@@ -1,5 +1,7 @@
 package ParseObjects;
 
+import java.util.Vector;
+
 public class Number {
 
     /**
@@ -7,7 +9,8 @@ public class Number {
      * @param number-string represent full number- 1,000/ 1 Million  / 10.35 / 1 Thousends  / 1 Billion / 10 3/4  /10 3/4 Thousands
      * @return the number parsed by rules
      */
-    public static String Parse(String number){
+    public static Vector<String> Parse(String number){
+        Vector<String> toReturn =new Vector<String>();
         String out="";
         String [] splitNum=number.split(" ");
         splitNum[0]=RemoveComas(splitNum[0]);
@@ -41,7 +44,8 @@ public class Number {
         {
 
         }
-        return out;
+        toReturn.add(out);
+        return toReturn;
     }
 
     /**
@@ -73,7 +77,7 @@ public class Number {
     private static String toNum(String s) {
         String out="";
         try {
-            double num = Integer.parseInt(s);
+            double num=Double.parseDouble(s);
             if (num < 1000) {//small
                 out = Double.toString(num);
                 out = MabyeInteger(out);
