@@ -47,7 +47,8 @@ public class Parser {
          * Stem the token
          * Add to desktop
          * @return theToken
-         */
+
+**/
         private String getToken_removePunc_Stem_AndAddToDesktop()
         {
             String theToken =ListOfTokens.get(i);
@@ -111,7 +112,7 @@ public class Parser {
      * @return s without puncuation-
      *      remove from begining only 1 Punctuation.
      *      remove from the end only 1 Punctuation.
-     */
+**/
     private String removePunctuationsFromString(String s) {
         s = s.replaceAll("\\s*\\p{Punct}+\\s*$", "");//remove from the end only 1 Punctuation.
         s.replaceAll("^\\p{Punct}|\\p{Punct}$", "");//remove from begining only 1 Punctuation.
@@ -121,7 +122,7 @@ public class Parser {
     /**
      *
      * @return the list of terms.
-     */
+**/
     public Dictionary<String, Integer> getTermList() {
         return termList;
     }
