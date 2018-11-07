@@ -1,16 +1,27 @@
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Vector;
+import ParseObjects.Number;
 
 public class Main {
     public static void main(String[] args) {
-        Vector<String> s= new Vector<String>(4);
-        s.add("1");
-        s.add("2");
-        s.add("3");
-        System.out.println(s.get(0)+"_"+ s.get(1)+ "_"+ s.get(2));
-        s.remove(0); s.add("4");
+        String s="1,000";
+        System.out.println("should be 1K:"+Number.Parse(s));
 
-        System.out.print(s.get(0)+"_"+ s.get(1)+ "_"+ s.get(2));
+        s="1,000,000";
+        System.out.println("should be 1M:"+Number.Parse(s));
+
+        s="7 Trillion";
+        System.out.println("should be 700B:"+Number.Parse(s));
+
+        s="10,123";
+        System.out.println("should be 10.123K:"+Number.Parse(s));
+
+        s="123 Thousand";
+        System.out.println("should be 123K:"+Number.Parse(s));
+
+        s="1010.56";
+        System.out.println("should be 1.01056K:"+Number.Parse(s));
+
+
+
     }
+
 }
