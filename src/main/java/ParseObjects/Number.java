@@ -15,7 +15,11 @@ public class Number {
         String [] splitNum=number.split(" ");
         splitNum[0]=RemoveComas(splitNum[0]);
         if(splitNum.length==1){//only number!!
-            out=toNum(splitNum[0]);
+            if(splitNum[0].contains("/")){
+                out=splitNum[0];
+            }
+            else
+                out=toNum(splitNum[0]);
         }
         else if(splitNum.length==2)//number fraction or number modifier
         {
@@ -56,13 +60,18 @@ public class Number {
      */
     private static String addmodifier(String num, String modifier) {
         String out=num;
+        double number=Double.parseDouble(num);
         if(modifier.equalsIgnoreCase("Thousand")){
-            out=out+"000";
+            number=number*1000;
+            out=Double.toString(number);
         }
         else if(modifier.equalsIgnoreCase("Million")||modifier.equalsIgnoreCase("m")){
-            out=out+"000000";
+            number=number*1000000;
+            out=Double.toString(number);
         }
         else if(modifier.equalsIgnoreCase("Billion")|modifier.equalsIgnoreCase("bn")||modifier.equalsIgnoreCase("b")){
+            number=number*1000000000;
+            out=Double.toString(number);
             out=out+"000000000";
         }
         return out;
