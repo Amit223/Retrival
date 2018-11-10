@@ -1,29 +1,25 @@
-import ParseObjects.Date;
+import ParseObjects.*;
 import ParseObjects.Number;
-import ParseObjects.Percentage;
-import ParseObjects.Price;
 
 import java.util.Vector;
 
 public class Main {
     public static void main(String[] args) {
-        Vector<String> out= Date.Parse("14 MAY");
+        Vector<String> out= Between.Parse("Value-added");
         System.out.println(out);
 
-        out= Date.Parse("14 May");
+        out= Between.Parse("step-by-step");
         System.out.println(out);
 
-        out= Date.Parse("June 4");
+        out= Between.Parse("10-part");
         System.out.println(out);
 
-        out= Date.Parse("JUNE 4");
+        out= Between.Parse("6-7");
         System.out.println(out);
 
-        out= Date.Parse("Sep 1994");
+        out= Between.Parse("18 24");
         System.out.println(out);
 
-        out= Date.Parse("October 1994");
-        System.out.println(out);
 
     }
 
