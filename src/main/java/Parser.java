@@ -10,7 +10,7 @@ public class Parser {
     //forParseSentence
     Vector<String> ListOfTokens;
     HashSet<String> stopwords = StopWords.getStopwords();
-    HashSet<String> months; {// TODO: 07/11/2018  add all month opthins. 
+    HashSet<String> months; {// TODO: 07/11/2018  add all month opthins.
         PorterStemmer stemmer = new PorterStemmer();
         Vector<String> tokensDesktop;//the four that i work with in the for loop.
         String term, term2, term3, term4, term5, term6;
@@ -48,7 +48,7 @@ public class Parser {
          * Add to desktop
          * @return theToken
 
-**/
+         **/
         private String getToken_removePunc_Stem_AndAddToDesktop()
         {
             String theToken =ListOfTokens.get(i);
@@ -112,7 +112,7 @@ public class Parser {
      * @return s without puncuation-
      *      remove from begining only 1 Punctuation.
      *      remove from the end only 1 Punctuation.
-**/
+     **/
     private String removePunctuationsFromString(String s) {
         s = s.replaceAll("\\s*\\p{Punct}+\\s*$", "");//remove from the end only 1 Punctuation.
         s.replaceAll("^\\p{Punct}|\\p{Punct}$", "");//remove from begining only 1 Punctuation.
@@ -122,7 +122,7 @@ public class Parser {
     /**
      *
      * @return the list of terms.
-**/
+     **/
     public Dictionary<String, Integer> getTermList() {
         return termList;
     }
