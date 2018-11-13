@@ -4,34 +4,34 @@ import java.util.Vector;
 
 public class Price {
 
-    public static Vector <String> Parse(String price){
-        Vector<String> toReturn =new Vector<String>();
+    public static String Parse(String price){
         String out="";
-        String [] splitPrice=price.split(" ");
-        splitPrice[0]=RemoveComas(splitPrice[0]);
-        if(splitPrice.length==1){//only number!!
-            out=toNum(splitPrice[0]);
-        }
-        else if(splitPrice.length==2)//number fraction or number modifier
-        {
-            String next=splitPrice[1];
-            if(Character.isDigit(next.charAt(0))){//fraction
+        try {
+            String[] splitPrice = price.split(" ");
+            splitPrice[0] = RemoveComas(splitPrice[0]);
+            if (splitPrice.length == 1) {//only number!!
+                out = toNum(splitPrice[0]);
+            } else if (splitPrice.length == 2)//number fraction or number modifier
+            {
+                String next = splitPrice[1];
+                if (Character.isDigit(next.charAt(0))) {//fraction
 
-                out=toNum(splitPrice[0]);
-                out=out + " "+ next; //--> 30, 3/4-> 30 3/4; 30K ,3/4-> 30K 3/4
-            }
-            else{//modifier
-                out=addmodifier(splitPrice[0],splitPrice[1]);
-                out=toNum(out);
-            }
-        }
-        else if(splitPrice.length==3) //number fraction modifier--unknown
-        {
+                    out = toNum(splitPrice[0]);
+                    out = out + " " + next; //--> 30, 3/4-> 30 3/4; 30K ,3/4-> 30K 3/4
+                } else {//modifier
+                    out = addmodifier(splitPrice[0], splitPrice[1]);
+                    out = toNum(out);
+                }
+            } else if (splitPrice.length == 3) //number fraction modifier--unknown
+            {
 
+            }
+            out = out + " Dollars";
+            return out;
         }
-        out=out+ " Dollars";
-        toReturn.add(out);
-        return toReturn;
+        catch (Exception e){
+            return "";
+        }
     }
 
     /**

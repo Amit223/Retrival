@@ -15,25 +15,28 @@ public class Date {
         String month;
         String num;
         String s1="";
-        if(Character.isDigit(date[0].charAt(0))){//num- month
-            num=date[0];
-            month=date[1];
-        }
-        else{//month-num
-            month=date[0];
-            num=date[1];
-        }
-        if(isYear(num)){
-            s1=num+"-"+getMonthNumber(month);
-        }
-        else{
-            s1=getMonthNumber(month)+"-"+num;
-        }
+        try {
+            if (Character.isDigit(date[0].charAt(0))) {//num- month
+                num = date[0];
+                month = date[1];
+            } else {//month-num
+                month = date[0];
+                num = date[1];
+            }
+            if (isYear(num)) {
+                s1 = num + "-" + getMonthNumber(month);
+            } else {
+                s1 = getMonthNumber(month) + "-" + num;
+            }
 
-        Vector<String> toReturn =new Vector<String>();
-        toReturn.add(s1);
-        toReturn.add(getMonthShort(month));
-        return toReturn;
+            Vector<String> toReturn = new Vector<String>();
+            toReturn.add(s1);
+            toReturn.add(getMonthShort(month));
+            return toReturn;
+        }
+        catch (Exception e){
+            return new Vector<String>();
+        }
     }
 
     /**

@@ -3,10 +3,12 @@ package ParseObjects;
 import java.util.Vector;
 
 public class Percentage {
-    public static Vector<String> Parse(String percent){
-        Vector out=Number.Parse(percent);
-        String newOut=out.get(0)+"%";
-        out.set(0,newOut);
-        return out;
+    public static String Parse(String percent){
+        String out=Number.Parse(percent);
+        if(out.equals("")){//parse didnt work
+            return "";
+        }
+        String newOut=out+"%";
+        return newOut;
     }
 }
