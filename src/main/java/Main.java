@@ -1,25 +1,19 @@
 import ParseObjects.*;
 import ParseObjects.Number;
 
+import java.util.Timer;
 import java.util.Vector;
 
 public class Main {
     public static void main(String[] args) {
-        Vector<String> out= Between.Parse("Value-added");
-        System.out.println(out);
+        long startTime = System.nanoTime();
+        ReadFile readFile=new ReadFile();
+        readFile.read("C:\\Users\\AMIT MOSHE\\Desktop\\אוניברסיטה\\סמסטר ה\\אחזור\\corpus\\");
+        long endTime = System.nanoTime();
 
-        out= Between.Parse("step-by-step");
-        System.out.println(out);
-
-        out= Between.Parse("10-part");
-        System.out.println(out);
-
-        out= Between.Parse("6-7");
-        System.out.println(out);
-
-        out= Between.Parse("18 24");
-        System.out.println(out);
-
+        long duration = (endTime - startTime);  //divide by 1000000 to get milliseconds.
+        duration=duration/1000000;
+        System.out.println(duration);
 
     }
 
