@@ -45,25 +45,20 @@ public class ReadFile {
     public void read(String folderPath){
         try {
             docs = new Elements();
-            File mainfolder = new File(folderPath);
-            File[] listOfFolders = mainfolder.listFiles();
-            for (File folder : listOfFolders) {
-                File[] files = folder.listFiles();
-                int c = 0;
-                Thread[] threads = new Thread[files.length];
-                for (int i = 0; i < files.length; i++) {
-                    File file = files[i];
-                    System.out.println(file.getPath());
-                    readAndSeperateFile(file.getPath());
-
-                }
+            File folder = new File(folderPath);
+            File[] listOfFolders = folder.listFiles();
+            File[] files = folder.listFiles();
+            for (int i = 0; i < files.length; i++) {
+                File file = files[i];
+                System.out.println(file.getPath());
+                readAndSeperateFile(file.getPath());
             }
+
         }
         catch (Exception e){
             e.printStackTrace();
         }
     }
-
     /**
      *
      * @param fullFilePath- the file path
