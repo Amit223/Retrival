@@ -1,51 +1,427 @@
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Dictionary;
-import java.util.Enumeration;
+import javafx.util.Pair;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import sun.net.www.protocol.http.HttpURLConnection;
 
-import static com.oracle.jrockit.jfr.ContentType.Bytes;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 public class Indexer {
 
-    File dictionary;
-    int lineNumDic;
-    File posting;
-    int lineNumPosting;
-    File statesDictioary;
-    File statesPosting;
+    private Map<String,Pair<Integer,Integer>> dictionary;
+    private File posting;//lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
+    private int lineNumPosting;
+    private File documents;//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+    private int lineNumDocs;
+
+    //citys
+    private Map <String,Pair<Vector<String>,Integer>> statesDictionary;
+    private File statesPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
+    private int lineNumCitys;
 
     public Indexer() {
         try {
-            dictionary = new File("Dictionary.txt");//term(32 bytes),idf(4 bytes),line in posting(4 bytes)-40 bytes per line
-            dictionary.createNewFile();
-            lineNumDic =0;
-            posting = new File("Posting.txt");//docName|maxtf|tf|num of terms|city
+            dictionary=new HashMap<>();
+            posting = new File("Posting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
             posting.createNewFile();
             lineNumPosting=0;
-            statesDictioary = new File("StatesDictionary.txt");
-            statesDictioary.createNewFile();
+            documents=new File("Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+            lineNumDocs=0;
+
+            //citys
+            statesDictionary=new HashMap<>();
             statesPosting = new File("StatesPosting.txt");
             statesPosting.createNewFile();
+            lineNumCitys=0;
         }
         catch (IOException e){
 
         }
     }
 
-    public void Index(Dictionary<String,Integer> terms,String nameOfDoc,String countryOfDoc){
+    public void Index(Dictionary<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
+                      int numOfWords){
         Enumeration<String> keys=terms.keys();
+        int maxtf=getMaxTf(terms.elements());
+        writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
         while (keys.hasMoreElements()) {
             String term = keys.nextElement();
-            int lineInPosting = toDictionaryFile(term);
+            int lineOfFirstDoc = toDictionaryFile(term);
+            if(lineOfFirstDoc!=lineNumPosting)
+                searchInPosting(lineOfFirstDoc);//updates the term's ladt doc that new line will be added in lineNumPosting
+            writeToPosting(lineNumDocs,terms.get(term));
+            lineNumPosting+=1;
+        }
+        toStatesDictionary(cityOfDoc);//todo- get function from http-complete html request
+        toStatesPosting(cityOfDoc,locations);
+
+        lineNumDocs+=1;
+        lineNumCitys+=1;
+    }
+
+    /**
+     *
+     * @param cityOfDoc
+     * @param locations
+     *
+     * adds all vector of location to the state posting
+     */
+    private void toStatesPosting(String cityOfDoc, Vector<Integer> locations) {
+        int size=locations.size();
+        int index=0;
+        byte[] toWrite=new byte[28];
+        byte [] docline=toBytes(this.lineNumDocs);
+        byte []loc1;
+        byte []loc2;
+        byte []loc3;
+        byte []loc4;
+        byte []loc5;
+        byte[]ptr;
+        while(size>5){
+            loc1=toBytes(locations.get(index*5));
+            loc2=toBytes(locations.get(index*5+1));
+            loc3=toBytes(locations.get(index*5+2));
+            loc4=toBytes(locations.get(index*5+3));
+            loc5=toBytes(locations.get(index*5+4));
+            ptr=toBytes(this.lineNumCitys);
+            for (int i = 0; i < 4; i++) {
+                toWrite[i]=docline[i];
+            }
+            for (int i = 4; i <8 ; i++) {
+                toWrite[i]=loc1[i-4];
+            }
+
+            for (int i = 8; i < 12; i++) {
+                toWrite[i]=loc2[i-8];
+            }
+            for (int i = 12; i <16 ; i++) {
+                toWrite[i]=loc3[i-12];
+            }
+
+            for (int i = 16; i < 20; i++) {
+                toWrite[i]=loc4[i-16];
+            }
+            for (int i = 20; i <24 ; i++) {
+                toWrite[i]=loc5[i-20];
+            }
+
+            for (int i = 24; i < 28; i++) {
+                toWrite[i]=ptr[i-24];
+            }
+            try {
+                RandomAccessFile raf=new RandomAccessFile(statesPosting,"rw");
+                raf.seek(raf.length());
+                raf.write(toWrite);
+                raf.close();
+                this.lineNumCitys+=1;
+            }
+            catch (Exception e){
+                System.out.println("problem in write to city posting");
+            }
+            index+=1;
+            size=size-5;
+            }
+        loc1=toBytes(-1);
+        loc2=toBytes(-1);
+        loc3=toBytes(-1);
+        loc4=toBytes(-1);
+        loc5=toBytes(-1);
+        ptr=toBytes(-1);
+        if(size>0)
+            loc1=toBytes(index*5);
+        if(size>1)
+            loc2=toBytes(index*5+1);
+        if(size>2)
+            loc3=toBytes(index*5+2);
+        if(size>3)
+            loc4=toBytes(index*5+3);
+        if(size>4)
+            loc5=toBytes(index*5+4);
+        for (int i = 0; i < 4; i++) {
+            toWrite[i]=docline[i];
+        }
+        for (int i = 4; i <8 ; i++) {
+            toWrite[i]=loc1[i-4];
+        }
+
+        for (int i = 8; i < 12; i++) {
+            toWrite[i]=loc2[i-8];
+        }
+        for (int i = 12; i <16 ; i++) {
+            toWrite[i]=loc3[i-12];
+        }
+
+        for (int i = 16; i < 20; i++) {
+            toWrite[i]=loc4[i-16];
+        }
+        for (int i = 20; i <24 ; i++) {
+            toWrite[i]=loc5[i-20];
+        }
+
+        for (int i = 24; i < 28; i++) {
+            toWrite[i]=ptr[i-24];
+        }
+
+
+
+    }
+
+    private void htmlRequest(String cityOfDoc){
+        try {
+            DefaultHttpClient httpClient = new DefaultHttpClient();
+            HttpGet getRequest = new HttpGet(
+                    "https://restcountries.eu/rest/v2/capital/"+cityOfDoc+"?fields=name/get");
+            getRequest.addHeader("accept", "application/json");
+            HttpResponse response = httpClient.execute(getRequest);
+            if (response.getStatusLine().getStatusCode() != 200) {
+                return;
+            }
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader((response.getEntity().getContent())));
+
+            String output;
+            while ((output = br.readLine()) != null) {
+                System.out.println(output);
+            }
+
+            httpClient.getConnectionManager().shutdown();
+
+        }
+        catch (IOException e){
+            System.out.println("ffffff");
+        }
+
+
+    }
+    private void toStatesDictionary(String cityOfDoc,String country,String coin,String population) {
+        if(!statesDictionary.containsKey(cityOfDoc)){
+            Vector<String> v=new Vector<>();
+            v.add(country);
+            v.add(coin);
+            v.add(population);
+            Pair <Vector<String>,Integer>pair=new Pair<>(v,new Integer(this.lineNumCitys));
+            statesDictionary.put(cityOfDoc,pair);
+        }
+        else{//exist need to update the posting file's pointer
+            int lineInPosting=(statesDictionary.get(cityOfDoc)).getValue();
+            updateStatesPosting(lineInPosting);
+        }
+
+
+    }
+
+
+
+    public Map<String, Pair<Integer, Integer>> getDictionary() {
+        return dictionary;
+    }
+    public Map<String, Pair<Vector<String>, Integer>> getStatesDictionary() {
+        return statesDictionary;
+    }
+
+    /**
+     * delete the files text
+     */
+    public void delete(){
+        try {
+            PrintWriter writer = new PrintWriter(posting);
+            writer.print("");
+            writer.close();
+             writer = new PrintWriter(documents);
+            writer.print("");
+            writer.close();
+            writer=new PrintWriter(statesPosting);
+            writer.print("");
+            writer.close();
+        }
+        catch (Exception e){
+            System.out.println("problem in indexer->delete");
         }
     }
 
+    /**
+     *
+     * @param lineInPosting
+     * updates the pointer of last doc of the city
+     */
+    private void updateStatesPosting(int lineInPosting) {
+        try {
+            RandomAccessFile raf = new RandomAccessFile(statesPosting, "rw");
+            raf.seek(28*lineInPosting+24);
+            byte[] ptr = new byte[4];
+            raf.read(ptr);
+            int ptr_int=byteToInt(ptr);
+            int prevptr=lineInPosting;//to know what line is the last of the term's docs
+            while(ptr_int!=-1){
+                prevptr=ptr_int;
+                raf.seek(ptr_int*27+24);
+                ptr = new byte[4];
+                raf.read(ptr);
+                ptr_int=byteToInt(ptr);
+            }
+            //the last line.need to change the pointer!
+            raf.seek(prevptr*28);
+            byte[] line = new byte[28];
+            raf.read(line);
+            ptr=toBytes(this.lineNumCitys);
+            line[46]=ptr[0];
+            line[47]=ptr[1];
+            line[48]=ptr[2];
+            line[49]=ptr[3];
+            raf.close();
+
+        }
+        catch(Exception e){
+
+        }
+    }
+
+
+    private void writeToPosting(int lineOfDoc,int tf) {
+        byte [] tf_bytes=toBytes(tf);
+        byte [] line_bytes=toBytes(lineOfDoc);
+        byte [] ptr_bytes=toBytes(-1);
+
+        byte [] toWrite=new byte[12];
+        for (int i = 0; i < 4; i++) {
+            toWrite[i]=line_bytes[i];
+        }
+        for (int i = 4; i <8 ; i++) {
+            toWrite[i]=tf_bytes[i-4];
+        }
+
+        for (int i = 8; i < 12; i++) {
+            toWrite[i]=ptr_bytes[i-8];
+        }
+        try {
+            RandomAccessFile raf=new RandomAccessFile(posting,"rw");
+            raf.seek(raf.length());
+            raf.write(toWrite);
+            raf.close();
+        }
+        catch (Exception e){
+            System.out.println("problem in writeToPosting");
+        }
+
+    }
+
+    /**
+     *
+     * @param nameOfDoc
+     * @param cityOfDoc
+     * @param maxtf
+     * @param size
+     * @param numOfWords
+     *
+     * writes to the docs file the document details-
+     * docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+
+     */
+    private void writeToDocuments(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords) {
+        //docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+        byte[] name=stringToByteArray(nameOfDoc,20);
+        byte[] city=stringToByteArray(cityOfDoc,18);
+        byte [] maxtf_bytes=toBytes(maxtf);
+        byte [] size_bytes=toBytes(size);
+        byte [] words_bytes=toBytes(size);
+        byte [] toWrite=new byte[50];
+        for (int i = 0; i < 20; i++) {
+            toWrite[i]=name[i];
+        }
+        for (int i = 20; i <38 ; i++) {
+            toWrite[i]=city[i-20];
+        }
+
+        for (int i = 38; i < 42; i++) {
+            toWrite[i]=maxtf_bytes[i-38];
+        }
+        for (int i = 42; i <46 ; i++) {
+            toWrite[i]=size_bytes[i-42];
+        }
+
+        for (int i = 46; i < 50; i++) {
+            toWrite[i]=words_bytes[i-46];
+        }
+        try {
+            RandomAccessFile raf=new RandomAccessFile(documents,"rw");
+            raf.seek(raf.length());
+            raf.write(toWrite);
+            raf.close();
+        }
+        catch (Exception e){
+            System.out.println("problem in write to doc");
+        }
+
+    }
+
+    /**
+     *
+     * @param lineOfFirstDoc
+     * searches for last row of docs of the term, updates its pointer to the new row
+     */
+    private void searchInPosting(int lineOfFirstDoc) {
+        try {
+            RandomAccessFile raf = new RandomAccessFile(posting, "r");
+            raf.seek(lineOfFirstDoc*54+50);
+            byte[] ptr = new byte[4];
+            raf.read(ptr);
+            int ptr_int=byteToInt(ptr);
+            int prevptr=lineOfFirstDoc;//to know what line is the last of the term's docs
+            while(ptr_int!=-1){
+                prevptr=ptr_int;
+                raf.seek(ptr_int*54+50);
+                ptr = new byte[4];
+                raf.read(ptr);
+                ptr_int=byteToInt(ptr);
+            }
+            //the last line.need to change the pointer!
+            raf.seek(prevptr*54);
+            byte[] line = new byte[54];
+            raf.read(line);
+            ptr=toBytes(this.lineNumPosting);
+            line[46]=ptr[0];
+            line[47]=ptr[1];
+            line[48]=ptr[2];
+            line[49]=ptr[3];
+            raf.close();
+        }
+        catch (Exception e){
+            System.out.println("problem in searchInPosting !");
+        }
+
+    }
+
     private int toDictionaryFile(String term) {
+        if(dictionary.containsKey(term)){//just add to df and return the line in posting
+           int df= dictionary.get(term).getKey();
+           int pointer= dictionary.get(term).getValue();
+           df+=1;
+           dictionary.remove(term);
+           dictionary.put(term,new Pair<Integer, Integer>(df,pointer));
+           return pointer;
+        }
+        else if(dictionary.containsKey(Reverse(term))){//the reversed term in dictionary need to put the uppercase one
+            String newTerm;
+            if(Character.isUpperCase(Reverse(term).charAt(0))){//the term in dictionary is the uppercase one
+                newTerm=Reverse(term);
+            }
+            else{//the new term is the upper case one!
+                newTerm=term;
+            }
+            int df= dictionary.get(Reverse(term)).getKey();
+            int pointer= dictionary.get(Reverse(term)).getValue();
+            df+=1;
+            dictionary.remove(Reverse(term));
+            dictionary.put(newTerm,new Pair<Integer, Integer>(df,pointer));
+            return pointer;
+        }
+        else {//new term completely
+            dictionary.put(term,new Pair<Integer, Integer>(1,lineNumPosting));
+            return lineNumPosting;
+        }
+        /**
 
             int []lineInDic= getLineInDic(term);
             try {
@@ -84,129 +460,23 @@ public class Indexer {
             catch (Exception e){
                 System.out.println("problem in indexer->toDictionaryFile");
             }
-
-        return -1;
-
-    }
-
-    /**
-     *
-     * @param newTerm
-     * @param idf_int
-     * @param ptr_int
-     * add to dictionary in existing line
-     */
-    private void AddToDic(String newTerm, int idf_int, int ptr_int,int line,int exist) {
-       try {
-           if(exist==1) {
-               RandomAccessFile raf = new RandomAccessFile(dictionary, "rw");
-               byte[] lineOfData = addToArray(stringToByteArray(newTerm), idf_int, ptr_int);
-               raf.seek(line * 40);
-               raf.write(lineOfData);
-               raf.close();
-           }
-           else//exist =0
-           {
-               RandomAccessFile raf = new RandomAccessFile(dictionary, "rw");
-               byte[] lineOfData = addToArray(stringToByteArray(newTerm), idf_int, ptr_int);
-               raf.seek((line+1)*40);
-               byte[] linesAfter=new byte[40*(lineNumDic-line)];
-               raf.read(linesAfter);
-               raf.seek((line+1)*40);
-               raf.write(lineOfData);
-               raf.seek((line+2)*40);
-               raf.write(linesAfter);
-               raf.close();
-
-           }
-       }
-       catch (Exception e){
-       }
+         **/
 
     }
 
-
-    /**
-     *
-     * @param term
-     * @param termFromDic
-     * @return the term in upper letter if there is
-     */
-    private String getRealTerm(String term, String termFromDic) {
-        if(Character.isUpperCase(term.charAt(0)))
-            return term;
-        return termFromDic;
+    private String Reverse(String term) {
+        int offset = 'a' - 'A';
+        char c=term.charAt(0);
+        if(c >= 'A' && c <= 'Z'){//turn to small
+            term=term.toLowerCase();
+        }
+        if((c >= 'a' && c <= 'z'))//turn to big letters
+        {
+            term=term.toUpperCase();
+        }
+        return term;
     }
 
-    public void test(){
-        try (RandomAccessFile raf=new RandomAccessFile(this.dictionary,"rw")) {
-            byte[] bytes=stringToByteArray("aa");
-            byte [] stuff={1,2,3,4,5,6,7,8};
-            byte[] both = Arrays.copyOf(bytes, 40);
-            System.arraycopy(stuff, 0, both, bytes.length, stuff.length);
-            raf.write(both);
-            bytes=stringToByteArray("cc");
-            both = Arrays.copyOf(bytes, 40);
-            System.arraycopy(stuff, 0, both, bytes.length, stuff.length);
-            raf.write(both);
-            bytes=stringToByteArray("dd");
-            both = Arrays.copyOf(bytes, 40);
-            System.arraycopy(stuff, 0, both, bytes.length, stuff.length);
-            raf.write(both);
-            bytes=stringToByteArray("ff");
-            both = Arrays.copyOf(bytes, 40);
-            System.arraycopy(stuff, 0, both, bytes.length, stuff.length);
-            raf.write(both);
-            this.lineNumDic=4;
-            raf.close();
-
-
-        }
-        catch (Exception e){
-
-        }
-    }
-
-    /**
-     *
-     * @param term
-     * @return converts string into byte array of size 30
-     */
-    private byte[] stringToByteArray(String term){
-        byte [] stringInByte=term.getBytes(StandardCharsets.UTF_8);
-        byte [] fullByteArray=new byte[32];
-        for (int i = 0; i<fullByteArray.length ; i++) {
-            if(i<stringInByte.length)
-                fullByteArray[i]=stringInByte[i];
-            else
-                fullByteArray[i]=35;//# in ascii
-        }
-        return fullByteArray;
-
-    }
-
-    /**
-     *
-     * @param bytes
-     * @param idf
-     * @param ptr
-     * @return make line of dictionary
-     */
-    private byte[] addToArray(byte[] bytes,int idf, int ptr){
-        byte[] idf_ =toBytes(idf);
-        byte [] ptr_=toBytes(ptr);
-        byte [] line=new byte[40];
-        for (int i = 0; i <32 ; i++) {
-            line[i]=bytes[i];
-        }
-        for (int i = 32; i <36 ; i++) {
-            line[i]=idf_[i-32];
-        }
-        for (int i = 36; i <40 ; i++) {
-            line[i]=idf_[i-36];
-        }
-        return line;
-    }
 
     private int byteToInt(byte[] bytes) {
         int val = 0;
@@ -228,66 +498,35 @@ public class Indexer {
         return result;
     }
 
+
+    private int getMaxTf(Enumeration<Integer> elements) {
+        int max=elements.nextElement();
+        while(elements.hasMoreElements()){
+            int num=elements.nextElement();
+            if(num>max)
+                max=num;
+        }
+        return max;
+    }
+
     /**
-     * Binary search
+     *
      * @param term
-     * @return array which the first int is wheter or not the line was found, the 2nd int is the line it is in or should be after
+     * @return converts string into byte array of size 30
      */
-    private int[] getLineInDic(String term) {
-        if (this.lineNumDic > 0) {
-            try {
-                RandomAccessFile dictionary = new RandomAccessFile(this.dictionary, "r");
-                int line = this.lineNumDic / 2;
-                int start = 0;
-                int end = this.lineNumDic;
-                int[] toReturn = new int[2];
-                while (start <= end) {
-                    line = (start + end) / 2;
-                    dictionary.seek(line * 40);
-                    byte[] stringInLine = new byte[32];
-                    dictionary.read(stringInLine);
-                    String theTerm = new String(stringInLine, StandardCharsets.UTF_8);
-                    theTerm = theTerm.substring(0, theTerm.indexOf("#"));
-                    if (term.equalsIgnoreCase(theTerm)) {
-                        dictionary.close();
-                        toReturn[0] = 1;
-                        toReturn[1] = line;
-                        return toReturn;
-                    } else if (term.compareTo(theTerm) < 0) {
-                        if (line == 0)//need to be first//
-                        {
-                            dictionary.close();
-                            toReturn[0] = 0;
-                            toReturn[1] = -1;
-                            return toReturn;
-                        } else
-                            end = line - 1;
-                    } else//term>termfromline
-                    {
-                        if (line == this.lineNumDic - 1) {
-                            dictionary.close();
-                            toReturn[0] = 0;
-                            toReturn[1] = line;
-                            return toReturn;
-                        }
-                        start = line + 1;
-                    }
-                }
-                dictionary.close();
-                toReturn[0] = 0;
-                toReturn[1] = line - 1;
-                return toReturn;
 
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else {
-            int [] toret=new int[]{0,0};
-            return toret;
+    private byte[] stringToByteArray(String term,int length){
+        byte [] stringInByte=term.getBytes(StandardCharsets.UTF_8);
+        byte [] fullByteArray=new byte[length];
+        for (int i = 0; i<length ; i++) {
+            if(i<stringInByte.length)
+                fullByteArray[i]=stringInByte[i];
+            else
+                fullByteArray[i]=35;//# in ascii
         }
-            return new int[2];
-        }
+        return fullByteArray;
 
+    }
 
 
 }
