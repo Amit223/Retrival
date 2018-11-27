@@ -50,7 +50,6 @@ public class ReadFile {
             File[] files = folder.listFiles();
             for (int i = 0; i < files.length; i++) {
                 File file = files[i];
-                System.out.println(file.getPath());
                 readAndSeperateFile(file.getPath());
             }
 
