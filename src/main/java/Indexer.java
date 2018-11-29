@@ -312,12 +312,17 @@ public class Indexer {
             raf.seek(prevptr*28);
             byte[] line = new byte[28];
             raf.read(line);
+            raf.close();
             ptr=toBytes(this.lineNumCitys);
             line[46]=ptr[0];
             line[47]=ptr[1];
             line[48]=ptr[2];
             line[49]=ptr[3];
+            raf=new RandomAccessFile(citysPosting,"rw");
+            raf.seek(prevptr*28);
+            raf.write(line);
             raf.close();
+
 
         }
         catch(Exception e){
