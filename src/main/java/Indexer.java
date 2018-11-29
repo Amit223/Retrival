@@ -1,9 +1,12 @@
+import ParseObjects.Number;
 import javafx.util.Pair;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
 import java.io.*;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -53,7 +56,7 @@ public class Indexer {
             writeToPosting(lineNumDocs,terms.get(term));
             lineNumPosting+=1;
         }
-        toStatesDictionary(cityOfDoc,"","","");//todo- get function from http-complete html request
+        toStatesDictionary(cityOfDoc,getCountry(cityOfDoc),getCurrency(cityOfDoc),getPopulation(cityOfDoc));
         toCityPosting(locations);
 
         lineNumDocs+=1;
@@ -209,32 +212,68 @@ public class Indexer {
 
     }
 
-    private void htmlRequest(String cityOfDoc){
+
+    private String getPopulation(String cityOfDoc){
+        URL url;
         try {
-            DefaultHttpClient httpClient = new DefaultHttpClient();
-            HttpGet getRequest = new HttpGet(
-                    "https://restcountries.eu/rest/v2/capital/"+cityOfDoc+"?fields=name/get");
-            getRequest.addHeader("accept", "application/json");
-            HttpResponse response = httpClient.execute(getRequest);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                return;
-            }
+            // get URL content
+            url = new URL("https://restcountries.eu/rest/v2/capital/"+cityOfDoc+"?fields=population");
+            URLConnection conn = url.openConnection();
+
+            // open the stream and put it into BufferedReader
             BufferedReader br = new BufferedReader(
-                    new InputStreamReader((response.getEntity().getContent())));
-
-            String output;
-            while ((output = br.readLine()) != null) {
-                System.out.println(output);
+                    new InputStreamReader(conn.getInputStream()));
+            String s=br.readLine();
+            s=s.substring(s.indexOf(":")+1,s.indexOf("}"));
+            s= Number.Parse(s);
+            if(s.contains(".")) {
+                char mod=s.charAt(s.length() - 1);
+                double num=Double.parseDouble(s.substring(0,s.length()-1));
+                num= Math.round(num * 100.0) / 100.0;
+                s=Double.toString(num)+mod;
             }
-
-            httpClient.getConnectionManager().shutdown();
+            return s;
+        } catch (Exception e) {
 
         }
-        catch (IOException e){
-            System.out.println("ffffff");
+        return "";
+    }
+    private String getCurrency(String cityOfDoc){
+        URL url;
+        try {
+            // get URL content
+            url = new URL("    https://restcountries.eu/rest/v2/capital/"+cityOfDoc+"?fields=currencies\n");
+            URLConnection conn = url.openConnection();
+
+            // open the stream and put it into BufferedReader
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream()));
+            String s=br.readLine();
+            s=s.substring(s.indexOf("code")+7,s.indexOf("name")-3);
+            return s;
+        } catch (Exception e) {
+
         }
+        return "";
+    }
 
+    private String getCountry(String cityOfDoc){
+        URL url;
+        try {
+            // get URL content
+            url = new URL("https://restcountries.eu/rest/v2/capital/" + cityOfDoc + "?fields=name");
+            URLConnection conn = url.openConnection();
 
+            // open the stream and put it into BufferedReader
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream()));
+            String s=br.readLine();
+            s=s.substring(s.indexOf(":")+2,s.indexOf("}")-1);
+            return s;
+        } catch (Exception e) {
+
+        }
+        return "";
     }
     private void toStatesDictionary(String cityOfDoc,String country,String coin,String population) {
         if(!cityDictionary.containsKey(cityOfDoc)){
@@ -491,7 +530,7 @@ public class Indexer {
     }
 
 
-    public int byteToInt(byte[] bytes) {
+    private int byteToInt(byte[] bytes) {
         int val = 0;
         for (int i = 0; i < 4; i++) {
             val=val<<8;
