@@ -2,7 +2,6 @@ import javafx.util.Pair;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
-import sun.net.www.protocol.http.HttpURLConnection;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -17,8 +16,8 @@ public class Indexer {
     private int lineNumDocs;
 
     //citys
-    private Map <String,Pair<Vector<String>,Integer>> statesDictionary;
-    private File statesPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
+    private Map <String,Pair<Vector<String>,Integer>> cityDictionary;
+    private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
     private int lineNumCitys;
 
     public Indexer() {
@@ -31,9 +30,9 @@ public class Indexer {
             lineNumDocs=0;
 
             //citys
-            statesDictionary=new HashMap<>();
-            statesPosting = new File("StatesPosting.txt");
-            statesPosting.createNewFile();
+            cityDictionary =new HashMap<>();
+            citysPosting = new File("CityPosting.txt");
+            citysPosting.createNewFile();
             lineNumCitys=0;
         }
         catch (IOException e){
@@ -54,21 +53,55 @@ public class Indexer {
             writeToPosting(lineNumDocs,terms.get(term));
             lineNumPosting+=1;
         }
-        toStatesDictionary(cityOfDoc);//todo- get function from http-complete html request
-        toStatesPosting(cityOfDoc,locations);
+        toStatesDictionary(cityOfDoc,"","","");//todo- get function from http-complete html request
+        toCityPosting(locations);
 
         lineNumDocs+=1;
         lineNumCitys+=1;
     }
 
+
+    public Map<String, Pair<Integer, Integer>> getDictionary() {
+        return dictionary;
+    }
+    public Map<String, Pair<Vector<String>, Integer>> getCityDictionary() {
+        return cityDictionary;
+    }
+
+    /**
+     * delete the files text
+     */
+    public void delete(){
+        try {
+            PrintWriter writer = new PrintWriter(posting);
+            writer.print("");
+            writer.close();
+             writer = new PrintWriter(documents);
+            writer.print("");
+            writer.close();
+            writer=new PrintWriter(citysPosting);
+            writer.print("");
+            writer.close();
+        }
+        catch (Exception e){
+            System.out.println("problem in indexer->delete");
+        }
+    }
+
     /**
      *
-     * @param cityOfDoc
+     * @param lineInPosting
+     * updates the pointer of last doc of the city
+     */
+
+
+    /**
+     *
      * @param locations
      *
      * adds all vector of location to the state posting
      */
-    private void toStatesPosting(String cityOfDoc, Vector<Integer> locations) {
+    private void toCityPosting(Vector<Integer> locations) {
         int size=locations.size();
         int index=0;
         byte[] toWrite=new byte[28];
@@ -111,7 +144,7 @@ public class Indexer {
                 toWrite[i]=ptr[i-24];
             }
             try {
-                RandomAccessFile raf=new RandomAccessFile(statesPosting,"rw");
+                RandomAccessFile raf=new RandomAccessFile(citysPosting,"rw");
                 raf.seek(raf.length());
                 raf.write(toWrite);
                 raf.close();
@@ -122,7 +155,7 @@ public class Indexer {
             }
             index+=1;
             size=size-5;
-            }
+        }
         loc1=toBytes(-1);
         loc2=toBytes(-1);
         loc3=toBytes(-1);
@@ -130,15 +163,15 @@ public class Indexer {
         loc5=toBytes(-1);
         ptr=toBytes(-1);
         if(size>0)
-            loc1=toBytes(index*5);
+            loc1=toBytes(locations.get(index*5));
         if(size>1)
-            loc2=toBytes(index*5+1);
+            loc2=toBytes(locations.get(index*5+1));
         if(size>2)
-            loc3=toBytes(index*5+2);
+            loc3=toBytes(locations.get(index*5+2));
         if(size>3)
-            loc4=toBytes(index*5+3);
+            loc4=toBytes(locations.get(index*5+3));
         if(size>4)
-            loc5=toBytes(index*5+4);
+            loc5=toBytes(locations.get(index*5+4));
         for (int i = 0; i < 4; i++) {
             toWrite[i]=docline[i];
         }
@@ -163,7 +196,15 @@ public class Indexer {
         for (int i = 24; i < 28; i++) {
             toWrite[i]=ptr[i-24];
         }
-
+        try {
+            RandomAccessFile raf=new RandomAccessFile(citysPosting,"rw");
+            raf.seek(raf.length());
+            raf.write(toWrite);
+            raf.close();
+        }
+        catch (Exception e){
+            System.out.println("problem in write to city posting");
+        }
 
 
     }
@@ -196,16 +237,16 @@ public class Indexer {
 
     }
     private void toStatesDictionary(String cityOfDoc,String country,String coin,String population) {
-        if(!statesDictionary.containsKey(cityOfDoc)){
+        if(!cityDictionary.containsKey(cityOfDoc)){
             Vector<String> v=new Vector<>();
             v.add(country);
             v.add(coin);
             v.add(population);
             Pair <Vector<String>,Integer>pair=new Pair<>(v,new Integer(this.lineNumCitys));
-            statesDictionary.put(cityOfDoc,pair);
+            cityDictionary.put(cityOfDoc,pair);
         }
         else{//exist need to update the posting file's pointer
-            int lineInPosting=(statesDictionary.get(cityOfDoc)).getValue();
+            int lineInPosting=(cityDictionary.get(cityOfDoc)).getValue();
             updateStatesPosting(lineInPosting);
         }
 
@@ -213,42 +254,9 @@ public class Indexer {
     }
 
 
-
-    public Map<String, Pair<Integer, Integer>> getDictionary() {
-        return dictionary;
-    }
-    public Map<String, Pair<Vector<String>, Integer>> getStatesDictionary() {
-        return statesDictionary;
-    }
-
-    /**
-     * delete the files text
-     */
-    public void delete(){
-        try {
-            PrintWriter writer = new PrintWriter(posting);
-            writer.print("");
-            writer.close();
-             writer = new PrintWriter(documents);
-            writer.print("");
-            writer.close();
-            writer=new PrintWriter(statesPosting);
-            writer.print("");
-            writer.close();
-        }
-        catch (Exception e){
-            System.out.println("problem in indexer->delete");
-        }
-    }
-
-    /**
-     *
-     * @param lineInPosting
-     * updates the pointer of last doc of the city
-     */
     private void updateStatesPosting(int lineInPosting) {
         try {
-            RandomAccessFile raf = new RandomAccessFile(statesPosting, "rw");
+            RandomAccessFile raf = new RandomAccessFile(citysPosting, "rw");
             raf.seek(28*lineInPosting+24);
             byte[] ptr = new byte[4];
             raf.read(ptr);
@@ -325,7 +333,7 @@ public class Indexer {
         byte[] city=stringToByteArray(cityOfDoc,18);
         byte [] maxtf_bytes=toBytes(maxtf);
         byte [] size_bytes=toBytes(size);
-        byte [] words_bytes=toBytes(size);
+        byte [] words_bytes=toBytes(numOfWords);
         byte [] toWrite=new byte[50];
         for (int i = 0; i < 20; i++) {
             toWrite[i]=name[i];
@@ -364,27 +372,32 @@ public class Indexer {
     private void searchInPosting(int lineOfFirstDoc) {
         try {
             RandomAccessFile raf = new RandomAccessFile(posting, "r");
-            raf.seek(lineOfFirstDoc*54+50);
+            raf.seek(lineOfFirstDoc*12+8);
             byte[] ptr = new byte[4];
             raf.read(ptr);
             int ptr_int=byteToInt(ptr);
             int prevptr=lineOfFirstDoc;//to know what line is the last of the term's docs
             while(ptr_int!=-1){
                 prevptr=ptr_int;
-                raf.seek(ptr_int*54+50);
+                raf.seek(ptr_int*12+8);
                 ptr = new byte[4];
                 raf.read(ptr);
                 ptr_int=byteToInt(ptr);
             }
             //the last line.need to change the pointer!
-            raf.seek(prevptr*54);
-            byte[] line = new byte[54];
+            raf.seek(prevptr*12);
+            byte[] line = new byte[12];
             raf.read(line);
+            raf.close();
             ptr=toBytes(this.lineNumPosting);
-            line[46]=ptr[0];
-            line[47]=ptr[1];
-            line[48]=ptr[2];
-            line[49]=ptr[3];
+            line[8]=ptr[0];
+            line[9]=ptr[1];
+            line[10]=ptr[2];
+            line[11]=ptr[3];
+            //updates the line
+            raf=new RandomAccessFile(posting,"rw");
+            raf.seek(prevptr*12);
+            raf.write(line);
             raf.close();
         }
         catch (Exception e){
@@ -478,7 +491,7 @@ public class Indexer {
     }
 
 
-    private int byteToInt(byte[] bytes) {
+    public int byteToInt(byte[] bytes) {
         int val = 0;
         for (int i = 0; i < 4; i++) {
             val=val<<8;
