@@ -27,19 +27,22 @@ public class Between {
                         String num2 = Number.Parse(serperte[1]);
                         terms.add(num1);
                         terms.add(num2);
+                        terms.add(num1 + "-" + num2);
                     } else if (isNum(serperte[0]) && !isNum(serperte[1])) {//num-word
                         String num = Number.Parse(serperte[0]);
                         terms.add(num);
                         terms.add(serperte[1]);
+                        terms.add(num + "-" + serperte[1]);
                     } else if (!isNum(serperte[0]) && isNum(serperte[1])) {//word-num
                         String num = Number.Parse(serperte[1]);
                         terms.add(num);
                         terms.add(serperte[0]);
+                        terms.add(serperte[0] + "-" + num);
                     } else {//word word
                         terms.add(serperte[0]);
                         terms.add(serperte[1]);
+                        terms.add(serperte[0] + "-" + serperte[1]);
                     }
-                    terms.add(serperte[0] + "-" + serperte[1]);
 
                 } else {//word-word-word
                     terms.add(serperte[0]);

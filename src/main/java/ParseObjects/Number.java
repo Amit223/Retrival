@@ -33,20 +33,24 @@ public class Number {
                         out = toNum(out);
                         out = out.substring(0, out.length() - 1);
                         out = out + "00B";
-                    } else {
+                    } else if(splitNum[1].equalsIgnoreCase("billion")||splitNum[1].equalsIgnoreCase("bn")||splitNum[1].equalsIgnoreCase("b")){
+                        out = addmodifier(splitNum[0], "Million");
+                        out.substring(0, out.length() - 5);
+                        out = toNum(out);
+                        out = out.substring(0, out.length() - 1);
+                        out = out + "B";
+                    }
+                    else{//K or M
                         out = addmodifier(splitNum[0], splitNum[1]);
                         out = toNum(out);
                     }
 
                 }
-            } else if (splitNum.length == 3) //number fraction modifier
-            {
-
             }
             return out;
         }
         catch (Exception e){
-            return "";
+            return number;
         }
     }
 
@@ -65,10 +69,6 @@ public class Number {
             } else if (modifier.equalsIgnoreCase("Million") || modifier.equalsIgnoreCase("m")) {
                 number = number * 1000000;
                 out = Double.toString(number);
-            } else if (modifier.equalsIgnoreCase("Billion") | modifier.equalsIgnoreCase("bn") || modifier.equalsIgnoreCase("b")) {
-                number = number * 1000000000;
-                out = Double.toString(number);
-                out = out + "000000000";
             }
             return out;
 
