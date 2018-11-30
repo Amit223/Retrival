@@ -23,20 +23,33 @@ public class Indexer {
     private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
     private int lineNumCitys;
 
-    public Indexer() {
+    public Indexer(boolean toStem) {
         try {
-            dictionary=new HashMap<>();
-            posting = new File("Posting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
+            if(toStem) {
+                posting = new File("Posting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
+                documents = new File("Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+
+                //citys
+                citysPosting = new File("CityPosting.txt");
+            }
+            else{//not to stem
+                posting = new File("NotStemPosting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
+                documents = new File("NotStemDocuments.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+
+                //citys
+                citysPosting = new File("NotStemCityPosting.txt");
+            }
             posting.createNewFile();
-            lineNumPosting=0;
-            documents=new File("Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-            lineNumDocs=0;
+            documents.createNewFile();
+            dictionary = new HashMap<>();
+            lineNumPosting = 0;
+            lineNumDocs = 0;
+            lineNumCitys = 0;
 
             //citys
-            cityDictionary =new HashMap<>();
-            citysPosting = new File("CityPosting.txt");
+            cityDictionary = new HashMap<>();
             citysPosting.createNewFile();
-            lineNumCitys=0;
+
         }
         catch (IOException e){
 
@@ -87,6 +100,9 @@ public class Indexer {
             writer=new PrintWriter(citysPosting);
             writer.print("");
             writer.close();
+            lineNumCitys=0;
+            lineNumDocs=0;
+            lineNumPosting=0;
         }
         catch (Exception e){
             System.out.println("problem in indexer->delete");
