@@ -16,15 +16,8 @@ public class Main {
        // Test();
        // Test3();
 
-        Test4();
+        //Test4();
         
-    }
-
-    private static void Test4() {
-        Indexer indexer=new Indexer();
-        String details=indexer.getCityDetails("los");
-        String[] strings=details.split("-");
-        System.out.println(Arrays.toString(strings));
     }
 
     private static void Test3() {
