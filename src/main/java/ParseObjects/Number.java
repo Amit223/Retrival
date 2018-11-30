@@ -106,7 +106,6 @@ public class Number {
             }
         }
         catch (Exception e){
-            System.out.println("hi");
         }
         return out;
     }
@@ -123,7 +122,7 @@ public class Number {
      * @param s
      * @return the string without ","
      */
-    private static String RemoveComas(String s){
+    public static String RemoveComas(String s){
         StringBuilder sb=new StringBuilder(s);
         int index=sb.indexOf(",");
         while(index>-1){

@@ -1,16 +1,12 @@
+import ADT.HashSetIgnoreCase;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Vector;
-
 public class StopWords {
-
-
-    private static HashSet<String> stopwords;
+    private static HashSetIgnoreCase stopwords; //not include between and may.
 
     /**
      * build the list
      */
-    public static void setStopWords() {
+    static{
         String words="a's\n" +
                 "able\n" +
                 "about\n" +
@@ -82,7 +78,6 @@ public class StopWords {
                 "besides\n" +
                 "best\n" +
                 "better\n" +
-                "between\n" +
                 "beyond\n" +
                 "both\n" +
                 "brief\n" +
@@ -281,7 +276,6 @@ public class StopWords {
                 "m\n" +
                 "mainly\n" +
                 "many\n" +
-                "may\n" +
                 "maybe\n" +
                 "me\n" +
                 "mean\n" +
@@ -581,12 +575,11 @@ public class StopWords {
                 "yourselves\n" +
                 "z\n" +
                 "zero";
-
-        stopwords = new HashSet<String>(Arrays.asList(words.split("\n"))); //use vector beacause: https://stackoverflow.com/questions/11001330/java-split-string-performances
-
+        stopwords = new HashSetIgnoreCase(Arrays.asList(words.split("\n"))); //use vector beacause: https://stackoverflow.com/questions/11001330/java-split-string-performances
     }
 
-    public static HashSet<String> getStopwords() {
-        return stopwords;
+    public static boolean isStopWord(String s){
+        boolean ans = stopwords.contains(s);
+        return ans;
     }
 }
