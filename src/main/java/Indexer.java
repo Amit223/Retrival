@@ -56,7 +56,9 @@ public class Indexer {
             writeToPosting(lineNumDocs,terms.get(term));
             lineNumPosting+=1;
         }
-        toStatesDictionary(cityOfDoc,getCountry(cityOfDoc),getCurrency(cityOfDoc),getPopulation(cityOfDoc));
+        String details=getCityDetails(cityOfDoc);
+        String[] strings=details.split("-");
+        toStatesDictionary(cityOfDoc,strings[0],strings[1],strings[2]);
         toCityPosting(locations);
 
         lineNumDocs+=1;
@@ -213,68 +215,34 @@ public class Indexer {
     }
 
 
-    private String getPopulation(String cityOfDoc){
-        URL url;
-        try {
-            // get URL content
-            url = new URL("https://restcountries.eu/rest/v2/capital/"+cityOfDoc+"?fields=population");
-            URLConnection conn = url.openConnection();
+   private String getCityDetails(String city){
+       String s="http://getcitydetails.geobytes.com/GetCityDetails?fqcn=";
+       URL url;
+       try {
+           // get URL content
+           url = new URL(s+city);
+           URLConnection conn = url.openConnection();
 
-            // open the stream and put it into BufferedReader
-            BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream()));
-            String s=br.readLine();
-            s=s.substring(s.indexOf(":")+1,s.indexOf("}"));
-            s= Number.Parse(s);
-            if(s.contains(".")) {
-                char mod=s.charAt(s.length() - 1);
-                double num=Double.parseDouble(s.substring(0,s.length()-1));
-                num= Math.round(num * 100.0) / 100.0;
-                s=Double.toString(num)+mod;
-            }
-            return s;
-        } catch (Exception e) {
+           // open the stream and put it into BufferedReader
+           BufferedReader br = new BufferedReader(
+                   new InputStreamReader(conn.getInputStream()));
+           String string=br.readLine();
+           String currency=string.substring(string.indexOf("\"geobytescurrencycode\":")+24,string.indexOf("geobytestitle")-3);
+           String country=string.substring(string.indexOf("\"geobytescountry\":")+19,string.indexOf("geobytesregionlocation")-3);
+           String population=string.substring(string.indexOf("\"geobytespopulation\":")+22,string.indexOf("geobytesnationalityplural")-3);
+           population=Number.Parse(population);
+           if(population.contains(".")) {
+               char mod=population.charAt(population.length() - 1);
+               double num=Double.parseDouble(population.substring(0,population.length()-1));
+               num= Math.round(num * 100.0) / 100.0;
+               population=Double.toString(num)+mod;
+           }
+           return country+"-"+currency+"-"+population;
 
-        }
-        return "";
-    }
-    private String getCurrency(String cityOfDoc){
-        URL url;
-        try {
-            // get URL content
-            url = new URL("    https://restcountries.eu/rest/v2/capital/"+cityOfDoc+"?fields=currencies\n");
-            URLConnection conn = url.openConnection();
-
-            // open the stream and put it into BufferedReader
-            BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream()));
-            String s=br.readLine();
-            s=s.substring(s.indexOf("code")+7,s.indexOf("name")-3);
-            return s;
-        } catch (Exception e) {
-
-        }
-        return "";
-    }
-
-    private String getCountry(String cityOfDoc){
-        URL url;
-        try {
-            // get URL content
-            url = new URL("https://restcountries.eu/rest/v2/capital/" + cityOfDoc + "?fields=name");
-            URLConnection conn = url.openConnection();
-
-            // open the stream and put it into BufferedReader
-            BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream()));
-            String s=br.readLine();
-            s=s.substring(s.indexOf(":")+2,s.indexOf("}")-1);
-            return s;
-        } catch (Exception e) {
-
-        }
-        return "";
-    }
+       } catch (Exception e) {
+            return "";
+       }
+   }
     private void toStatesDictionary(String cityOfDoc,String country,String coin,String population) {
         if(!cityDictionary.containsKey(cityOfDoc)){
             Vector<String> v=new Vector<>();

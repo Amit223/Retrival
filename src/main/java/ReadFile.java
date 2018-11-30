@@ -4,44 +4,17 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import sun.awt.Mutex;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.nio.file.Files;
+import java.util.Scanner;
 
 public class ReadFile {
 
     private static Elements docs;
 
-    /**
-     * public void read(String folderPath){
-     try {
-     docs = new Elements();
-     File mainfolder = new File(folderPath);
-     File[] listOfFolders = mainfolder.listFiles();
-     for (File folder : listOfFolders) {
-     File[] files = folder.listFiles();
-     int c=0;
-     Thread [] threads= new Thread[files.length];
-     for (int i=0;i<files.length;i++) {
-     File file=files[i];
-     threads[i]=new Thread(new RunnableRead(file.getPath()));
-     c++;
-     while(c>100);
-     threads[i].start();
 
-     }
-     for (int i = 0; i <threads.length ; i++) {
-     threads[i].join();
-     c--;
-     }
-
-     }
-     }
-     catch (Exception e){
-     e.printStackTrace();
-     }
-     }
-     *
-     */
     public void read(String folderPath){
         try {
             docs = new Elements();
@@ -56,6 +29,29 @@ public class ReadFile {
         }
         catch (Exception e){
             e.printStackTrace();
+        }
+    }
+
+    /**
+     *
+     * @param path to the stop words folder!!
+     */
+    public String readStopWords(String path){
+        String stopwords="";
+        try {
+            File folder = new File(path);
+            File[] listOfFiles = folder.listFiles();
+            for(File file:listOfFiles){//should be only 1 but just in case
+                if (file.isFile()) {
+                    Scanner sc = new Scanner(file);
+                    while (sc.hasNextLine())
+                        stopwords=stopwords+sc.nextLine()+',';
+                }
+            }
+            return stopwords.substring(0,stopwords.length()-1);
+        }
+        catch (Exception e){
+            return stopwords;
         }
     }
     /**
