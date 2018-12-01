@@ -1,4 +1,3 @@
-=======
 import javafx.stage.Stage;
 import javafx.util.Pair;
 import org.jsoup.nodes.Element;
@@ -30,8 +29,8 @@ public class Model {
     }
 
     // todo
-    public void Start(boolean toStem,String path){
-        indexer=new Indexer(toStem);
+    public void Start(boolean toStem,String path,String toSave){
+        indexer=new Indexer(toStem,toSave);
 
     }
 }

@@ -31,21 +31,21 @@ public class Indexer {
     private Mutex postingMutex;
     private Mutex cityMutex;
 
-    public Indexer(boolean toStem) {
+    public Indexer(boolean toStem,String path) {
         try {
             if(toStem) {
-                posting = new File("Posting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
-                documents = new File("Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+                posting = new File(path+"/Posting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
+                documents = new File(path+"/Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
 
                 //citys
-                citysPosting = new File("CityPosting.txt");
+                citysPosting = new File(path+"/CityPosting.txt");
             }
             else{//not to stem
-                posting = new File("NotStemPosting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
-                documents = new File("NotStemDocuments.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+                posting = new File(path+"/NotStemPosting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
+                documents = new File(path+"/NotStemDocuments.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
 
                 //citys
-                citysPosting = new File("NotStemCityPosting.txt");
+                citysPosting = new File(path+"/NotStemCityPosting.txt");
             }
             posting.createNewFile();
             documents.createNewFile();

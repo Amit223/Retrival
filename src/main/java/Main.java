@@ -7,7 +7,6 @@ public class Main {
     public static void main(String[] args) {
 
 
-        System.out.println(Distances.Parse("15.5 thousand km"));
-        System.out.println(Number.Parse("15 trillion"));
+        Indexer indexer=new Indexer(false,"C:\\Users\\AMIT MOSHE\\Desktop\\אוניברסיטה\\סמסטר ה\\אחזור\\test");
     }
 }
