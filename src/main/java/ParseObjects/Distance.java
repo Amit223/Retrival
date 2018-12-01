@@ -1,6 +1,6 @@
 package ParseObjects;
 
-public class Distances {
+public class Distance {
 
     /**
      *
@@ -29,5 +29,14 @@ public class Distances {
         String dis=Number.Parse(num);
         dis=dis+" m";
         return dis;
+    }
+
+    public static boolean isDistance(String nextTerm) {
+        return (nextTerm.equalsIgnoreCase("m")
+                ||nextTerm.equalsIgnoreCase("meters")
+                ||nextTerm.equalsIgnoreCase("meter")
+                ||nextTerm.equalsIgnoreCase("km")
+                ||nextTerm.equalsIgnoreCase("kilometer")||
+                nextTerm.equalsIgnoreCase("kilometers"));
     }
 }

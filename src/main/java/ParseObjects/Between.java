@@ -10,7 +10,7 @@ public class Between {
      * @return vector of terms so term is x-x and x is word or num + x if word + x after parse if num
      */
     public static Vector<String> Parse(String between) {
-        //between=word-word; word-word-word; number-word; word-number; number-number; number number
+        //between=word-word; word-word-word; number-word; word-number; number-number; number number; number frac/mod-number frac/mod; number-number mod/frac;
         Vector<String> terms = new Vector<String>();
         try {
             if (!between.contains("-")) //between number and number
@@ -51,10 +51,7 @@ public class Between {
                     terms.add(serperte[0] + "-" + serperte[1] + "-" + serperte[2]);
                 }
             }
-
-
             return terms;
-
         }
         catch (Exception e){
             return new Vector<String>();//empty vector
