@@ -55,8 +55,8 @@ class ThreadedIndex extends Thread{
         HashMap<String, Integer> termList;
        for(Element element:elements){
            parser.Parse(element.text());
-           termList=parser.;//return termlist
-           indexer.Index(termList,parser.getLocations,...,...,parser.getWordCount());
+           //termList=parser.;//return termlist
+           //indexer.Index(termList,parser.getLocations,...,...,parser.getWordCount());
        }
     }
 }
