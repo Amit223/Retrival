@@ -32,6 +32,24 @@ public class Parser {
     private int _wordCounter =0; // count the word in the document.
     //todo todoss.....
     //todo laws. km
+    private HashMap<String, Integer> termList = new HashMap<String, Integer>(); //Map of terms-Pairs. The pair include the name of the doc the term include in and the number of times.
+    private Vector<String> ListOfTokens = new Vector<>();
+    private int index = 0; //the token that we work on from the list of token.
+    private PorterStemmer stemmer = new PorterStemmer(); //use for stemming
+    private boolean toStem; // true if want to stem the terms before insert to dictionary, false if not.
+    private String term = "";
+    private boolean isMinus = false;//is the term start with minus //todo
+    private String term2 = "";
+    private String term3 = "";
+    private String term4 = "";
+    private String term5 = "";
+    private String term6 = "";
+    //todo debug on sentcenes
+    //todo debug on text.
+    //todo todoss.....
+    //todo laws. km mr mrs bercovich
+    //mr mrs - add to stop word.
+    //todo : find all the token index of all the "city" and return in vector.
 
     /**helpful functions for the whole program**/
 
@@ -75,6 +93,8 @@ public class Parser {
 
     /** //todo change.
      * remove from the _token:
+=======
+     * remove from the term:
      * 1. '-' (at the start)
      * 2. '.' (at the end)/
      * 3. '?'
@@ -86,6 +106,8 @@ public class Parser {
         try {
             int startIndex = -1;// the index that the _token begin.
             int endIndex = termS.length(); //the index that the _token ends
+            int startIndex = -1;// the index that the term begin.
+            int endIndex = termS.length(); //the index that the term ends
             if (termS != null && !termS.equals("")) {
                 for (int i = 0; i < termS.length() && startIndex == -1; i++) {
                     if (Character.isDigit(termS.charAt(i))
@@ -105,6 +127,10 @@ public class Parser {
                 }
                 if (startIndex >= endIndex) return "";
                 if (startIndex - 1 >= 0 && termS.charAt(startIndex - 1) == '-') _isMinus = true;
+                    }
+                }
+                if (startIndex >= endIndex) return "";
+                if (startIndex - 1 >= 0 && termS.charAt(startIndex - 1) == '-') isMinus = true;
                 if ((startIndex != 0) || (endIndex != termS.length())) {
                     termS = termS.substring(startIndex, endIndex + 1);
                 }
@@ -145,6 +171,7 @@ public class Parser {
      */
     private void addToTermList(String finalTerm) {
         if(_isMinus)
+        if(isMinus)
             finalTerm="-"+finalTerm;
         if (finalTerm != null || !finalTerm.equalsIgnoreCase("")) {
             if (!finalTerm.equalsIgnoreCase("between")
@@ -296,6 +323,9 @@ public class Parser {
         if (isNumeric(_token)) {
             String theNumber = _token;
             _token2 = getToken_RemovePuncuation_Stem();
+        if (isNumeric(term)) {
+            String theNumber = term;
+            term2 = getToken_RemovePuncuation_Stem();
             boolean isPrecent = false;  //for the case of 55 billion%
             if (!_token2.equals("") && _token2.charAt(_token2.length() - 1) == '%') {  //for the case of 55 billion%
                 String term2tmp = _token2.substring(0, _token2.length() - 1); //todo save _token2.length as variable
@@ -319,6 +349,14 @@ public class Parser {
                 nextTerm = _token2;
                 _token3 = getToken_RemovePuncuation_Stem();
                 nextnextTerm = _token3;
+                term3 = getToken_RemovePuncuation_Stem();
+                nextTerm = term3;
+                term4 = getToken_RemovePuncuation_Stem();
+                nextnextTerm = term4;
+            } else { // term2 isn't mod or frac
+                nextTerm = term2;
+                term3 = getToken_RemovePuncuation_Stem();
+                nextnextTerm = term3;
             }
 
             //check what kind of parse needed
@@ -378,8 +416,7 @@ public class Parser {
             boolean isModOrFrac = yesNumeric_isModifierOrFraction(_token2);
             if (isModOrFrac) theNumber = theNumber + " " + _token2;
             else downIndex(_token2.length()); //we didn't recognise _token2
-            addToTermList(Price.Parse(theNumber));
-        }
+       
         //else do nothing - we dont need  things like: $2324rjjdffadf3
     }
 
@@ -455,6 +492,9 @@ public class Parser {
         _token2 = getToken_RemovePuncuation_Stem();
         if (isNumeric(_token2)) {
             addToTermList(Date.Parse(_token + " " + _token2));
+        term2 = getToken_RemovePuncuation_Stem();
+        if (isNumeric(term2)) {
+            addToTermList(Date.Parse(term + " " + term2));
         } else {
             downIndex(_token2.length());
             yesUndefinedTerm_parseCLAndAddToTermList(_token);
@@ -486,6 +526,7 @@ public class Parser {
             if (!StopWords.isStopWord(_token) && _token !=null && !_token.equals("")) {
                 FirstC = _token.charAt(0);
                 lastC = _token.charAt(_token.length() - 1);//todo save _token length as variable.
+
                 if (lastC == '%') {
                     _token = _token.substring(0, _token.length() - 1);
                     if (isNumeric(_token)) {
@@ -514,6 +555,14 @@ public class Parser {
             }//if is stopword\
         }
     }//ParseSentence function\
+
+    public void Parse(String Doc){
+        Vector <String> ListOfSentences = new Vector<String>(Arrays.asList(Doc.split("\n"))); //use vector beacause: https://stackoverflow.com/questions/11001330/java-split-string-performances
+        int size = ListOfSentences.size();
+        for (int i = 0; i < size ; i++) {
+            ParseSentence(ListOfSentences.get(i));
+        }
+    }
 
     /**
      *

@@ -23,5 +23,7 @@ public class Main {
         System.out.println(_stemmer.toString());
 
 
+        System.out.println(Price.Parse("15 thousand"));
+        System.out.println(Number.Parse("15 trillion"));
     }
 }
