@@ -15,11 +15,11 @@ public class ReadFile {
     private static Elements docs;
 
 
-    public void read(String folderPath){
+    public static void read(String folderPath){
         try {
             docs = new Elements();
             File folder = new File(folderPath);
-            File[] listOfFolders = folder.listFiles();
+            //File[] listOfFolders = folder.listFiles();
             File[] files = folder.listFiles();
             for (int i = 0; i < files.length; i++) {
                 File file = files[i];
@@ -46,13 +46,14 @@ public class ReadFile {
                     Scanner sc = new Scanner(file);
                     while (sc.hasNextLine())
                         stopwords=stopwords+sc.nextLine()+',';
+                    return stopwords.substring(0,stopwords.length()-1);//only one file
                 }
             }
-            return stopwords.substring(0,stopwords.length()-1);
         }
         catch (Exception e){
             return stopwords;
         }
+        return stopwords;
     }
     /**
      *

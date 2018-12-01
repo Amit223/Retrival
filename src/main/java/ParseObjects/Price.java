@@ -19,12 +19,24 @@ public class Price {
                     out = toNum(splitPrice[0]);
                     out = out + " " + next; //--> 30, 3/4-> 30 3/4; 30K ,3/4-> 30K 3/4
                 } else {//modifier
-                    out = addmodifier(splitPrice[0], splitPrice[1]);
-                    out = toNum(out);
+                    if (splitPrice[1].equalsIgnoreCase("Trillion")) {//cant conver to int
+                        out = addmodifier(splitPrice[0], "Million");
+                        out.substring(0, out.length() - 5);
+                        out = toNum(out);
+                        out = out.substring(0, out.length() - 1);
+                        out = out + "00000 M";
+                    } else if(splitPrice[1].equalsIgnoreCase("billion")||splitPrice[1].equalsIgnoreCase("bn")||splitPrice[1].equalsIgnoreCase("b")){
+                        out = addmodifier(splitPrice[0], "Million");
+                        out.substring(0, out.length() - 5);
+                        out = toNum(out);
+                        out = out.substring(0, out.length() - 1);
+                        out = out + "000 M";
+                    }
+                    else {
+                        out = addmodifier(splitPrice[0], splitPrice[1]);
+                        out = toNum(out);
+                    }
                 }
-            } else if (splitPrice.length == 3) //number fraction modifier--unknown
-            {
-
             }
             out = out + " Dollars";
             return out;
@@ -42,19 +54,13 @@ public class Price {
      */
     private static String addmodifier(String num, String modifier) {
         String out=num;
-        double number=Double.parseDouble(num);
-        if(modifier.equalsIgnoreCase("Thousand")){
-            number=number*1000;
-            out=Double.toString(number);
-        }
-        else if(modifier.equalsIgnoreCase("Million")||modifier.equalsIgnoreCase("m")){
-            number=number*1000000;
-            out=Double.toString(number);
-        }
-        else if(modifier.equalsIgnoreCase("Billion")|modifier.equalsIgnoreCase("bn")||modifier.equalsIgnoreCase("b")){
-            number=number*1000000000;
-            out=Double.toString(number);
-            out=out+"000000000";
+        double number = Double.parseDouble(num);
+        if (modifier.equalsIgnoreCase("Thousand")) {
+            number = number * 1000;
+            out = Double.toString(number);
+        } else if (modifier.equalsIgnoreCase("Million") || modifier.equalsIgnoreCase("m")) {
+            number = number * 1000000;
+            out = Double.toString(number);
         }
         return out;
 
@@ -95,7 +101,7 @@ public class Price {
             num=num/1000000;
             out=Double.toString(num);
             out=MabyeInteger(out);
-            out=out+ " M";
+            out=out+ "M";
         }
 
         return out;

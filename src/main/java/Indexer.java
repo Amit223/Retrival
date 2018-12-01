@@ -3,6 +3,7 @@ import javafx.util.Pair;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import sun.awt.Mutex;
 
 import java.io.*;
 import java.net.URL;
@@ -22,6 +23,12 @@ public class Indexer {
     private Map <String,Pair<Vector<String>,Integer>> cityDictionary;
     private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
     private int lineNumCitys;
+
+
+    //mutex
+    private Mutex docMutex;
+    private Mutex postingMutex;
+    private Mutex cityMutex;
 
     public Indexer(boolean toStem) {
         try {
@@ -50,6 +57,12 @@ public class Indexer {
             cityDictionary = new HashMap<>();
             citysPosting.createNewFile();
 
+
+            //mutexes
+            cityMutex=new Mutex();
+            docMutex=new Mutex();
+            postingMutex=new Mutex();
+
         }
         catch (IOException e){
 
@@ -60,22 +73,29 @@ public class Indexer {
                       int numOfWords){
         Enumeration<String> keys=terms.keys();
         int maxtf=getMaxTf(terms.elements());
+        docMutex.lock();
         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
+        lineNumDocs+=1;
+        docMutex.unlock();
         while (keys.hasMoreElements()) {
             String term = keys.nextElement();
+            postingMutex.lock();
             int lineOfFirstDoc = toDictionaryFile(term);
             if(lineOfFirstDoc!=lineNumPosting)
                 searchInPosting(lineOfFirstDoc);//updates the term's ladt doc that new line will be added in lineNumPosting
-            writeToPosting(lineNumDocs,terms.get(term));
+            writeToPosting(lineNumDocs-1,terms.get(term));
             lineNumPosting+=1;
+            postingMutex.unlock();
         }
         String details=getCityDetails(cityOfDoc);
         String[] strings=details.split("-");
-        toStatesDictionary(cityOfDoc,strings[0],strings[1],strings[2]);
-        toCityPosting(locations);
-
-        lineNumDocs+=1;
+        cityMutex.lock();
+            toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2],locations.size());
+        if(locations.size()>0) {
+            toCityPosting(locations);
+        }
         lineNumCitys+=1;
+        cityMutex.unlock();
     }
 
 
@@ -126,7 +146,7 @@ public class Indexer {
         int size=locations.size();
         int index=0;
         byte[] toWrite=new byte[28];
-        byte [] docline=toBytes(this.lineNumDocs);
+        byte [] docline=toBytes(this.lineNumDocs-1);
         byte []loc1;
         byte []loc2;
         byte []loc3;
@@ -259,18 +279,26 @@ public class Indexer {
             return "";
        }
    }
-    private void toStatesDictionary(String cityOfDoc,String country,String coin,String population) {
+    private void toStatesDictionary(String cityOfDoc,String country,String coin,String population,int size) {
         if(!cityDictionary.containsKey(cityOfDoc)){
             Vector<String> v=new Vector<>();
             v.add(country);
             v.add(coin);
             v.add(population);
-            Pair <Vector<String>,Integer>pair=new Pair<>(v,new Integer(this.lineNumCitys));
-            cityDictionary.put(cityOfDoc,pair);
+            if(size>0) {
+                Pair<Vector<String>, Integer> pair = new Pair<>(v, new Integer(this.lineNumCitys));
+                cityDictionary.put(cityOfDoc, pair);
+            }
+            else {
+                Pair<Vector<String>, Integer> pair = new Pair<>(v, -1);
+                cityDictionary.put(cityOfDoc, pair);
+            }
         }
         else{//exist need to update the posting file's pointer
-            int lineInPosting=(cityDictionary.get(cityOfDoc)).getValue();
-            updateStatesPosting(lineInPosting);
+            if(size>0) {
+                int lineInPosting = (cityDictionary.get(cityOfDoc)).getValue();
+                updateStatesPosting(lineInPosting);
+            }
         }
 
 

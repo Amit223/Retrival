@@ -1,5 +1,11 @@
 import javafx.stage.Stage;
+import javafx.util.Pair;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import sun.awt.Mutex;
+
+import java.util.HashMap;
+
 
 public class Model {
 
@@ -26,5 +32,30 @@ public class Model {
     public void Start(boolean toStem,String path){
         indexer=new Indexer(toStem);
 
+    }
+}
+
+class ThreadedIndex extends Thread{
+
+    private String path;
+    private boolean toStem;
+    private Indexer indexer;
+
+    public ThreadedIndex(String path, boolean toStem,Indexer indexer) {
+        this.path = path;
+        this.toStem = toStem;
+        this.indexer=indexer;
+    }
+
+    public void run(){
+        Parser parser=new Parser();
+       ReadFile.read(path);
+       Elements elements=ReadFile.getDocs();
+        HashMap<String, Integer> termList;
+       for(Element element:elements){
+           parser.Parse(element.text());
+           termList=parser.;//return termlist
+           indexer.Index(termList,parser.getLocations,...,...,parser.getWordCount());
+       }
     }
 }

@@ -7,8 +7,7 @@ public class Main {
     public static void main(String[] args) {
 
 
-        Parser parser = new Parser();
-        parser.ParseSentence("-15 3/4");
-        parser.printTermList();
+        System.out.println(Price.Parse("15 thousand"));
+        System.out.println(Number.Parse("15 trillion"));
     }
 }
