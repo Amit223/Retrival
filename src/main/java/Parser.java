@@ -21,10 +21,11 @@ public class Parser {
     private String term4 = "";
     private String term5 = "";
     private String term6 = "";
-    //todo debug on sentcens
+    //todo debug on sentcenes
     //todo debug on text.
     //todo todoss.....
-    //todo laws. km
+    //todo laws. km mr mrs bercovich
+    //mr mrs - add to stop word.
     //todo : find all the token index of all the "city" and return in vector.
 
     /**helpful functions for the whole program**/
@@ -35,7 +36,7 @@ public class Parser {
      *
      * @return theToken
      **/
-    private String getToken_Stem() {
+    private String getToken_RemovePuncuation_Stem() {
         try {
             String theToken = "";
             if (index < ListOfTokens.size()) {
@@ -57,7 +58,7 @@ public class Parser {
         index--;
     }
 
-    /**
+    /** //todo change.
      * remove from the term:
      * 1. '-' (at the start)
      * 2. '.' (at the end)/
@@ -67,29 +68,36 @@ public class Parser {
      * 6. ','
      */
     private String removeFromTheTermUndefindSigns(String termS) {
-        int startIndex = -1;// the index that the term begin.
-        int endIndex = termS.length(); //the index that the term ends
-        if (termS != null && !termS.equals("")) {
-            for (int i = 0; i < termS.length() && startIndex == -1; i++) {
-                if (Character.isDigit(termS.charAt(i))
-                        || Character.isLetter(termS.charAt(i))
-                        || termS.charAt(i) == '$') {
-                    startIndex = i;
+        try {
+            int startIndex = -1;// the index that the term begin.
+            int endIndex = termS.length(); //the index that the term ends
+            if (termS != null && !termS.equals("")) {
+                for (int i = 0; i < termS.length() && startIndex == -1; i++) {
+                    if (Character.isDigit(termS.charAt(i))
+                            || Character.isLetter(termS.charAt(i))
+                            || termS.charAt(i) == '$') {
+                        startIndex = i;
+                    }
                 }
-            }
-            for (int i = termS.length() - 1; 0 < i && endIndex == termS.length(); i--) {
-                if (Character.isDigit(termS.charAt(i))
-                        || Character.isLetter(termS.charAt(i))
-                        || termS.charAt(i) == '%') {
-                    endIndex = i;
+                for (int i = termS.length() - 1; 0 < i && endIndex == termS.length(); i--) {
+                    if (Character.isDigit(termS.charAt(i))
+                            || Character.isLetter(termS.charAt(i))
+                            || termS.charAt(i) == '%') {
+                        endIndex = i;
+                    }
                 }
-            }
-            if ((startIndex != 0) || (endIndex != term.length() - 1)) {
-                termS = termS.substring(startIndex, endIndex + 1);
+                if (startIndex >= endIndex) return "";
+                if (startIndex - 1 >= 0 && termS.charAt(startIndex - 1) == '-') isMinus = true;
+                if ((startIndex != 0) || (endIndex != termS.length())) {
+                    termS = termS.substring(startIndex, endIndex + 1);
+                }
                 return termS;
-            } else return termS;
+            }
+            return "";
         }
-        return "";
+        catch (Exception e) {
+            return "";
+        }
     }
 
     /**
@@ -119,6 +127,8 @@ public class Parser {
      * @param finalTerm - a final term to add to term list
      */
     private void addToTermList(String finalTerm) {
+        if(isMinus)
+            finalTerm="-"+finalTerm;
         if (finalTerm != null || !finalTerm.equalsIgnoreCase("")) {
             if (!finalTerm.equalsIgnoreCase("between")
                     || !finalTerm.equalsIgnoreCase("and")) {
@@ -256,7 +266,7 @@ public class Parser {
     private void yesDigit_isNumberPricePrecentTermOrNoOne() {
         if (isNumeric(term)) {
             String theNumber = term;
-            term2 = getToken_Stem();
+            term2 = getToken_RemovePuncuation_Stem();
             boolean isPrecent = false;  //for the case of 55 billion%
             if (!term2.equals("") && term2.charAt(term2.length() - 1) == '%') {  //for the case of 55 billion%
                 String term2tmp = term2.substring(0, term2.length() - 1); //todo save term2.length as term.
@@ -272,13 +282,13 @@ public class Parser {
             if (isModorFrac) {
                 theNumber = theNumber + " " + term2;
                 //for the checking later:
-                term3 = getToken_Stem();
+                term3 = getToken_RemovePuncuation_Stem();
                 nextTerm = term3;
-                term4 = getToken_Stem();
+                term4 = getToken_RemovePuncuation_Stem();
                 nextnextTerm = term4;
             } else { // term2 isn't mod or frac
                 nextTerm = term2;
-                term3 = getToken_Stem();
+                term3 = getToken_RemovePuncuation_Stem();
                 nextnextTerm = term3;
             }
 
@@ -352,7 +362,7 @@ public class Parser {
     private void yesDollarFC_isPrice_isWithModOrFrac() {
         if (isNumeric(term)) {
             String theNumber = term;
-            term2 = getToken_Stem();
+            term2 = getToken_RemovePuncuation_Stem();
             boolean isModOrFrac = yesNumeric_isModifierOrFraction(term2);
             if (isModOrFrac) theNumber = theNumber + " " + term2;
             else downIndex(); //we didn't recognise term2
@@ -371,11 +381,11 @@ public class Parser {
      * +"between 5 and 7 million" => 5-7M
      */
     private void yesBetween_isNumberAndNumber_hasModOrFrac() {
-        term2 = getToken_Stem();
-        term3 = getToken_Stem();
-        term4 = getToken_Stem();
-        term5 = getToken_Stem();
-        term6 = getToken_Stem();
+        term2 = getToken_RemovePuncuation_Stem();
+        term3 = getToken_RemovePuncuation_Stem();
+        term4 = getToken_RemovePuncuation_Stem();
+        term5 = getToken_RemovePuncuation_Stem();
+        term6 = getToken_RemovePuncuation_Stem();
         boolean isBetween = true;
         String number1 = "", number2 = "", between = "";
         if (isNumeric(term2)) {
@@ -430,7 +440,7 @@ public class Parser {
      * if yes, parse it and add it to the termList.
      */
     private void yesMonth_isDate() {
-        term2 = getToken_Stem();
+        term2 = getToken_RemovePuncuation_Stem();
         if (isNumeric(term2)) {
             addToTermList(Date.Parse(term + " " + term2));
         } else {
@@ -445,7 +455,8 @@ public class Parser {
      *
      * @param sentenceInDoc - separated by '/n'.
      */
-    public void ParseSentence(String sentenceInDoc) {
+    private void ParseSentence(String sentenceInDoc) {
+        index=0;
         ListOfTokens = new Vector<String>(Arrays.asList(sentenceInDoc.split(" "))); //use vector beacause: https://stackoverflow.com/questions/11001330/java-split-string-performances
         char FirstC;
         char lastC;
@@ -458,17 +469,10 @@ public class Parser {
             term4 = "";
             term5 = "";
             term6 = "";
-            term = getToken_Stem();
-            if (!StopWords.isStopWord(term)) {
+            term = getToken_RemovePuncuation_Stem();
+            if (!StopWords.isStopWord(term) && term!=null && !term.equals("")) {
                 FirstC = term.charAt(0);
                 lastC = term.charAt(term.length() - 1);//todo save term length as variable.
-                { // just find if there is minus or not.
-                    if (FirstC == '-') {
-                        isMinus = true;
-                        term = term.substring(1);
-                    } else isMinus = false;
-
-                }
                 if (lastC == '%') {
                     term = term.substring(0, term.length() - 1);
                     if (isNumeric(term)) {
@@ -496,6 +500,14 @@ public class Parser {
             }//if is stopword\
         }
     }//ParseSentence function\
+
+    public void Parse(String Doc){
+        Vector <String> ListOfSentences = new Vector<String>(Arrays.asList(Doc.split("\n"))); //use vector beacause: https://stackoverflow.com/questions/11001330/java-split-string-performances
+        int size = ListOfSentences.size();
+        for (int i = 0; i < size ; i++) {
+            ParseSentence(ListOfSentences.get(i));
+        }
+    }
 
     /**
      * for tests todo delete
