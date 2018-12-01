@@ -7,7 +7,7 @@ public class Main {
     public static void main(String[] args) {
 
 
-        System.out.println(Price.Parse("15 thousand"));
+        System.out.println(Distances.Parse("15.5 thousand km"));
         System.out.println(Number.Parse("15 trillion"));
     }
 }
