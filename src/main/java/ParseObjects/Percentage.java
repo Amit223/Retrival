@@ -11,4 +11,15 @@ public class Percentage {
         String newOut=out+"%";
         return newOut;
     }
+
+    /**
+     * @param nextTerm - check if its percent or precentage.
+     * @return
+     */
+    public static boolean isPercent(String nextTerm) {
+        if (nextTerm.equalsIgnoreCase("Percent")
+                || nextTerm.equalsIgnoreCase("Percentage"))
+            return true;
+        return false;
+    }
 }

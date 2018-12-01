@@ -5,7 +5,6 @@ import java.util.Vector;
 public class Number {
 
     /**
-     *
      * @param number-string represent full number- 1,000/ 1 Million  / 10.35 / 1 Thousends  / 1 Billion / 10 3/4  /10 3/4 Thousands
      * @return the number parsed by rules
      */
@@ -33,7 +32,7 @@ public class Number {
                         out = toNum(out);
                         out = out.substring(0, out.length() - 1);
                         out = out + "00B";
-                    } else if(splitNum[1].equalsIgnoreCase("billion")||splitNum[1].equalsIgnoreCase("bn")||splitNum[1].equalsIgnoreCase("b")){
+                    } else if(splitNum[1].equalsIgnoreCase("Billion")||splitNum[1].equalsIgnoreCase("bn")||splitNum[1].equalsIgnoreCase("b")){
                         out = addmodifier(splitNum[0], "Million");
                         out.substring(0, out.length() - 5);
                         out = toNum(out);
