@@ -464,7 +464,7 @@ public class Indexer {
             //the last line.need to change the pointer!
             raf.seek(prevptr*12);
             byte[] line = new byte[12];
-            long lineToAdd=raf.length()/12;
+            long lineToAdd=raf.length()/12;//todo check
             raf.read(line);
             raf.close();
             mutexesPosting[index].unlock();
