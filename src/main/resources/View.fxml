@@ -14,7 +14,7 @@
       <Button fx:id="folderChooser" layoutX="14.0" layoutY="85.0" mnemonicParsing="false" onAction="#getFileChooser" text="Choose Folder" />
       <TextField fx:id="path" editable="false" layoutX="133.0" layoutY="85.0" prefHeight="25.0" prefWidth="298.0" promptText="folder of the stop words and corpus.." />
       <Button fx:id="start" layoutX="14.0" layoutY="236.0" mnemonicParsing="false" onAction="#startProcess" text="Start!" />
-      <Button layoutX="85.0" layoutY="235.0" mnemonicParsing="false" onAction="#reset" text="Reset" />
+      <Button fx:id="reset" layoutX="85.0" layoutY="235.0" mnemonicParsing="false" onAction="#reset" text="Reset" />
       <Label layoutX="52.0" layoutY="22.0" prefHeight="36.0" prefWidth="390.0" text="Welcome to our Information Retrival project!">
          <font>
             <Font name="System Bold Italic" size="18.0" />

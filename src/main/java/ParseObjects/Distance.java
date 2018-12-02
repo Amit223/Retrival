@@ -15,7 +15,7 @@ public class Distance {
                 modifier.equalsIgnoreCase("kilometers"))
         {
             if(splitNum[0].contains(".")){
-                double d=Double.parseDouble(splitNum[0]);
+                double d=Double.parseDouble(Number.RemoveComas(splitNum[0]));
                 d=d*1000;
                 splitNum[0]=String.valueOf(d);
                // int index=splitNum[0].indexOf(".");

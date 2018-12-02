@@ -9,12 +9,10 @@ public class GUI extends Application {
     }
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Controller controller=new Controller();
-        Model model=new Model(controller,primaryStage);
-        controller.setModel(model);
         FXMLLoader fxmlLoader=new FXMLLoader();
-        //System.out.println(GUI.class.getResource("/View.fxml"));
         Parent root = fxmlLoader.load(getClass().getResource("/View.fxml").openStream());
+        Controller controller =fxmlLoader.getController();
+        controller.setModel(primaryStage);
         Scene scene = new Scene(root, 500, 350);
         primaryStage.setTitle("Retrival Project");
         primaryStage.setScene(scene);
