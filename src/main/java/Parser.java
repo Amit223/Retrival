@@ -10,7 +10,7 @@ import java.util.Vector;
 /*this class is for parsing sentence in the text.*/
 public class Parser {
 
-    //todo - remove from stop words may and between, and add a, mrs. mr. dr.
+    //todo - remove from stop words may and between, and add a, mrs. mr. dr. &amp  m,bn
     //private variables for the parser work:
     private Vector<String> _ListOfTokens = new Vector<>();
     private int _index = 0; //the token that we work on from the list of token.
@@ -31,7 +31,9 @@ public class Parser {
     private Vector<Integer> _cityLocations = new Vector<>(); //vector of the city's locations in the doc.
     private int _wordCounter = 0; // count the word in the document.
     //todo todoss.....
-    //todo laws. km
+    //todo law2.
+    //todo add pounds to distances
+
 
     /**helpful functions for the whole program**/
 
@@ -85,6 +87,11 @@ public class Parser {
         }
     }
 
+    /**
+     * index--;
+     * _tokenCounter++ if it isn't "".
+     * @param tokenLength
+     */
     private void downIndex(int tokenLength) {
         _index--;
         if (tokenLength != 0) _tokenCounter--;
@@ -175,6 +182,7 @@ public class Parser {
         }
     }
 
+
     /** helpful functions for yesDigit_isNumberPricePrecentTermOrNoOne */
 
     /**
@@ -202,26 +210,6 @@ public class Parser {
             } else {
                 return false;
             }
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * _index-- if nextnextterm isn't relavante.
-     *
-     * @param nextTerm
-     * @param nextnextTerm
-     * @return true if next _token is dollars ||
-     * the nextterm= u.s. and nextnextterm= dollars.
-     */
-    private boolean isPrice(String nextTerm, String nextnextTerm) {
-        if (nextTerm.equalsIgnoreCase("dollars")) {
-            downIndex(nextnextTerm.length());
-            return true;
-        } else if (nextTerm.equalsIgnoreCase("u.s")  //use the gusses we cut the puncuation in the end.
-                && nextnextTerm.equalsIgnoreCase("dollars")) {
-            return true;
         } else {
             return false;
         }
@@ -262,6 +250,7 @@ public class Parser {
         }
     }
 
+
     /**helpful functions for ParseSentence*/
 
     /**
@@ -283,7 +272,7 @@ public class Parser {
     }
 
     /**
-     * todo docum
+     * if end with bn or m so cut it and return the
      * todo change order. help for yesdigit......
      *
      * @param termS
@@ -338,9 +327,12 @@ public class Parser {
                 nextnextTerm = _token3;
             }
 
-            //check what kind of parse needed
+            //check what kind of parse needed, down the index if needed, parse and add to termlist.
 
-            if (isPrice(nextTerm, nextnextTerm)) {
+            if (Price.isPrice(nextTerm, nextnextTerm)) {
+                if(!(nextTerm.equalsIgnoreCase("u.s")
+                        && nextnextTerm.equalsIgnoreCase("dollars")))
+                    downIndex(nextnextTerm.length());
                 addToTermList(Price.Parse(theNumber));
             } else if (isBetweenModOrFracAndNumber(nextTerm)) {
                 if (yesNumeric_isModifierOrFraction(nextnextTerm)) {
@@ -349,8 +341,10 @@ public class Parser {
                     downIndex(nextnextTerm.length());
                     addToTermList(Between.Parse(_token + " " + nextTerm));
                 }
-            } else if (isPrecent || Percentage.isPercent(nextTerm)) {
-                downIndex(nextnextTerm.length()); //didn't recognize the next next _token.
+            } else if (isPrecent || Percentage.isPercent(nextTerm,nextnextTerm)) {
+                if (!(nextTerm.equalsIgnoreCase("per")
+                        && nextnextTerm.equalsIgnoreCase("cent")))
+                    downIndex(nextnextTerm.length()); //didn't recognize the next next _token.
                 addToTermList(Percentage.Parse(theNumber));
             } else if (Date.isMonth(nextTerm)) {
                 downIndex(nextnextTerm.length()); //didn't Recognize nextTerm
@@ -478,6 +472,7 @@ public class Parser {
         }
     }
 
+
     /**the parse functions:**/
 
     /**
@@ -548,6 +543,7 @@ public class Parser {
             }
         }
     }
+
 
     /**getters for the indexer**/
 

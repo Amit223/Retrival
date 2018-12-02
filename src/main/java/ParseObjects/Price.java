@@ -100,5 +100,22 @@ public class Price {
 
         return out;
     }
+    /**
+     *
+     * @param nextTerm
+     * @param nextnextTerm
+     * @return true if next _token is dollars ||
+     * the nextterm= u.s and nextnextterm= dollars.
+     */
+    public static boolean isPrice(String nextTerm, String nextnextTerm) {
+        if (nextTerm.equalsIgnoreCase("dollars")) {
+            return true;
+        } else if (nextTerm.equalsIgnoreCase("u.s")  //use the gusses we cut the puncuation in the end.
+                && nextnextTerm.equalsIgnoreCase("dollars")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 
 }

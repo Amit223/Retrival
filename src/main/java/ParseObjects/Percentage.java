@@ -13,13 +13,21 @@ public class Percentage {
     }
 
     /**
-     * @param nextTerm - check if its percent or precentage.
-     * @return
+     * @param nextTerm
+     * @param nextnextTerm
+     * @return true if next _token is percent || percentage
+     * the nextterm= per and nextnextterm= cent.
      */
-    public static boolean isPercent(String nextTerm) {
+    public static boolean isPercent(String nextTerm, String nextnextTerm) {
         if (nextTerm.equalsIgnoreCase("Percent")
-                || nextTerm.equalsIgnoreCase("Percentage"))
+                || nextTerm.equalsIgnoreCase("Percentage")) {
             return true;
-        return false;
+        } else if (nextTerm.equalsIgnoreCase("per")  //use the gusses we cut the puncuation in the end.
+                && nextnextTerm.equalsIgnoreCase("cent")) {
+            return true;
+        } else {
+            return false;
+        }
     }
+
 }

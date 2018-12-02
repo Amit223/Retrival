@@ -1,6 +1,9 @@
 package ParseObjects;
 import ADT.HashMapIgnoreCase;
 
+import javax.print.DocFlavor;
+import java.util.Vector;
+
 public class Date {
     private static final HashMapIgnoreCase months;
 
@@ -35,11 +38,12 @@ public class Date {
      * @param s- 05 May/ May 05 / May 2000 / 2000 May /
      * @return
      */
-    public static String Parse(String s) {
+    public static Vector<String> Parse(String s) {
         String[] date = s.split(" ");
         String month;
         String num;
         String s1 = "";
+        Vector<String>ans= new Vector<>();
         try {
             if (Character.isDigit(date[0].charAt(0))) {//num- month
                 num = date[0];
@@ -50,12 +54,15 @@ public class Date {
             }
             if (isYear(num)) {
                 s1 = num + "-" + getMonthNumber(month);
+                ans.add(Number.Parse(num));
             } else {
                 s1 = getMonthNumber(month) + "-" + num;
             }
-            return s1;
+            ans.add(s1);
+
+            return ans;
         } catch (Exception e) {
-            return "";
+            return ans;
         }
     }
 

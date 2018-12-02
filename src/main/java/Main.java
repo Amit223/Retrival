@@ -13,7 +13,7 @@ public class Main {
         //System.out.println(Distance.Parse("10 3/4 km"));
         Parser parser = new Parser();
         long startTime = System.nanoTime();
-        parser.Parse("study", true, "paris");
+        parser.Parse("MAY 1998", true, "paris");
         long endTime = System.nanoTime();
         System.out.println("Took "+(endTime - startTime) + " ns");
         parser.printTermList();
