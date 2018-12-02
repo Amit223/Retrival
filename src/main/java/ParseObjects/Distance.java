@@ -1,6 +1,7 @@
 package ParseObjects;
 
 public class Distance {
+    //todo maybe need to add pounds ?
 
     /**
      *
