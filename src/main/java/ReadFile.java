@@ -36,7 +36,7 @@ public class ReadFile {
      *
      * @param path to the stop words folder!!
      */
-    public String readStopWords(String path){
+    public static String readStopWords(String path){
         String stopwords="";
         try {
             File folder = new File(path);

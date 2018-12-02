@@ -11,6 +11,18 @@ public class StopWords {
     public static void setStopwords(String theWords){
         String [] words=theWords.split(",");
         stopwords = new HashSetIgnoreCase(Arrays.asList(words)); //use vector beacause: https://stackoverflow.com/questions/11001330/java-split-string-performances
+        if(stopwords.contains("May")){
+            stopwords.remove("May");
+        }
+        if(stopwords.contains("Between")){
+            stopwords.remove("Between");
+        }
+        stopwords.add("amp");
+        stopwords.add("dr");
+        stopwords.add("m");
+        stopwords.add("a");
+        stopwords.add("mr");
+        stopwords.add("mrs");
     }
 
     public static boolean isStopWord(String s){

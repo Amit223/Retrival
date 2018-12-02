@@ -19,6 +19,8 @@ public class Indexer {
     private int lineNumPosting;
     private File documents;//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
     private int lineNumDocs;
+    private List<byte[]>toWrite;
+    private static int numOfFiles;
 
     //citys
     private Map <String,Pair<Vector<String>,Integer>> cityDictionary;
@@ -47,12 +49,14 @@ public class Indexer {
                 //citys
                 citysPosting = new File(path+"/NotStemCityPosting.txt");
             }
+            toWrite=new ArrayList<>();
             posting.createNewFile();
             documents.createNewFile();
             dictionary = new HashMap<>();
             lineNumPosting = 0;
             lineNumDocs = 0;
             lineNumCitys = 0;
+            numOfFiles=0;
 
             //citys
             cityDictionary = new HashMap<>();
@@ -70,16 +74,17 @@ public class Indexer {
         }
     }
 
-    public void Index(Dictionary<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
+    public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
                       int numOfWords){
-        Enumeration<String> keys=terms.keys();
-        int maxtf=getMaxTf(terms.elements());
+        Set<String> keys=terms.keySet();
+        int maxtf=getMaxTf(terms.values());
         docMutex.lock();
         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
         lineNumDocs+=1;
         docMutex.unlock();
-        while (keys.hasMoreElements()) {
-            String term = keys.nextElement();
+        Iterator<String>iterator=keys.iterator();
+        while (iterator.hasNext()) {
+            String term = iterator.next();
             postingMutex.lock();
             int lineOfFirstDoc = toDictionaryFile(term);
             if(lineOfFirstDoc!=lineNumPosting)
@@ -96,6 +101,7 @@ public class Indexer {
             toCityPosting(locations);
         }
         lineNumCitys+=1;
+        lineNumDocs+=1;
         cityMutex.unlock();
     }
 
@@ -130,6 +136,10 @@ public class Indexer {
         }
     }
 
+
+    public int getNumOfFiles(){
+        return numOfFiles;
+    }
     /**
      *
      * @param lineInPosting
@@ -491,46 +501,7 @@ public class Indexer {
             dictionary.put(term,new Pair<Integer, Integer>(1,lineNumPosting));
             return lineNumPosting;
         }
-        /**
 
-            int []lineInDic= getLineInDic(term);
-            try {
-                if (lineInDic[0] == 1) {//is in dictionary
-                    RandomAccessFile randomAccessFile = new RandomAccessFile(dictionary, "rw");
-                    randomAccessFile.seek(lineInDic[1] * 40);
-                    byte[] termInBytes = new byte[32];
-                    randomAccessFile.seek(lineInDic[1] * 40 + 32);
-                    byte[] idfInBytes = new byte[4];
-                    randomAccessFile.read(idfInBytes);
-                    randomAccessFile.seek(lineInDic[1] * 40 + 32 + 4);
-                    byte[] pointerInBytes = new byte[4];
-                    randomAccessFile.read(pointerInBytes);
-                    //byte[]->string
-                    String termFromDic = new String(termInBytes, StandardCharsets.UTF_8);
-                    //get the int value of ptr,idf
-                    int idf_int = byteToInt(idfInBytes);
-                    int ptr_int = byteToInt(pointerInBytes);
-                    idf_int += 1;//another doc
-
-                    String newTerm = getRealTerm(term, termFromDic);
-                    randomAccessFile.close();
-                    AddToDic(newTerm, idf_int, ptr_int, lineInDic[1], 1);
-                    this.lineNumDic = this.lineNumDic += 1;
-                    return ptr_int;
-
-                } else//new term!
-                {
-                    int idf_int = 1;
-                    int ptr_int = this.lineNumPosting;
-                    AddToDic(term, idf_int, ptr_int, lineInDic[1], 0);
-                    this.lineNumDic += 1;
-                    return ptr_int;
-                }
-            }
-            catch (Exception e){
-                System.out.println("problem in indexer->toDictionaryFile");
-            }
-         **/
 
     }
 
@@ -569,10 +540,11 @@ public class Indexer {
     }
 
 
-    private int getMaxTf(Enumeration<Integer> elements) {
-        int max=elements.nextElement();
-        while(elements.hasMoreElements()){
-            int num=elements.nextElement();
+    private int getMaxTf(Collection<Integer> elements) {
+        Iterator<Integer> iterator=elements.iterator();
+        int max=iterator.next();
+        while(iterator.hasNext()){
+            int num=iterator.next();
             if(num>max)
                 max=num;
         }
@@ -598,5 +570,22 @@ public class Indexer {
 
     }
 
+    /**
+     * flushes all list to posting file every 50 files
+     */
+    private void flush(){
+        try {
+            RandomAccessFile raf = new RandomAccessFile(posting, "rw");
+            for (int i = 0; i < toWrite.size(); i++) {
+                raf.seek(raf.length());
+                raf.write(toWrite.get(i));
+            }
+            raf.close();
+            toWrite.clear();
+        }
+        catch (Exception e){
+
+        }
+    }
 
 }
