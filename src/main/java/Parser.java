@@ -141,28 +141,28 @@ public class Parser {
         }
     }
 
-    /**
-     * @param termS - _token in string.
-     * @return true - if the string is numeric. else false
-     */
-    private boolean isNumeric(String termS) {
+/**
+ * @param termS - _token in string.
+ * @return true - if the string is numeric. else false
+ */
+private boolean isNumeric(String termS) {
         try {
-            termS = Number.RemoveComas(termS);
-            Double.parseDouble(termS);
-            return true;
+        termS = Number.RemoveComas(termS);
+        Double.parseDouble(termS);
+        return true;
         } catch (Exception e) {
-            return false;
+        return false;
         }
-    }
+        }
 
-    /**
-     * @param finalTerms - the final Terms to add the final _token list.
-     */
-    private void addToTermList(Vector<String> finalTerms) {
+/**
+ * @param finalTerms - the final Terms to add the final _token list.
+ */
+private void addToTermList(Vector<String> finalTerms) {
         for (int i = 0; i < finalTerms.size(); i++) {
-            addToTermList(finalTerms.get(i));
+        addToTermList(finalTerms.get(i));
         }
-    }
+        }
 
     /**
      * @param finalTerm - a final _token to add to _token list
@@ -171,49 +171,49 @@ public class Parser {
         if (_isMinus)
             finalTerm = "-" + finalTerm;
         if (finalTerm != null || !finalTerm.equalsIgnoreCase("")) {
-            if (!finalTerm.equalsIgnoreCase("between")
-                    || !finalTerm.equalsIgnoreCase("and")) {
-                if (_termList.containsKey(finalTerm)) {
-                    _termList.put(finalTerm, _termList.get(finalTerm) + 1);
-                } else {
-                    _termList.put(finalTerm, 1);
-                }
-            }
-        }
-    }
-
-
-    /** helpful functions for yesDigit_isNumberPricePrecentTermOrNoOne */
-
-    /**
-     * @param termS
-     * @return true if its modifier or fraction. false if either.
-     */
-    private boolean yesNumeric_isModifierOrFraction(String termS) {
-        if (!termS.equals("")) {
-            String[] parts = termS.split("/");
-            if (parts.length == 2) {
-                try {
-                    isNumeric(parts[0]);
-                    isNumeric(parts[1]);
-                    return true;
-                } catch (Exception e) {
-                    return false;
-                }
-            } else if (termS.equalsIgnoreCase("Million")
-                    || termS.equalsIgnoreCase("Billion")
-                    || termS.equalsIgnoreCase("Trillion")
-                    || termS.equalsIgnoreCase("Thousand")
-                    || termS.equalsIgnoreCase("m")
-                    || termS.equalsIgnoreCase("bn")) {
-                return true;
-            } else {
-                return false;
-            }
+        if (!finalTerm.equalsIgnoreCase("between")
+        || !finalTerm.equalsIgnoreCase("and")) {
+        if (_termList.containsKey(finalTerm)) {
+        _termList.put(finalTerm, _termList.get(finalTerm) + 1);
         } else {
-            return false;
+        _termList.put(finalTerm, 1);
         }
-    }
+        }
+        }
+        }
+
+
+/** helpful functions for yesDigit_isNumberPricePrecentTermOrNoOne */
+
+/**
+ * @param termS
+ * @return true if its modifier or fraction. false if either.
+ */
+private boolean yesNumeric_isModifierOrFraction(String termS) {
+        if (!termS.equals("")) {
+        String[] parts = termS.split("/");
+        if (parts.length == 2) {
+        try {
+        isNumeric(parts[0]);
+        isNumeric(parts[1]);
+        return true;
+        } catch (Exception e) {
+        return false;
+        }
+        } else if (termS.equalsIgnoreCase("Million")
+        || termS.equalsIgnoreCase("Billion")
+        || termS.equalsIgnoreCase("Trillion")
+        || termS.equalsIgnoreCase("Thousand")
+        || termS.equalsIgnoreCase("m")
+        || termS.equalsIgnoreCase("bn")) {
+        return true;
+        } else {
+        return false;
+        }
+        } else {
+        return false;
+        }
+        }
 
     /**
      * @param termS- _token to add
@@ -248,28 +248,28 @@ public class Parser {
                 }
             }
         }
-    }
-
+    
 
     /**helpful functions for ParseSentence*/
 
-    /**
-     * todo documention and change order
-     */
-    private boolean isBetween(String termS) {
+
+/**
+ * todo documention and change order
+ */
+private boolean isBetween(String termS) {
         String[] termComponnents = (termS).split("-"); //array
         return termComponnents.length == 2;
-    }
+        }
 
-    /**
-     * todo documention and change order
-     */
-    private boolean isBetweenModOrFracAndNumber(String termS) {
+/**
+ * todo documention and change order
+ */
+private boolean isBetweenModOrFracAndNumber(String termS) {
         String[] termComponnents = (termS).split("-"); //array
         return (termComponnents.length == 2
-                && yesNumeric_isModifierOrFraction(termComponnents[0])
-                && isNumeric(termComponnents[1]));
-    }
+        && yesNumeric_isModifierOrFraction(termComponnents[0])
+        && isNumeric(termComponnents[1]));
+        }
 
     /**
      * if end with bn or m so cut it and return the
@@ -279,26 +279,27 @@ public class Parser {
      * @return
      */
     private String endWithBnM(String termS) {
-        if (termS.length() > 2) {
-            if (termS.charAt(termS.length() - 1) == 'm') { //todo variavle to .length
-                termS = termS.substring(0, termS.length() - 1) + " m";
-                return termS;
-            } else if ((termS.charAt(termS.length() - 2) == 'b')
-                    && (termS.charAt(termS.length() - 1) == 'n')) {
-                termS = termS.substring(0, termS.length() - 2) + " bn";
-                return termS;
-            } else return "";
-        } else return "";
-    }
 
-    /**
-     * we find _token's first char is digit, so it can be:
-     * 1. Number
-     * 2. Price
-     * 3. Percent
-     * 4. Term or no one.
-     */
-    private void yesDigit_isNumberPricePrecentTermOrNoOne() {
+        if (termS.length() > 2) {
+        if (termS.charAt(termS.length() - 1) == 'm') { //todo variavle to .length
+        termS = termS.substring(0, termS.length() - 1) + " m";
+        return termS;
+        } else if ((termS.charAt(termS.length() - 2) == 'b')
+        && (termS.charAt(termS.length() - 1) == 'n')) {
+        termS = termS.substring(0, termS.length() - 2) + " bn";
+        return termS;
+        } else return "";
+        } else return "";
+        }
+
+/**
+ * we find _token's first char is digit, so it can be:
+ * 1. Number
+ * 2. Price
+ * 3. Percent
+ * 4. Term or no one.
+ */
+private void yesDigit_isNumberPricePrecentTermOrNoOne() {
         if (isNumeric(_token)) {
             String theNumber = _token;
             _token2 = getToken_RemovePunctuation();
@@ -359,16 +360,36 @@ public class Parser {
             }
         }//if\
         else { //isn't numeric. kind of _token.
-            String termTmp = endWithBnM(_token);
-            if (!termTmp.equals("")) {
-                addToTermList(Price.Parse(termTmp)); //todo - problem: go over twice on u.s. dollars after.
-            } else if (isBetween(_token)) {
-                addToTermList(Between.Parse(_token));
-            } else { //undefined _token
-                yesUndefinedTerm_parseCLAndAddToTermList(_token);
-            }
+        String termTmp = endWithBnM(_token);
+        if (!termTmp.equals("")) {
+        addToTermList(Price.Parse(termTmp)); //todo - problem: go over twice on u.s. dollars after.
+        } else if (isBetween(_token)) {
+        addToTermList(Between.Parse(_token));
+        } else { //undefined _token
+        yesUndefinedTerm_parseCLAndAddToTermList(_token);
+        }
         }//else\
-    }//yesDigit_isNumberPricePrecentTermOrNoOne\
+        }//yesDigit_isNumberPricePrecentTermOrNoOne\
+
+/**
+ * Dollar F C - we know for sure the first char was dollar,
+ * so we try figure out:
+ * if its price (the _token without the $ is numeric)
+ * if there is modifier or Frac.
+ * <p>
+ * if the _token without the $ is numeric and it has modifier or fraction-
+ * we will add: _token + " " + _token2
+ * if no modifier or fraction
+ * we will add: _token
+ * if no numeric without $ we wouldn't do anything.
+ */
+private void yesDollarFC_isPrice_isWithModOrFrac() {
+    if (isNumeric(_token)) {
+        String theNumber = _token;
+        _token2 = getToken_RemovePuncuation_Stem();
+        boolean isModOrFrac = yesNumeric_isModifierOrFraction(_token2);
+        if (isModOrFrac) theNumber = theNumber + " " + _token2;
+        else downIndex(_token2.length()); //we didn't recognise _token2
 
     /**
      * Dollar F C - we know for sure the first char was dollar,
@@ -412,48 +433,48 @@ public class Parser {
         boolean isBetween = true;
         String number1 = "", number2 = "", between = "";
         if (isNumeric(_token2)) {
-            if (_token3.equalsIgnoreCase("And")) {
-                number1 = _token2;
-                //between _token2 and _token4...
-                if (isNumeric(_token4)) {
-                    if (yesNumeric_isModifierOrFraction(_token5)) {
-                        number2 = _token4 + " " + _token5;
-                    } else {
-                        number2 = _token4;
-                        downIndex(_token5.length()); //we don't need _token5
-                    }
-                    addToTermList(Between.Parse(number1 + "-" + number2));
-                    downIndex(_token6.length()); //we don't need _token6.
-                }//else - not between because it's not two numbers.
-                else isBetween = false;
-            } // _token3 isn't "And"
-            else if (_token4.equalsIgnoreCase("And")
-                    && yesNumeric_isModifierOrFraction(_token3)) {
-                number1 = _token2 + " " + _token3;
-                //between _token2 _token3 and _token5...
-                if (isNumeric(_token5)) {
-                    if (yesNumeric_isModifierOrFraction(_token6)) {
-                        number2 = _token5 + " " + _token6;
-                    } else {
-                        number2 = _token5;
-                        downIndex(_token5.length()); //we don't need _token5
-                    }
-                    addToTermList(Between.Parse(number1 + "-" + number2));
-                } //_token5  isn't numeric.
-                else isBetween = false;
-            } // _token4 isn't "And"
-            else isBetween = false;
+        if (_token3.equalsIgnoreCase("And")) {
+        number1 = _token2;
+        //between _token2 and _token4...
+        if (isNumeric(_token4)) {
+        if (yesNumeric_isModifierOrFraction(_token5)) {
+        number2 = _token4 + " " + _token5;
+        } else {
+        number2 = _token4;
+        downIndex(_token5.length()); //we don't need _token5
+        }
+        addToTermList(Between.Parse(number1 + "-" + number2));
+        downIndex(_token6.length()); //we don't need _token6.
+        }//else - not between because it's not two numbers.
+        else isBetween = false;
+        } // _token3 isn't "And"
+        else if (_token4.equalsIgnoreCase("And")
+        && yesNumeric_isModifierOrFraction(_token3)) {
+        number1 = _token2 + " " + _token3;
+        //between _token2 _token3 and _token5...
+        if (isNumeric(_token5)) {
+        if (yesNumeric_isModifierOrFraction(_token6)) {
+        number2 = _token5 + " " + _token6;
+        } else {
+        number2 = _token5;
+        downIndex(_token5.length()); //we don't need _token5
+        }
+        addToTermList(Between.Parse(number1 + "-" + number2));
+        } //_token5  isn't numeric.
+        else isBetween = false;
+        } // _token4 isn't "And"
+        else isBetween = false;
         }//_token2 isn't numeric.
         else isBetween = false;
         if (!isBetween) {// it's between but not with 2 numbers.
-            //we don't need to save it as one _token of between.
-            //so we just need to reverse the _index back.
-            downIndex(_token6.length()); //->_token6
-            downIndex(_token5.length()); //->_token5
-            downIndex(_token4.length()); //->_token4
-            downIndex(_token3.length()); //->_token3
-            downIndex(_token2.length()); //->_token2
-            //now next time it will continue parse from _token2.
+        //we don't need to save it as one _token of between.
+        //so we just need to reverse the _index back.
+        downIndex(_token6.length()); //->_token6
+        downIndex(_token5.length()); //->_token5
+        downIndex(_token4.length()); //->_token4
+        downIndex(_token3.length()); //->_token3
+        downIndex(_token2.length()); //->_token2
+        //now next time it will continue parse from _token2.
         }//if not between\
     }//yesBetween_isNumber....()\
 
@@ -466,11 +487,13 @@ public class Parser {
         _token2 = getToken_RemovePunctuation();
         if (isNumeric(_token2)) {
             addToTermList(Date.Parse(_token + " " + _token2));
+
         } else {
             downIndex(_token2.length());
             yesUndefinedTerm_parseCLAndAddToTermList(_token);
         }
     }
+}
 
 
     /**the parse functions:**/
@@ -525,7 +548,12 @@ public class Parser {
                 }
             }//if is stopword\
         }
-    }//ParseSentence function\
+        } else {
+        yesUndefinedTerm_parseCLAndAddToTermList(_token);
+        }
+        }//if is stopword\
+        }
+        }//ParseSentence function\
 
     /**
      * @param doc    - the document to pars
@@ -542,31 +570,31 @@ public class Parser {
                 ParseSentence(ListOfSentences.get(i));
             }
         }
-    }
 
 
     /**getters for the indexer**/
 
-    /**
-     * @return the term list.
-     */
-    public HashMap<String, Integer> getTerms() {
+/**
+ * @return the term list.
+ */
+public HashMap<String, Integer> getTerms() {
         return _termList;
-    }
+        }
+
 
     /**
      * @return vector of the city locations in the text.
      */
-    public Vector<Integer> getLocations() {
+    public Vector<Integer> 
         return _cityLocations;
-    }
+        }
 
     /**
      * @return the number of the words in the text.
      */
     public int getWordCount() {
         return _wordCounter;
-    }
+        }
 
     /**
      * for tests todo delete
@@ -574,8 +602,6 @@ public class Parser {
     public void printTermList() {
         System.out.println(_termList.toString() + "\n" + _cityLocations.toString());
 
-    }
-}//Parser class\
 
-
-
+        }
+        }//Parser class\

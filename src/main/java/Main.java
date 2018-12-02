@@ -17,5 +17,6 @@ public class Main {
         long endTime = System.nanoTime();
         System.out.println("Took "+(endTime - startTime) + " ns");
         parser.printTermList();
+
     }
 }
