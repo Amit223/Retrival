@@ -14,9 +14,12 @@ public class Distance {
                 modifier.equalsIgnoreCase("kilometers"))
         {
             if(splitNum[0].contains(".")){
-                int index=splitNum[0].indexOf(".");
-                String next=splitNum[0].substring(index,splitNum[0].length());
-                splitNum[0]=splitNum[0].substring(0,index)+"000"+next;
+                double d=Double.parseDouble(splitNum[0]);
+                d=d*1000;
+                splitNum[0]=String.valueOf(d);
+               // int index=splitNum[0].indexOf(".");
+                //String next=splitNum[0].substring(index,splitNum[0].length());
+                //splitNum[0]=splitNum[0].substring(0,index)+"000"+next;
             }
             else
                 splitNum[0]=splitNum[0]+"000";//multiply by 1000
@@ -25,7 +28,7 @@ public class Distance {
         for (int i=0;i<splitNum.length-1;i++){
             num=num+ splitNum[i]+" ";
         }
-        num=num.substring(0,num.length()-2);
+        num=num.substring(0,num.length()-1);
         String dis=Number.Parse(num);
         dis=dis+" m";
         return dis;
