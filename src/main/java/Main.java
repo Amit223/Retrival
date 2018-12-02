@@ -9,14 +9,9 @@ import java.util.Vector;
 public class Main {
     public static void main(String[] args) {
 
-
-        //System.out.println(Distance.Parse("10 3/4 km"));
-        Parser parser = new Parser();
-        long startTime = System.nanoTime();
-        parser.Parse("MAY 1998", true, "paris");
-        long endTime = System.nanoTime();
-        System.out.println("Took "+(endTime - startTime) + " ns");
-        parser.printTermList();
+        String city="Los Angeles";
+        city=city.substring(0,city.indexOf(" "));
+        System.out.println(city+"-");
 
     }
 }

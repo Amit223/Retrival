@@ -20,7 +20,7 @@ public class Indexer {
     private File documents;//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
     private int lineNumDocs;
     private List<byte[]>toWrite;
-    private static int numOfFiles;
+    private int numOfFiles;
 
     //citys
     private Map <String,Pair<Vector<String>,Integer>> cityDictionary;
@@ -83,16 +83,18 @@ public class Indexer {
         lineNumDocs+=1;
         docMutex.unlock();
         Iterator<String>iterator=keys.iterator();
+        postingMutex.lock();
         while (iterator.hasNext()) {
             String term = iterator.next();
-            postingMutex.lock();
             int lineOfFirstDoc = toDictionaryFile(term);
             if(lineOfFirstDoc!=lineNumPosting)
                 searchInPosting(lineOfFirstDoc);//updates the term's ladt doc that new line will be added in lineNumPosting
             writeToPosting(lineNumDocs-1,terms.get(term));
             lineNumPosting+=1;
-            postingMutex.unlock();
         }
+        System.out.println("here");
+        flush();
+        postingMutex.unlock();
         String details=getCityDetails(cityOfDoc);
         String[] strings=details.split("-");
         cityMutex.lock();
@@ -101,8 +103,10 @@ public class Indexer {
             toCityPosting(locations);
         }
         lineNumCitys+=1;
-        lineNumDocs+=1;
+        numOfFiles+=1;
         cityMutex.unlock();
+        System.out.println(numOfFiles);
+
     }
 
 
@@ -370,16 +374,7 @@ public class Indexer {
         for (int i = 8; i < 12; i++) {
             toWrite[i]=ptr_bytes[i-8];
         }
-        try {
-            RandomAccessFile raf=new RandomAccessFile(posting,"rw");
-            raf.seek(raf.length());
-            raf.write(toWrite);
-            raf.close();
-        }
-        catch (Exception e){
-            System.out.println("problem in writeToPosting");
-        }
-
+       this.toWrite.add(toWrite);
     }
 
     /**

@@ -78,31 +78,5 @@ public class ReadFile {
     public static Elements getDocs(){
         return docs;
     }
-    public class RunnableRead implements Runnable{
 
-        private String fullFilePath;
-        Mutex m;
-        public RunnableRead(String path) {
-            this.fullFilePath=path;
-            m=new Mutex();
-        }
-        @Override
-        public void run() {
-            try {
-                System.out.println(fullFilePath);
-                File f = new File(fullFilePath);
-                Document document = Jsoup.parse(new String(Files.readAllBytes(f.toPath())));
-                Elements elements = document.getElementsByTag("DOC");
-                for (Element element : elements){
-                    m.lock();
-                    docs.add(element);
-                    m.unlock();
-                }
-            }
-            catch (Exception e){
-                e.printStackTrace();
-            }
-
-        }
-    }
 }

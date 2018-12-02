@@ -2,9 +2,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -17,11 +15,16 @@ public class Controller {
     private TextField path;
     @FXML
     private CheckBox toStem;
-    Model model;
     @FXML
     private TextField save;
     @FXML
     private ChoiceBox <String> language;
+    @FXML
+    private Button reset;
+
+
+    Model model;
+
 
 
     @FXML
@@ -29,10 +32,14 @@ public class Controller {
         language.getItems().removeAll(language.getItems());
         language.getItems().addAll("English", "Hebrew ", "Arabic", "Spanish","Italian","Romanian","Russian","Other");
         language.getSelectionModel().select("English");
+        reset.setDisable(true);
     }
-    public void setModel(Model model) {
-        this.model = model;
+
+
+    public void setModel(Stage stage) {
+        model=new Model(stage);
     }
+
     @FXML
     public void getFileChooser(ActionEvent actionEvent) {
         DirectoryChooser chooser = new DirectoryChooser();
@@ -55,7 +62,21 @@ public class Controller {
     public void reset(ActionEvent actionEvent) {
         model.Reset();
     }
+
     public void startProcess(ActionEvent actionEvent) {
-        model.Start(toStem.isSelected(),path.getText(),save.getText());
+        if(path.getText().equals("")||save.getText().equals("")){
+            Alert alert=new Alert(Alert.AlertType.ERROR);
+            alert.setContentText("Can't start process without all paths filled!\n Choose the folders and try again! ");
+            alert.show();
+        }
+        else{
+            long startTime = System.nanoTime();
+            System.out.println("Started");
+            model.Start(toStem.isSelected(),path.getText(),save.getText());
+            reset.setDisable(false);
+            long endTime = System.nanoTime();
+            System.out.println("Took "+(endTime - startTime) + " ns");
+        }
+
     }
 }
