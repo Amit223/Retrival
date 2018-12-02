@@ -9,9 +9,6 @@ import java.util.Vector;
 public class Main {
     public static void main(String[] args) {
 
-        String city="Los Angeles";
-        city=city.substring(0,city.indexOf(" "));
-        System.out.println(city+"-");
-
+        System.out.println('0' - 'a' + 1);
     }
 }

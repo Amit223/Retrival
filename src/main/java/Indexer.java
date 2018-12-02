@@ -1,9 +1,6 @@
 
 import ParseObjects.Number;
 import javafx.util.Pair;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
 import sun.awt.Mutex;
 
 import java.io.*;
@@ -15,12 +12,16 @@ import java.util.*;
 public class Indexer {
 
     private Map<String,Pair<Integer,Integer>> dictionary;
-    private File posting;//lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
-    private int lineNumPosting;
+
+
+    //lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
+
     private File documents;//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
     private int lineNumDocs;
-    private List<byte[]>toWrite;
-    private int numOfFiles;
+    private int _numOfFiles;
+    private String _path;
+    private boolean _toStem;
+    private Mutex [] mutexesPosting; //mutexs of the posting files.
 
     //citys
     private Map <String,Pair<Vector<String>,Integer>> cityDictionary;
@@ -30,50 +31,58 @@ public class Indexer {
 
     //mutex
     private Mutex docMutex;
-    private Mutex postingMutex;
     private Mutex cityMutex;
 
+    /**
+     * the constructor.,
+     * @param toStem to stem - to decide the path of the file.
+     * @param path -the path of the directory of the posting files.
+     */
     public Indexer(boolean toStem,String path) {
         try {
+            _path=path;
+            _toStem=toStem;
             if(toStem) {
-                posting = new File(path+"/Posting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
                 documents = new File(path+"/Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-
                 //citys
                 citysPosting = new File(path+"/CityPosting.txt");
             }
             else{//not to stem
-                posting = new File(path+"/NotStemPosting.txt");//docline(4)|tf(4)|pointer(4)-12 bytes
                 documents = new File(path+"/NotStemDocuments.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-
                 //citys
                 citysPosting = new File(path+"/NotStemCityPosting.txt");
             }
-            toWrite=new ArrayList<>();
-            posting.createNewFile();
             documents.createNewFile();
             dictionary = new HashMap<>();
-            lineNumPosting = 0;
             lineNumDocs = 0;
             lineNumCitys = 0;
-            numOfFiles=0;
+            _numOfFiles =0;
 
             //citys
             cityDictionary = new HashMap<>();
             citysPosting.createNewFile();
 
-
-            //mutexes
+            //mutexesPostingFiles
             cityMutex=new Mutex();
             docMutex=new Mutex();
-            postingMutex=new Mutex();
-
+            mutexesPosting =new Mutex[27];
+            for(int i=0; i<mutexesPosting.length;i++){
+                mutexesPosting[i]=new Mutex();
+            }
         }
         catch (IOException e){
 
         }
     }
 
+    /**
+     * create inverted index and posting files.
+     * @param terms
+     * @param locations - vector of locations of the city
+     * @param nameOfDoc
+     * @param cityOfDoc
+     * @param numOfWords - the number of word in the document
+     */
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
                       int numOfWords){
         Set<String> keys=terms.keySet();
@@ -82,19 +91,23 @@ public class Indexer {
         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
         lineNumDocs+=1;
         docMutex.unlock();
-        Iterator<String>iterator=keys.iterator();
-        postingMutex.lock();
-        while (iterator.hasNext()) {
-            String term = iterator.next();
-            int lineOfFirstDoc = toDictionaryFile(term);
-            if(lineOfFirstDoc!=lineNumPosting)
-                searchInPosting(lineOfFirstDoc);//updates the term's ladt doc that new line will be added in lineNumPosting
+        Iterator<String>termsKeys=keys.iterator();
+
+
+
+
+        while (termsKeys.hasNext()) {
+            String term = termsKeys.next();
+            int lineOfFirstDoc = addToDic(term);
+            if(lineOfFirstDoc!=-1)
+                updateTheLastNodePtr(lineOfFirstDoc,'x');//updates the term's ladt doc that new line will be added in lineNumPosting
+
+            //todo
             writeToPosting(lineNumDocs-1,terms.get(term));
-            lineNumPosting+=1;
         }
-        System.out.println("here");
-        flush();
-        postingMutex.unlock();
+
+
+
         String details=getCityDetails(cityOfDoc);
         String[] strings=details.split("-");
         cityMutex.lock();
@@ -103,9 +116,9 @@ public class Indexer {
             toCityPosting(locations);
         }
         lineNumCitys+=1;
-        numOfFiles+=1;
+        _numOfFiles +=1;
         cityMutex.unlock();
-        System.out.println(numOfFiles);
+        System.out.println(_numOfFiles);
 
     }
 
@@ -122,10 +135,8 @@ public class Indexer {
      */
     public void delete(){
         try {
-            PrintWriter writer = new PrintWriter(posting);
-            writer.print("");
-            writer.close();
-             writer = new PrintWriter(documents);
+
+             PrintWriter writer = new PrintWriter(documents);
             writer.print("");
             writer.close();
             writer=new PrintWriter(citysPosting);
@@ -133,7 +144,6 @@ public class Indexer {
             writer.close();
             lineNumCitys=0;
             lineNumDocs=0;
-            lineNumPosting=0;
         }
         catch (Exception e){
             System.out.println("problem in indexer->delete");
@@ -141,8 +151,8 @@ public class Indexer {
     }
 
 
-    public int getNumOfFiles(){
-        return numOfFiles;
+    public int get_numOfFiles(){
+        return _numOfFiles;
     }
     /**
      *
@@ -374,7 +384,6 @@ public class Indexer {
         for (int i = 8; i < 12; i++) {
             toWrite[i]=ptr_bytes[i-8];
         }
-       this.toWrite.add(toWrite);
     }
 
     /**
@@ -428,12 +437,18 @@ public class Indexer {
 
     /**
      *
-     * @param lineOfFirstDoc
-     * searches for last row of docs of the term, updates its pointer to the new row
+     * @param lineOfFirstDoc - the index of line in posting file of the first in the linked list.
+     * searches for last row of doc of the term, updates its pointer to the new row.
+     * @return the row to add on.
      */
-    private void searchInPosting(int lineOfFirstDoc) {
+    private int updateTheLastNodePtr(int lineOfFirstDoc,char firstChar) {
         try {
-            RandomAccessFile raf = new RandomAccessFile(posting, "r");
+            File f=new File(_path+"/"+Character.toLowerCase(firstChar)+_toStem);
+            int index=Character.toLowerCase(firstChar) - 'a' + 1;
+            if(index==-48)//^^
+                index=0;
+            mutexesPosting[index].lock();
+            RandomAccessFile raf = new RandomAccessFile(f, "r");
             raf.seek(lineOfFirstDoc*12+8);
             byte[] ptr = new byte[4];
             raf.read(ptr);
@@ -449,55 +464,66 @@ public class Indexer {
             //the last line.need to change the pointer!
             raf.seek(prevptr*12);
             byte[] line = new byte[12];
+            long lineToAdd=raf.length()/12;
             raf.read(line);
             raf.close();
-            ptr=toBytes(this.lineNumPosting);
+            mutexesPosting[index].unlock();
+            ptr=toBytes((int)lineToAdd);
             line[8]=ptr[0];
             line[9]=ptr[1];
             line[10]=ptr[2];
             line[11]=ptr[3];
             //updates the line
-            raf=new RandomAccessFile(posting,"rw");
+            mutexesPosting[index].lock();
+            raf=new RandomAccessFile(f,"rw");
             raf.seek(prevptr*12);
             raf.write(line);
             raf.close();
+            mutexesPosting[index].unlock();
+            return (int)lineToAdd;
         }
         catch (Exception e){
-            System.out.println("problem in searchInPosting !");
+            System.out.println("problem in updateTheLastNodePtr !");
         }
-
+            return -1;
     }
 
-    private int toDictionaryFile(String term) {
+    /**
+     *
+     * @param term - add to dictionary or update
+     * @return the number of the first line in the posting document if exist, else:  -1.
+     */
+    private int addToDic(String term) {
         if(dictionary.containsKey(term)){//just add to df and return the line in posting
            int df= dictionary.get(term).getKey();
-           int pointer= dictionary.get(term).getValue();
+           int pointerToPost= dictionary.get(term).getValue(); //pointer to posting file.
            df+=1;
            dictionary.remove(term);
-           dictionary.put(term,new Pair<Integer, Integer>(df,pointer));
-           return pointer;
+           dictionary.put(term,new Pair<Integer, Integer>(df,pointerToPost));
+           return pointerToPost;
         }
-        else if(dictionary.containsKey(Reverse(term))){//the reversed term in dictionary need to put the uppercase one
+        //check if exist in the dictionary in diffrent way.
+        else if(dictionary.containsKey(Reverse(term))){//the reversed term in dictionary need to put the uppercase one //todo - fix.
             String newTerm;
-            if(Character.isUpperCase(Reverse(term).charAt(0))){//the term in dictionary is the uppercase one
+            if(Character.isLowerCase(Reverse(term).charAt(0))){//the term in dictionary is the uppercase one
                 newTerm=Reverse(term);
             }
             else{//the new term is the upper case one!
                 newTerm=term;
             }
+            //take the details of its if exist.
             int df= dictionary.get(Reverse(term)).getKey();
             int pointer= dictionary.get(Reverse(term)).getValue();
             df+=1;
             dictionary.remove(Reverse(term));
+            //todo newTerm = changeCase(newTerm); //todo
             dictionary.put(newTerm,new Pair<Integer, Integer>(df,pointer));
             return pointer;
         }
         else {//new term completely
-            dictionary.put(term,new Pair<Integer, Integer>(1,lineNumPosting));
-            return lineNumPosting;
+            dictionary.put(term,new Pair<Integer, Integer>(1,-1));
+            return -1;
         }
-
-
     }
 
     private String Reverse(String term) {
@@ -565,22 +591,6 @@ public class Indexer {
 
     }
 
-    /**
-     * flushes all list to posting file every 50 files
-     */
-    private void flush(){
-        try {
-            RandomAccessFile raf = new RandomAccessFile(posting, "rw");
-            for (int i = 0; i < toWrite.size(); i++) {
-                raf.seek(raf.length());
-                raf.write(toWrite.get(i));
-            }
-            raf.close();
-            toWrite.clear();
-        }
-        catch (Exception e){
 
-        }
-    }
 
 }
