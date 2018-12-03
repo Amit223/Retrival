@@ -16,8 +16,8 @@ public class Price {
                 String next = splitPrice[1];
                 if (Character.isDigit(next.charAt(0))) {//fraction
 
-                    out = toNum(splitPrice[0]);
-                    out = out + " " + next; //--> 30, 3/4-> 30 3/4; 30K ,3/4-> 30K 3/4
+                    out = toNum(splitPrice[0], next);
+                    out = out; //--> 30, 3/4-> 30 3/4; 30K ,3/4-> 30K 3/4
                 } else {//modifier
                     if (splitPrice[1].equalsIgnoreCase("Trillion")) {//cant conver to int
                         out = addmodifier(splitPrice[0], "Million");
@@ -90,9 +90,25 @@ public class Price {
     }
 
 
-    private static String toNum(String s){
+    private static String toNum(String number) {
+    return toNum(number,"");
+    }
+        /**
+         *
+         * @param number
+         * @param fraction
+         * @return
+         */
+    private static String toNum(String number,String fraction){
         String out="";
-        double num=Double.parseDouble(s);
+        double frac=0;
+        if(fraction!=null && !fraction.equals("")){
+            String [] fracParts= fraction.split("/");
+            double x=Double.parseDouble(fracParts[0]);
+            double y=Double.parseDouble(fracParts[1]);
+            frac=x/y;
+        }
+        double num=Double.parseDouble(number)+frac;
         if(num<1000000){
             out = Double.toString(num);
             out = MabyeInteger(out);

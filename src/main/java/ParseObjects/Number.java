@@ -22,8 +22,8 @@ public class Number {
             {
                 String next = splitNum[1];
                 if (Character.isDigit(next.charAt(0))) {//fraction
-                    out = toNum(splitNum[0]);
-                    out = out + " " + next; //--> 30, 3/4-> 30 3/4; 30K ,3/4-> 30K 3/4
+                    out = toNum(splitNum[0],next);
+                    out = out; //--> 30, 3/4-> 30.75 ; 30.0000075K
 
                 } else {//modifier
                     if (splitNum[1].equalsIgnoreCase("Trillion")) {//cant conver to int
@@ -73,15 +73,33 @@ public class Number {
 
     }
 
+
     /**
      *
-     * @param s- single number in for
-     * @return
+     * @param number- single number in for
+     * @return the number
      */
-    private static String toNum(String s) {
+    public static String toNum(String number){
+        return toNum(number,"");
+    }
+
+    /**
+     *
+     * @param number
+     * @param fraction
+     * @return the number.
+     */
+    private static String toNum(String number, String fraction) {
         String out="";
+        double frac=0;
         try {
-            double num=Double.parseDouble(s);
+            if(fraction!=null && !fraction.equals("")){
+                String [] fracParts= fraction.split("/");
+                double x=Double.parseDouble(fracParts[0]);
+                double y=Double.parseDouble(fracParts[1]);
+                frac=x/y;
+            }
+            double num=Double.parseDouble(number)+frac;
             if (num < 1000) {//small
                 out = Double.toString(num);
                 out = MabyeInteger(out);
