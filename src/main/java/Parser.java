@@ -124,7 +124,7 @@ public class Parser {
      * 5. '!'
      * 6. ','
      */
-    private String removeFromTheTermUndefindSigns(String termS) {
+    private String removeFromTheTermUndefindSigns(String termS) { //"dfsdfdsf
         try {
             int startIndex = -1;// the index that the _token begin.
             int endIndex = termS.length(); //the index that the _token ends
@@ -591,7 +591,7 @@ public class Parser {
      * for tests todo delete
      */
     public void printTermList() {
-        System.out.println(_termList.toString() + "\n" + _cityLocations.toString());
+        System.out.println(_termList.toString() + "\n" + _cityLocations.toString() +"\n"+_termList.size());
 
     }
 }//Parser class\
