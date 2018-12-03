@@ -8,6 +8,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Indexer {
 
@@ -17,11 +18,12 @@ public class Indexer {
     //lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
 
     private File documents;//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-    private int lineNumDocs;
+    private AtomicInteger _AtomicNumlineDocs;
     private int _numOfFiles;
     private String _path;
     private boolean _toStem;
     private Mutex [] mutexesPosting; //mutexs of the posting files.
+    private boolean [] created;
 
     //citys
     private Map <String,Pair<Vector<String>,Integer>> cityDictionary;
@@ -54,7 +56,7 @@ public class Indexer {
             }
             documents.createNewFile();
             dictionary = new HashMap<>();
-            lineNumDocs = 0;
+            _AtomicNumlineDocs = new AtomicInteger(0);
             lineNumCitys = 0;
             _numOfFiles =0;
 
@@ -66,8 +68,10 @@ public class Indexer {
             cityMutex=new Mutex();
             docMutex=new Mutex();
             mutexesPosting =new Mutex[27];
+            created=new boolean[27];
             for(int i=0; i<mutexesPosting.length;i++){
                 mutexesPosting[i]=new Mutex();
+                created[i]=false;
             }
         }
         catch (IOException e){
@@ -89,31 +93,31 @@ public class Indexer {
         int maxtf=getMaxTf(terms.values());
         docMutex.lock();
         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
-        lineNumDocs+=1;
+        _AtomicNumlineDocs.getAndAdd(1);
+        int lineNumDocs = _AtomicNumlineDocs.get()-1;
         docMutex.unlock();
         Iterator<String>termsKeys=keys.iterator();
 
-
-
-
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
-            int lineOfFirstDoc = addToDic(term);
-            if(lineOfFirstDoc!=-1)
-                updateTheLastNodePtr(lineOfFirstDoc,'x');//updates the term's ladt doc that new line will be added in lineNumPosting
+            int firstLineNum = ifExistUpdateTF(term); //the number of the first line of term in the posting document if exist, else:  -1.
+            char FirstC = (Character.isDigit(term.charAt(0)) ? '0' : Character.toLowerCase(term.charAt(0)));
+            if(firstLineNum!=-1) {
+                updateTheLastNodePtr(firstLineNum, FirstC);//updates the term's ladt doc that new line will be added in lineNumPosting
 
-            //todo
-            writeToPosting(lineNumDocs-1,terms.get(term));
+            }
+            int lineNumPosting=writeToPosting(lineNumDocs,terms.get(term),FirstC);
+            if(firstLineNum==-1){
+                dictionary.put(term,new Pair<Integer, Integer>(1,lineNumPosting));
+            }
         }
-
-
 
         String details=getCityDetails(cityOfDoc);
         String[] strings=details.split("-");
-        cityMutex.lock();
+        cityMutex.lock(); //todo runtime
             toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2],locations.size());
         if(locations.size()>0) {
-            toCityPosting(locations);
+            toCityPosting(locations,lineNumDocs);
         }
         lineNumCitys+=1;
         _numOfFiles +=1;
@@ -143,7 +147,7 @@ public class Indexer {
             writer.print("");
             writer.close();
             lineNumCitys=0;
-            lineNumDocs=0;
+            _AtomicNumlineDocs.set(0); ;
         }
         catch (Exception e){
             System.out.println("problem in indexer->delete");
@@ -167,11 +171,11 @@ public class Indexer {
      *
      * adds all vector of location to the state posting
      */
-    private void toCityPosting(Vector<Integer> locations) {
+    private void toCityPosting(Vector<Integer> locations,int lineNumDoc) {
         int size=locations.size();
         int index=0;
         byte[] toWrite=new byte[28];
-        byte [] docline=toBytes(this.lineNumDocs-1);
+        byte [] docline=toBytes(lineNumDoc);
         byte []loc1;
         byte []loc2;
         byte []loc3;
@@ -367,8 +371,15 @@ public class Indexer {
         }
     }
 
+    /**
+     *
+     * @param lineOfDoc
+     * @param tf
+     * @param firstChar
+     * @return the line number that wrote to.
+     */
+    private int writeToPosting(int lineOfDoc,int tf, char firstChar) {
 
-    private void writeToPosting(int lineOfDoc,int tf) {
         byte [] tf_bytes=toBytes(tf);
         byte [] line_bytes=toBytes(lineOfDoc);
         byte [] ptr_bytes=toBytes(-1);
@@ -384,6 +395,30 @@ public class Indexer {
         for (int i = 8; i < 12; i++) {
             toWrite[i]=ptr_bytes[i-8];
         }
+
+        try {
+            File f = new File(_path + "/" + Character.toLowerCase(firstChar) + _toStem+".txt");
+            int index = Character.toLowerCase(firstChar) - 'a' + 1;
+            if (index == -48)//^^
+                index = 0;
+            mutexesPosting[index].lock();//todo runTime
+            if(!created[index]){
+                f.createNewFile();
+                created[index]=true;
+            }
+            RandomAccessFile raf = new RandomAccessFile(f, "rw");
+            int lineNumPosting=(int)raf.length()/12;
+            raf.seek(raf.length());
+            raf.write(toWrite);
+            raf.close();
+            mutexesPosting[index].unlock();
+            return lineNumPosting;
+
+        }
+        catch(Exception e){
+            System.out.println("oopss");
+        }
+        return -1;
     }
 
     /**
@@ -443,7 +478,7 @@ public class Indexer {
      */
     private int updateTheLastNodePtr(int lineOfFirstDoc,char firstChar) {
         try {
-            File f=new File(_path+"/"+Character.toLowerCase(firstChar)+_toStem);
+            File f=new File(_path+"/"+Character.toLowerCase(firstChar)+_toStem+".txt");
             int index=Character.toLowerCase(firstChar) - 'a' + 1;
             if(index==-48)//^^
                 index=0;
@@ -490,10 +525,10 @@ public class Indexer {
 
     /**
      *
-     * @param term - add to dictionary or update
-     * @return the number of the first line in the posting document if exist, else:  -1.
+     * @param term - update tf if exist- the df-++
+     * @return the number of the first line of term in the posting document if exist, else:  -1.
      */
-    private int addToDic(String term) {
+    private int ifExistUpdateTF(String term) {
         if(dictionary.containsKey(term)){//just add to df and return the line in posting
            int df= dictionary.get(term).getKey();
            int pointerToPost= dictionary.get(term).getValue(); //pointer to posting file.
@@ -521,7 +556,7 @@ public class Indexer {
             return pointer;
         }
         else {//new term completely
-            dictionary.put(term,new Pair<Integer, Integer>(1,-1));
+            //dictionary.put(term,new Pair<Integer, Integer>(1,-1));
             return -1;
         }
     }
