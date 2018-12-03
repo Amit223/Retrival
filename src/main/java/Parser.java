@@ -7,7 +7,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Vector;
 
-/**this class is for parsing sentence in the text.**/
+/**
+ * this class is for parsing sentence in the text.
+ **/
 public class Parser {
 
     //todo - remove from stop words may and between, and add a, mrs. mr. dr. &amp  m,bn
@@ -27,19 +29,19 @@ public class Parser {
     private String _token6 = "";
 
     public Parser() {
-          _ListOfTokens = new Vector<>();
+        _ListOfTokens = new Vector<>();
         _index = 0; //the token that we work on from the list of token.
         _stemmer = new PorterStemmer(); //use for stemming
-          _toStem = false; // true if want to stem the terms before insert to dictionary, false if not.
-          _cityUp = ""; //the city(in upper case) to save its locations.
-          _tokenCounter = 0; //count every token that i pop. //when tokens is splitted by space.
-          _token = "";
-          _isMinus = false;//is the _token start with minus
-          _token2 = "";
-          _token3 = "";
-          _token4 = "";
-          _token5 = "";
-          _token6 = "";
+        _toStem = false; // true if want to stem the terms before insert to dictionary, false if not.
+        _cityUp = ""; //the city(in upper case) to save its locations.
+        _tokenCounter = 0; //count every token that i pop. //when tokens is splitted by space.
+        _token = "";
+        _isMinus = false;//is the _token start with minus
+        _token2 = "";
+        _token3 = "";
+        _token4 = "";
+        _token5 = "";
+        _token6 = "";
     }
 
 
@@ -64,14 +66,14 @@ public class Parser {
         if (_toStem) {
             if (theToken.contains("-")) {
                 Vector<String> vector = new Vector<String>(Arrays.asList(theToken.split("-")));
-                theToken="";
+                theToken = "";
                 for (int i = 0; i < vector.size(); i++) {
                     String s = vector.get(i);
                     _stemmer.add(s.toCharArray(), s.length());
                     _stemmer.stem();
                     s = _stemmer.toString();
-                    theToken+=s;
-                    if(i!=vector.size()-1) theToken+="-";
+                    theToken += s;
+                    if (i != vector.size() - 1) theToken += "-";
                 }
             } else {
                 _stemmer.add(theToken.toCharArray(), theToken.length());
@@ -107,6 +109,7 @@ public class Parser {
     /**
      * index--;
      * _tokenCounter++ if it isn't "".
+     *
      * @param tokenLength
      */
     private void downIndex(int tokenLength) {
@@ -177,8 +180,11 @@ public class Parser {
      */
     private void addToTermList(Vector<String> finalTerms) {
         for (int i = 0; i < finalTerms.size(); i++) {
-            addToTermList(finalTerms.get(i));
-        }
+            if (i == 0)
+                addToTermList(finalTerms.get(i));
+            else
+                yesUndefinedTerm_parseCLAndAddToTermList(removeFromTheTermUndefindSigns(finalTerms.get(i)));
+        } // sdfjk-"Y&^%%^&%15,  sdfjk, %15
     }
 
     /**
@@ -189,7 +195,7 @@ public class Parser {
             finalTerm = "-" + finalTerm;
         if (finalTerm != null && !finalTerm.equalsIgnoreCase("")) {
             if (!finalTerm.equalsIgnoreCase("between")
-                    || !finalTerm.equalsIgnoreCase("and")) {
+                    && !finalTerm.equalsIgnoreCase("and") && !StopWords.isStopWord(finalTerm)) {
                 if (_termList.containsKey(finalTerm)) {
                     _termList.put(finalTerm, _termList.get(finalTerm) + 1);
                 } else {
@@ -249,8 +255,7 @@ public class Parser {
                     _termList.remove(termsUp);
                     _termList.put(termsLow, counterUp + 1);
                 } else if (Character.isUpperCase(firstC)) {
-                    if (termsUp.equals(_cityUp))
-                        _cityLocations.add(_tokenCounter);
+
                     _termList.put(termsUp, counterUp + 1);
                 } else { //not going to happend because @see x
                     _termList.remove(termsUp);
@@ -264,6 +269,7 @@ public class Parser {
                     _termList.put(termsLow, 1); // x
                 }
             }
+            if (termsUp.equals(_cityUp)) _cityLocations.add(_tokenCounter);
         }
     }
 
@@ -347,7 +353,7 @@ public class Parser {
             //check what kind of parse needed, down the index if needed, parse and add to termlist.
 
             if (Price.isPrice(nextTerm, nextnextTerm)) {
-                if(!(nextTerm.equalsIgnoreCase("u.s")
+                if (!(nextTerm.equalsIgnoreCase("u.s")
                         && nextnextTerm.equalsIgnoreCase("dollars")))
                     downIndex(nextnextTerm.length());
                 addToTermList(Price.Parse(theNumber));
@@ -358,7 +364,7 @@ public class Parser {
                     downIndex(nextnextTerm.length());
                     addToTermList(Between.Parse(_token + " " + nextTerm));
                 }
-            } else if (isPrecent || Percentage.isPercent(nextTerm,nextnextTerm)) {
+            } else if (isPrecent || Percentage.isPercent(nextTerm, nextnextTerm)) {
                 if (!(nextTerm.equalsIgnoreCase("per")
                         && nextnextTerm.equalsIgnoreCase("cent")))
                     downIndex(nextnextTerm.length()); //didn't recognize the next next _token.
@@ -504,8 +510,8 @@ public class Parser {
         char FirstC;
         char lastC;
         while (_index < _ListOfTokens.size()) { //parse _token:
-            _token = "";
             _isMinus = false;//is the _token start with minus
+            _token = "";
             _token2 = "";
             _token3 = "";
             _token4 = "";
@@ -591,7 +597,7 @@ public class Parser {
      * for tests todo delete
      */
     public void printTermList() {
-        System.out.println(_termList.toString() + "\n" + _cityLocations.toString() +"\n"+_termList.size());
+        System.out.println(_termList.toString() + "\n" + _cityLocations.toString() + "\n" + _termList.size());
 
     }
 }//Parser class\

@@ -13,7 +13,7 @@ public class Main {
     public static void main(String[] args) {
     Parser p = new Parser();
     StopWords.setStopWords();
-    p.Parse("Table     of Contents \n" +
+    p.Parse("paris Table     of Contents \n" +
             "   FEATURE: \n" +
             "   France: National Debate On Research Policy \n" +
             "   POLICY ISSUES \n" +
@@ -83,7 +83,7 @@ public class Main {
             "available by 1997.  The program is open to small and medium-sized \n" +
             "companies and includes the newly created laser institutes in Berlin- \n" +
             "Adlershof and Dresden, as well as existing research institutes in \n" +
-            "Dresden, Jena, Halle, and Rostock. \n" +
+            "Dresden, Jena, Halle, and Rostock. Paris \n" +
             "   The program is Particularly aimed at aiding the transition from \n" +
             "tube lasers to modern Semiconductor lasers.  Germany is two years \n" +
             "behind Japan and the United States in building more powerful \n" +
@@ -164,8 +164,8 @@ public class Main {
             "intends to spend a total of 120 million kronor ($15 million) on \n" +
             "research concerning electric and hybrid (electric and gas powered) \n" +
             "vehicles.  The project will last until 1997 and cover more than 120 \n" +
-            "vehicles.  Research will be concentrated on hybrid vehicles. \n" +
-            "(Stockholm DAGENS NYHETER 11 Jan 94) RB \n" +
+            "vehicles.  Research will be concentrated on  Paris hybrid vehicles. \n" +
+            "(Stockholm DAGENS NYHETER 11 Jan 94) RB \n"  +
             "   Honda Reacts to Sale of Rover--On 31 January, British Aerospace \n" +
             "announced the sale of Rover to BMW for close to $1.2 billion, \n" +
             "although Honda, which held a 20 percent share of Rover, was \n" +
@@ -226,7 +226,7 @@ public class Main {
             "   *Volvo 1992 annual report, 69 pages, in English. \n" +
             "   (AUTHOR:  COX.  QUESTIONS AND/OR COMMENTS, PLEASE CALL CHIEF, \n" +
             "EUROPE BRANCH AT (703) 733-6337) \n" +
-            "GIG/22MAR/ECONF/TID  cka 23/0141z  mar \n",false, "paris");
+            "GIG/22MAR/ECONF/TID  cka 23/0141z  mar \n",false, "Paris");
     p.printTermList();
 
     }
