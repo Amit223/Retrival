@@ -585,6 +585,12 @@ public class StopWords {
 
         stopwords = new HashSetIgnoreCase(Arrays.asList(words.split("\n"))); //use vector beacause: https://stackoverflow.com/questions/11001330/java-split-string-performances
 
+        stopwords.add("amp");
+        stopwords.add("dr");
+        stopwords.add("m");
+        stopwords.add("a");
+        stopwords.add("mr");
+        stopwords.add("mrs");
     }
     /**
      * build the list
