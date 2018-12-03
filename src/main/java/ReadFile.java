@@ -76,7 +76,10 @@ public class ReadFile {
     }
 
     public static Elements getDocs(){
-        return docs;
+        Elements elems= docs;
+        docs=new Elements();
+        return elems;
+
     }
 
 }

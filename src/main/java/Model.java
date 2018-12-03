@@ -43,13 +43,13 @@ public class Model {
         File folder = new File(path);
         File[] listOfFiles = folder.listFiles();
 
-        for(File f:listOfFiles){
-            if(f.isDirectory()){//the corpus!!
-                File[] directories=f.listFiles();//all the folders in corpus
+        for(int i=0; i<listOfFiles.length;i++){
+            if(listOfFiles[i].isDirectory()){//the corpus!!
+                File[] directories=listOfFiles[i].listFiles();//all the folders in corpus
                 Thread [] threads=new ThreadedIndex[directories.length];
-                for(int i=0;i<directories.length;i++){
-                    threads[i]=new ThreadedIndex(directories[i].getAbsolutePath(),toStem,indexer);
-                    pool.submit(threads[i]);
+                for(int j=0;j<directories.length;j++){
+                    threads[j]=new ThreadedIndex(directories[j].getAbsolutePath(),toStem,indexer);
+                    pool.submit(threads[j]);
                 }
 
                 pool.shutdown();
@@ -98,7 +98,7 @@ class ThreadedIndex extends Thread{
     }
 
     public void run(){
-       ReadFile.read(path);
+        ReadFile.read(path);
        Elements elements=ReadFile.getDocs();
         HashMap<String, Integer> termList;
        for(int i=0;i<elements.size();i++){
@@ -120,7 +120,10 @@ class ThreadedIndex extends Thread{
            Parser parser=new Parser();
            parser.Parse(text,toStem,city);//return termlist
            termList=parser.getTerms();
-           //System.out.println(name);
+           if(name.equals("FBIS3-52"))
+               System.out.println();
+           if(termList.containsKey("\"a"))
+               System.out.println();
            indexer.Index(termList,parser.getLocations(),name,city,parser.getWordCount());
            System.out.println(name);
        }
