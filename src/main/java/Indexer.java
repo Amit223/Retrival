@@ -8,6 +8,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Indexer {
@@ -55,7 +56,7 @@ public class Indexer {
                 citysPosting = new File(path+"/NotStemCityPosting.txt");
             }
             documents.createNewFile();
-            dictionary = new HashMap<>();
+            dictionary = new ConcurrentHashMap<>();
             _AtomicNumlineDocs = new AtomicInteger(0);
             lineNumCitys = 0;
             _numOfFiles =0;
@@ -100,8 +101,10 @@ public class Indexer {
 
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
+            if(term.charAt(0)=='"')
+                System.out.println(term);
             int firstLineNum = ifExistUpdateTF(term); //the number of the first line of term in the posting document if exist, else:  -1.
-            char FirstC = (Character.isDigit(term.charAt(0)) ? '0' : Character.toLowerCase(term.charAt(0)));
+            char FirstC = (Character.isDigit(term.charAt(0))||term.charAt(0)=='-') ? '0' : Character.toLowerCase(term.charAt(0));
             if(firstLineNum!=-1) {
                 updateTheLastNodePtr(firstLineNum, FirstC);//updates the term's ladt doc that new line will be added in lineNumPosting
 
@@ -111,17 +114,17 @@ public class Indexer {
                 dictionary.put(term,new Pair<Integer, Integer>(1,lineNumPosting));
             }
         }
-
         String details=getCityDetails(cityOfDoc);
         String[] strings=details.split("-");
         cityMutex.lock(); //todo runtime
             toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2],locations.size());
-        if(locations.size()>0) {
+        if(locations.size()>0&&!cityOfDoc.equals("")) {
             toCityPosting(locations,lineNumDocs);
         }
         lineNumCitys+=1;
         _numOfFiles +=1;
         cityMutex.unlock();
+
         System.out.println(_numOfFiles);
 
     }
@@ -414,9 +417,10 @@ public class Indexer {
             mutexesPosting[index].unlock();
             return lineNumPosting;
 
+
         }
         catch(Exception e){
-            System.out.println("oopss");
+            System.out.println(Arrays.toString(toWrite));
         }
         return -1;
     }
@@ -484,10 +488,15 @@ public class Indexer {
                 index=0;
             mutexesPosting[index].lock();
             RandomAccessFile raf = new RandomAccessFile(f, "r");
-            raf.seek(lineOfFirstDoc*12+8);
-            byte[] ptr = new byte[4];
+            raf.seek(lineOfFirstDoc*12);
+            byte[] ptr = new byte[12];
             raf.read(ptr);
-            int ptr_int=byteToInt(ptr);
+           // byte [] line_={ptr[0],ptr[1],ptr[2],ptr[3]};
+           // byte [] tf={ptr[4],ptr[5],ptr[6],ptr[7]};
+            byte [] pointer={ptr[8],ptr[9],ptr[10],ptr[11]};
+            int ptr_int=byteToInt(pointer);
+            //int line_int=byteToInt(line_);
+            //int tf_int=byteToInt(tf);
             int prevptr=lineOfFirstDoc;//to know what line is the last of the term's docs
             while(ptr_int!=-1){
                 prevptr=ptr_int;
