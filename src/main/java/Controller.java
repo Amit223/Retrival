@@ -103,8 +103,8 @@ public class Controller {
             e.printStackTrace();
         }
         Stage DicStage = new Stage();
-        DictionaryController controller = fxmlLoader.getController();
-        controller.showDictionary(pathS);
+        //DictionaryController controller = fxmlLoader.getController();
+        //controller.showDictionary(pathS);
         Scene scene = new Scene(root, 500, 500);
         DicStage.setTitle("Retrival Project - Dictionary");
         DicStage.setScene(scene);

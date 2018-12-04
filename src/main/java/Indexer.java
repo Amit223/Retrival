@@ -47,6 +47,7 @@ public class Indexer {
 
 
 
+
     public  int getNumberOfDocs() {
         return _numOfFiles.get();
     }
@@ -136,7 +137,7 @@ public class Indexer {
                 citysPosting = new File(path+"/NotStemCityPosting.txt");
             }
             documents.createNewFile();
-            dictionary = new TreeMap<>();
+            dictionary = new ConcurrentHashMap<>();
             _AtomicNumlineDocs = new AtomicInteger(0);
             lineNumCitys = 0;
             _numOfFiles=new AtomicInteger(0);
@@ -182,10 +183,10 @@ public class Indexer {
      * @param numOfWords - the number of word in the document
      */
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
-                      int numOfWords) {
+                      int numOfWords){
 
 
-        Set<String> keys = terms.keySet();
+        Set<String> keys=terms.keySet();
         /**
          int maxtf=getMaxTf(terms.values());
          docMutex.lock();
@@ -193,22 +194,22 @@ public class Indexer {
          docMutex.unlock();
          **/
         _AtomicNumlineDocs.getAndAdd(1);
-        int lineNumDocs = _AtomicNumlineDocs.get() - 1;
+        int lineNumDocs = _AtomicNumlineDocs.get()-1;
 
 
-        Iterator<String> termsKeys = keys.iterator();
+        Iterator<String>termsKeys=keys.iterator();
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
             dictionaryMutex.lock();
             ifExistUpdateTF(term); //updates dictionary df/ add new term
             dictionaryMutex.unlock();
-            char FirstC = (Character.isDigit(term.charAt(0)) || term.charAt(0) == '-') ? '0' : Character.toLowerCase(term.charAt(0));
+            char FirstC = (Character.isDigit(term.charAt(0))||term.charAt(0)=='-') ? '0' : Character.toLowerCase(term.charAt(0));
             //if(firstLineNum!=-1) {
             //postingLinesNum= updateTheLastNodePtr(firstLineNum, FirstC,postingLines);//updates the term's ladt doc that new line will be added in lineNumPosting
             //}
-            writeToPosting(lineNumDocs, terms.get(term), FirstC, postingLines, term);
+            writeToPosting(lineNumDocs,terms.get(term),FirstC,postingLines,term);
         }
-        if (_numOfFiles.get() % 1000 == 0)
+        if(_numOfFiles.get()%1000==0)
             writeListToPosting();
 
 /**
@@ -224,9 +225,10 @@ public class Indexer {
  cityMutex.unlock();
  }
  **/
+        _numOfFiles.getAndAdd(1);
+        // System.out.println(_numOfFiles);
 
     }
-
 
     private void writeListToPosting() {
         Thread [] threads=new ThreadedWrite[27];
@@ -650,8 +652,6 @@ public class Indexer {
             raf.seek(lineOfFirstDoc*12);
             byte[] ptr = new byte[12];
             raf.read(ptr);
-            // byte [] line_={ptr[0],ptr[1],ptr[2],ptr[3]};
-            // byte [] tf={ptr[4],ptr[5],ptr[6],ptr[7]};
             byte [] pointer={ptr[8],ptr[9],ptr[10],ptr[11]};
             int ptr_int=byteToInt(pointer);
             int prevptr=lineOfFirstDoc;//to know what line is the last of the term's docs
@@ -697,7 +697,6 @@ public class Indexer {
      * @param term - update tf if exist- the df-++
      * @return the number of the first line of term in the posting document if exist, else:  -1.
      */
-
     private void ifExistUpdateTF(String term) {
         if(dictionary.containsKey(term)){//just add to df and return the line in posting
             int df= dictionary.get(term);
@@ -920,8 +919,6 @@ class ThreadedSort extends Thread{
                 else{
                     writer.write(mapNot.get(notS)+'\n');
                     notS=not.next();
-                    System.out.println("bi");
-
                 }
             }
             while(not!=null &&not.hasNext()){//need to write the small letters

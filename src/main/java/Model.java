@@ -24,6 +24,7 @@ public class Model {
     public Model(Stage stage) {
         this.mainStage = stage;
         mutex=new Mutex();
+
         this.indexer=new Indexer(false,"C:\\Users\\liadber\\IdeaProjects\\Retrival\\src\\main\\resources");
     }
 
@@ -37,6 +38,20 @@ public class Model {
 
     public void Reset(){
         indexer.delete();
+    }
+
+    //todo
+    public int getNumberOfDocs(){
+        return -1;
+    }
+    //todo
+    public int getNumberOfTerms(){
+        return -1;
+    }
+
+    //todo
+    public void loadDictionaryToMemory(){
+
     }
 
 
@@ -78,14 +93,6 @@ public class Model {
 
 
     }
-
-    public int getNumberOfDocs() {
-        return indexer.getNumberOfDocs();
-    }
-
-    public int getNumberOfTerms() {
-        return indexer.getNumberOfTerms();
-    }
 }
 
 class ThreadedIndex extends Thread{
@@ -93,7 +100,6 @@ class ThreadedIndex extends Thread{
     private String path;
     private boolean toStem;
     private Indexer indexer;
-
 
     public ThreadedIndex(String path, boolean toStem,Indexer indexer) {
         this.path = path;
