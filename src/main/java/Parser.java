@@ -242,6 +242,7 @@ public class Parser {
      * @param termS- _token to add
      */
     private void yesUndefinedTerm_parseCLAndAddToTermList(String termS) {
+        termS=removeFromTheTermUndefindSigns(termS); // for " Balldur's " case after stem its  " Balldur' "
         if (termS != null && !termS.equals("")) {
             String termsLow = termS.toLowerCase();
             Integer counterLow = _termList.get(termsLow);

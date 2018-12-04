@@ -78,10 +78,11 @@ public class Model {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                System.out.println("Start sorting");
+             System.out.println("Start sorting");
                 indexer.loadDictionaryToFile();
                 StopWords.reset();
                 indexer.sort();
+
 
             }
         }
