@@ -85,6 +85,31 @@ public class Parser {
     }
 
     /**
+     * stem only the the part0 of between or the part1 if needed.
+     *
+     * @param theToken      - to stem.
+     * @param idxPartToStem - 0 or 1
+     * @return
+     */
+    private String stemPartOfBetween(String theToken, int idxPartToStem) {
+        if (_toStem) {
+            if (theToken.contains("-")) {
+                Vector<String> vector = new Vector<String>(Arrays.asList(theToken.split("-")));
+                String partToStem = vector.get(idxPartToStem);
+                String part0 = vector.get(0);
+                String part1 = vector.get(1);
+                _stemmer.add(partToStem.toCharArray(), partToStem.length());
+                _stemmer.stem();
+                partToStem = _stemmer.toString();
+                if (idxPartToStem == 0) theToken = partToStem + "-" + part1;
+                if (idxPartToStem == 1) theToken = part0 + "-" + partToStem;
+            }
+        }
+        return theToken;
+    }
+
+
+    /**
      * Get token
      * remove puncuation
      *
@@ -140,7 +165,7 @@ public class Parser {
                         break;
                     }
                 }
-                for (int i = termS.length() - 1; 0 <=i && endIndex == termS.length(); i--) {
+                for (int i = termS.length() - 1; 0 <= i && endIndex == termS.length(); i--) {
                     if (Character.isDigit(termS.charAt(i))
                             || Character.isLetter(termS.charAt(i))
                             || termS.charAt(i) == '%') {
@@ -176,11 +201,13 @@ public class Parser {
     }
 
     /**
+     * for between
+     *
      * @param finalTerms - the final Terms to add the final _token list.
      */
     private void addToTermList(Vector<String> finalTerms) {
         for (int i = 0; i < finalTerms.size(); i++) {
-            if (i == 0)
+            if (i == 0) //the first one is the one and only between term
                 addToTermList(finalTerms.get(i));
             else
                 yesUndefinedTerm_parseCLAndAddToTermList(removeFromTheTermUndefindSigns(finalTerms.get(i)));
@@ -191,7 +218,7 @@ public class Parser {
      * @param finalTerm - a final _token to add to _token list
      */
     private void addToTermList(String finalTerm) {
-        if(!StopWords.isStopWord(finalTerm)) {
+        if (!StopWords.isStopWord(finalTerm)) {
             if (_isMinus)
                 finalTerm = "-" + finalTerm;
             if (finalTerm != null && !finalTerm.equalsIgnoreCase("")) {
@@ -218,13 +245,8 @@ public class Parser {
         if (!termS.equals("")) {
             String[] parts = termS.split("/");
             if (parts.length == 2) {
-                try {
-                    isNumeric(parts[0]);
-                    isNumeric(parts[1]);
-                    return true;
-                } catch (Exception e) {
-                    return false;
-                }
+                return isNumeric(parts[0]) &&
+                        isNumeric(parts[1]);
             } else if (termS.equalsIgnoreCase("Million")
                     || termS.equalsIgnoreCase("Billion")
                     || termS.equalsIgnoreCase("Trillion")
@@ -244,8 +266,12 @@ public class Parser {
      * @param termS- _token to add
      */
     private void yesUndefinedTerm_parseCLAndAddToTermList(String termS) {
-        termS=removeFromTheTermUndefindSigns(termS); // for " Balldur's " case after stem its  " Balldur' "
-        if(!StopWords.isStopWord(termS)) {
+        termS = removeFromTheTermUndefindSigns(termS); // for " Balldur's " case after stem its  " Balldur' "
+        if (!termS.equals("")&&Character.isDigit(termS.charAt(0))) {
+            addToTermList(termS);
+            return;
+        } //if "13asZz" ,"13 M" , "13%" we add to dictionary the same.
+        if (!StopWords.isStopWord(termS)) {
             if (termS != null && !termS.equals("")) {
                 String termsLow = termS.toLowerCase();
                 Integer counterLow = _termList.get(termsLow);
@@ -292,12 +318,23 @@ public class Parser {
     /**
      * todo documention and change order
      */
-    private boolean isBetweenModOrFracAndNumber(String termS) {
-        String[] termComponnents = (termS).split("-"); //array
+    private boolean isBetweenModOrFracAndToken(String termS) {
+        String[] termComponnents = (termS).split("-"); //array 13
         return (termComponnents.length == 2
-                && yesNumeric_isModifierOrFraction(termComponnents[0])
-                && isNumeric(termComponnents[1]));
+                && yesNumeric_isModifierOrFraction(termComponnents[0]));
     }
+
+    /**
+     * @param termS   - term of between
+     * @param partidx - zero or one
+     * @return
+     */
+    private boolean isThePartOfBetweenIsNumeric(String termS, int partidx) {
+        String[] termComponnents = (termS).split("-"); //array 13
+        return (termComponnents.length == 2 &&
+                isNumeric(termComponnents[partidx]));
+    }
+
 
     /**
      * if end with bn or m so cut it and return the
@@ -362,12 +399,12 @@ public class Parser {
                         && nextnextTerm.equalsIgnoreCase("dollars")))
                     downIndex(nextnextTerm.length());
                 addToTermList(Price.Parse(theNumber));
-            } else if (isBetweenModOrFracAndNumber(nextTerm)) {
-                if (yesNumeric_isModifierOrFraction(nextnextTerm)) {
+            } else if (isBetweenModOrFracAndToken(nextTerm)) {
+                if (isThePartOfBetweenIsNumeric(nextTerm, 1) && yesNumeric_isModifierOrFraction(nextnextTerm)) { // 12 miillion-13 million
                     addToTermList(Between.Parse(_token + " " + nextTerm + " " + nextnextTerm));
                 } else {
                     downIndex(nextnextTerm.length());
-                    addToTermList(Between.Parse(_token + " " + nextTerm));
+                    addToTermList(Between.Parse(stemPartOfBetween(_token + " " + nextTerm, 1))); //13 million-dogs, 12 million-13 todo something like 13 million-dog's??
                 }
             } else if (isPrecent || Percentage.isPercent(nextTerm, nextnextTerm)) {
                 if (!(nextTerm.equalsIgnoreCase("per")
@@ -389,14 +426,25 @@ public class Parser {
         else { //isn't numeric. kind of _token.
             String termTmp = endWithBnM(_token);
             if (!termTmp.equals("")) {
-                addToTermList(Price.Parse(termTmp)); //todo - problem: go over twice on u.s. dollars after.
+                addToTermList(Price.Parse(termTmp));
             } else if (isBetween(_token)) {
-                addToTermList(Between.Parse(_token));
-            } else { //undefined _token
+                if (isThePartOfBetweenIsNumeric(_token, 1)) {  // IF 11-*13*
+                    _token2 = getToken_RemovePunctuation();
+                    if (yesNumeric_isModifierOrFraction(_token2)) { // IF 11-13 million // include:12-13 3/4
+                        addToTermList(Between.Parse(_token + " " + _token2));
+                    } else { //12-13
+                        downIndex(_token2.length());
+                        addToTermList(Between.Parse(_token));
+                    }
+                } else { //11-dogs
+                    addToTermList(Between.Parse(stemPartOfBetween(_token, 1))); //need to stem dogs.
+                }
+            } else { //totally undefined _token
                 yesUndefinedTerm_parseCLAndAddToTermList(_token);
             }
         }//else\
     }//yesDigit_isNumberPricePrecentTermOrNoOne\
+
 
     /**
      * Dollar F C - we know for sure the first char was dollar,
@@ -410,6 +458,7 @@ public class Parser {
      * we will add: _token
      * if no numeric without $ we wouldn't do anything.
      */
+
     private void yesDollarFC_isPrice_isWithModOrFrac() {
         if (isNumeric(_token)) {
             String theNumber = _token;
@@ -496,7 +545,7 @@ public class Parser {
             addToTermList(Date.Parse(_token + " " + _token2));
         } else {
             downIndex(_token2.length());
-            yesUndefinedTerm_parseCLAndAddToTermList(_token);
+            yesUndefinedTerm_parseCLAndAddToTermList(stem(_token));
         }
     }
 
@@ -543,8 +592,8 @@ public class Parser {
                         yesBetween_isNumberAndNumber_hasModOrFrac();
                     } else if (Date.isMonth(_token)) {
                         yesMonth_isDate();
-                    } else if (_token.contains("-")) { // todo 12-13 3/4
-                        addToTermList(Between.Parse(stem(_token)));
+                    } else if (_token.contains("-")) {
+                        addToTermList(Between.Parse(stem(_token))); //word-word //word-number //word-word-word
                     } else {
                         yesUndefinedTerm_parseCLAndAddToTermList(stem(_token));
                     }

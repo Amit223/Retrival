@@ -9,22 +9,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main {
     public static void main(String[] args) {
-        String toLower="A".toLowerCase();
-        String notS="acq";
-        if(toLower.compareTo(notS)>0)
-            System.out.println("yay");
-    Parser p = new Parser();
-   p.Parse("Speaking at weekly press conference, the spokesman said that \n" +
-            "Balladur's China tour is \"an important political visit.\" \n" +
-            "  \"It will give major impetus to the further development of \n" +
-            "the \n" +
-            "bilateral ties between China and France, including economic and \n" +
-            "trade relations,\" he said. \n" +
-            "  Maintaining good political relations will provide a solid \n" +
-            "foundation and favorable conditions for the development of \n" +
-            "mutually beneficial economic and trade relations between the two \n" +
-            "countries, he said. ",true, "Paris");
-    p.printTermList();
+        String s = ReadFile.readStopWords("C:\\Users\\liadber\\Downloads\\אחזור");
+        StopWords.setStopwords(s);
+        Parser p = new Parser();
+        p.Parse("12 bn u.s. dollars", true, "Paris");
+        p.printTermList();
 
     }
 }

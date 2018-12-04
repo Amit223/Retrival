@@ -138,7 +138,9 @@ public class Indexer {
 
         //docs
         Set<String> keys=terms.keySet();
-        int maxtf=getMaxTf(terms.values());
+        int maxtf=0;
+        if(keys.size()>0)
+            maxtf=getMaxTf(terms.values());
         docMutex.lock();
         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
         docMutex.unlock();
