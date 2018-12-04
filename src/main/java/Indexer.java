@@ -59,13 +59,14 @@ public class Indexer {
     /**
      * todo add!
      */
-    public void loadDictionaryToMemory() {
+    public boolean loadDictionaryToMemory() {
         String dicString = "";
         FileReader f = null;
         try {
-            f = new FileReader(_path+"/Dictionary.txt");
+            System.out.println(_path+"/"+_toStem+"Dictionary.txt");
+            f = new FileReader(_path+"/"+_toStem+"Dictionary.txt");
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            return false;
         }
         Scanner sc = new Scanner(f);
         int i = 0, startIndex = 1, //cut the '{'
@@ -82,6 +83,7 @@ public class Indexer {
             dictionary.put(pair[0], Integer.parseInt(pair[1]));
             i++;
         }
+        return true;
     }
 
 
@@ -554,18 +556,18 @@ public class Indexer {
      */
     private void writeToPosting(int lineOfDoc,int tf, char firstChar,ListOfByteArrays [] postingLines,String term ) {
 /**
-        byte [] tf_bytes=toBytes(tf);
-        byte [] line_bytes=toBytes(lineOfDoc);
+ byte [] tf_bytes=toBytes(tf);
+ byte [] line_bytes=toBytes(lineOfDoc);
 
-        byte [] toWrite=new byte[8];
-        for (int i = 0; i < 4; i++) {
-            toWrite[i]=line_bytes[i];
-        }
-        for (int i = 4; i <8 ; i++) {
-            toWrite[i]=tf_bytes[i-4];
-        }
+ byte [] toWrite=new byte[8];
+ for (int i = 0; i < 4; i++) {
+ toWrite[i]=line_bytes[i];
+ }
+ for (int i = 4; i <8 ; i++) {
+ toWrite[i]=tf_bytes[i-4];
+ }
 
-**/
+ **/
         StringBuilder toWrite=new StringBuilder();
         toWrite.append(term);
         toWrite.append(" ");

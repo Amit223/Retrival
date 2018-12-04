@@ -27,8 +27,8 @@ public class Model {
         this.indexer=new Indexer(false,"C:\\Users\\liadber\\IdeaProjects\\Retrival\\src\\main\\resources");
     }
 
-    public void loadDictionaryToMemory(){
-        indexer.loadDictionaryToMemory();
+    public boolean loadDictionaryToMemory(){
+        return indexer.loadDictionaryToMemory();
     }
 
     public Stage getMainStage() {
@@ -105,29 +105,29 @@ class ThreadedIndex extends Thread{
         ReadFile.read(path);
         Elements elements=ReadFile.getDocs();
         HashMap<String, Integer> termList;
-       for(int i=0;i<elements.size();i++){
-           String text=elements.get(i).getElementsByTag("TEXT").text();
-           String name=elements.get(i).getElementsByTag("DOCNO").text();
-           Elements Felements=elements.get(i).getElementsByTag("F");
-           String city="";
-           String language="";
-           for (Element element1: Felements){
-               if(element1.attr("P").equals("104")){//city
-                   city=element1.text();
-                   if(city.contains(" "))
+        for(int i=0;i<elements.size();i++){
+            String text=elements.get(i).getElementsByTag("TEXT").text();
+            String name=elements.get(i).getElementsByTag("DOCNO").text();
+            Elements Felements=elements.get(i).getElementsByTag("F");
+            String city="";
+            String language="";
+            for (Element element1: Felements){
+                if(element1.attr("P").equals("104")){//city
+                    city=element1.text();
+                    if(city.contains(" "))
                         city=city.substring(0,city.indexOf(" "));
-               }
-               else if(element1.attr("P").equals("105"))//language
-               {
-                   language=element1.text();
-               }
-           }
-           Parser parser=new Parser();
-           parser.Parse(text,toStem,city);//return termlist
-           termList=parser.getTerms();
-           indexer.Index(termList,parser.getLocations(),name,city,parser.getWordCount());
-           indexer.push();
-       }
+                }
+                else if(element1.attr("P").equals("105"))//language
+                {
+                    language=element1.text();
+                }
+            }
+            Parser parser=new Parser();
+            parser.Parse(text,toStem,city);//return termlist
+            termList=parser.getTerms();
+            indexer.Index(termList,parser.getLocations(),name,city,parser.getWordCount());
+            indexer.push();
+        }
         System.out.println("DONE");
     }
 }
