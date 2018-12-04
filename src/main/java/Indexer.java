@@ -48,7 +48,7 @@ public class Indexer {
 
 
     public  int getNumberOfDocs() {
-        return _numOfFiles;
+        return _numOfFiles.get();
     }
 
     public int getNumberOfTerms() {
@@ -180,10 +180,10 @@ public class Indexer {
      * @param numOfWords - the number of word in the document
      */
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
-                      int numOfWords){
+                      int numOfWords) {
 
 
-        Set<String> keys=terms.keySet();
+        Set<String> keys = terms.keySet();
         /**
          int maxtf=getMaxTf(terms.values());
          docMutex.lock();
@@ -191,22 +191,22 @@ public class Indexer {
          docMutex.unlock();
          **/
         _AtomicNumlineDocs.getAndAdd(1);
-        int lineNumDocs = _AtomicNumlineDocs.get()-1;
+        int lineNumDocs = _AtomicNumlineDocs.get() - 1;
 
 
-        Iterator<String>termsKeys=keys.iterator();
+        Iterator<String> termsKeys = keys.iterator();
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
             dictionaryMutex.lock();
             ifExistUpdateTF(term); //updates dictionary df/ add new term
             dictionaryMutex.unlock();
-            char FirstC = (Character.isDigit(term.charAt(0))||term.charAt(0)=='-') ? '0' : Character.toLowerCase(term.charAt(0));
+            char FirstC = (Character.isDigit(term.charAt(0)) || term.charAt(0) == '-') ? '0' : Character.toLowerCase(term.charAt(0));
             //if(firstLineNum!=-1) {
             //postingLinesNum= updateTheLastNodePtr(firstLineNum, FirstC,postingLines);//updates the term's ladt doc that new line will be added in lineNumPosting
             //}
-            writeToPosting(lineNumDocs,terms.get(term),FirstC,postingLines,term);
+            writeToPosting(lineNumDocs, terms.get(term), FirstC, postingLines, term);
         }
-        if(_numOfFiles.get()%1000==0)
+        if (_numOfFiles.get() % 1000 == 0)
             writeListToPosting();
 
 /**
@@ -222,29 +222,9 @@ public class Indexer {
  cityMutex.unlock();
  }
  **/
-        _numOfFiles.getAndAdd(1);
-        // System.out.println(_numOfFiles);
-
-            }
-            int lineNumPosting=writeToPosting(lineNumDocs,terms.get(term),FirstC);
-            if(firstLineNum==-1){
-
-
-
-
-
-
-
-            }
-        }
-        String details=getCityDetails(cityOfDoc);
-        String[] strings=details.split("-");
-        cityMutex.lock(); //todo runtime
-        toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2],locations.size());
-        if(locations.size()>0&&!cityOfDoc.equals("")) {
-            toCityPosting(locations,lineNumDocs);
 
     }
+
 
     private void writeListToPosting() {
         Thread [] threads=new ThreadedWrite[27];
@@ -739,9 +719,6 @@ public class Indexer {
             dictionary.put(newTerm,df);
         }
         else {//new term completely
-            return -1;
-        }*/
-        return 0;
             dictionary.put(term,1);
 
         }
