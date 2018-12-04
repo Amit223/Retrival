@@ -40,19 +40,13 @@ public class Model {
         indexer.delete();
     }
 
-    //todo
     public int getNumberOfDocs(){
-        return -1;
+        return indexer.getNumberOfDocs();
     }
-    //todo
     public int getNumberOfTerms(){
-        return -1;
+        return indexer.getNumberOfTerms();
     }
 
-    //todo
-    public void loadDictionaryToMemory(){
-
-    }
 
 
     public void Start(boolean toStem,String path,String toSave){
@@ -85,6 +79,7 @@ public class Model {
                     e.printStackTrace();
                 }
                 System.out.println("Start sorting");
+                indexer.loadDictionaryToFile();
                 indexer.sort();
 
             }
@@ -128,6 +123,7 @@ class ThreadedIndex extends Thread{
                     language=element1.text();
                 }
             }
+            StopWords.setStopWords();
             Parser parser=new Parser();
             parser.Parse(text,toStem,city);//return termlist
             termList=parser.getTerms();
