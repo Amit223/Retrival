@@ -77,8 +77,8 @@ public class Controller {
             alert.setContentText("Can't start process without all paths filled!\n Choose the folders and try again! ");
             alert.show();
         } else {
-            long startTime = System.nanoTime();
             System.out.println("Started");
+            long startTime = System.nanoTime();
             model.Start(toStem.isSelected(), path.getText(), save.getText());
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             long endTime = System.nanoTime(); //(endTime - startTime)
@@ -89,7 +89,6 @@ public class Controller {
                     "RunTime: "+ elapsedTime);
             alert.show();
             reset.setDisable(false);
-            long endTime = System.nanoTime();
             System.out.println("Took "+(endTime - startTime)/1000000000 + " s");
         }
     }
@@ -114,6 +113,20 @@ public class Controller {
 
     @FXML
     public void loadDictionaryToMemory(ActionEvent actionEvent){
-        model.loadDictionaryToMemory();
+        if (path.getText().equals("") || save.getText().equals("")) {
+            pathS=path.getText();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setContentText("Can't start process without all paths filled!\nChoose the folders and try again! ");
+            alert.show();
+        } else {
+            if(model.loadDictionaryToMemory()){
+                //success
+            }
+            else{
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("Dictionary.txt to load not found in the given path!\nPlease make sure it is there!");
+                alert.show();
+            }
+        }
     }
 }
