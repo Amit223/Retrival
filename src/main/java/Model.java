@@ -49,10 +49,6 @@ public class Model {
         return -1;
     }
 
-    //todo
-    public void loadDictionaryToMemory(){
-
-    }
 
 
     public void Start(boolean toStem,String path,String toSave){
