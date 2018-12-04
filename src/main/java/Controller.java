@@ -86,7 +86,7 @@ public class Controller {
             double seconds = (double)elapsedTime / 1_000_000_000.0;
             alert.setContentText("Number of files that were indexed: +" + model.getNumberOfDocs()+ "\n" +
                     "Number of files that were unique terms: "+ model.getNumberOfTerms()+ "\n"+
-                    "RunTime: "+ elapsedTime);
+                    "RunTime: "+ seconds/60 + " minutes!");
             alert.show();
             reset.setDisable(false);
             System.out.println("Took "+(endTime - startTime)/1000000000 + " s");
