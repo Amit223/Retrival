@@ -24,4 +24,6 @@ public class HashMapIgnoreCase extends HashMap<String, Integer> {
             return false;
         }
     }
+
+
 }
