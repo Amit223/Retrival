@@ -64,8 +64,7 @@ public class Indexer {
         String dicString = "";
         FileReader f = null;
         try {
-            System.out.println(_path+"/"+_toStem+"Dictionary.txt");
-            f = new FileReader(_path+"/"+_toStem+"Dictionary.txt");
+            f = new FileReader(_path+"\\"+_toStem+"Dictionary.txt");
         } catch (FileNotFoundException e) {
             return false;
         }
@@ -74,7 +73,6 @@ public class Indexer {
                 endindex = 1;
         sc.useDelimiter(", ");
         while (sc.hasNext()) {
-
             String line = sc.next();
             endindex = line.length(); //cut '/n' and ',' and ' '
             if (i != 0) startIndex = 0;
@@ -97,7 +95,7 @@ public class Indexer {
         BufferedWriter writer = null;
         try
         {
-            writer = new BufferedWriter( new FileWriter( "Dictionary.txt"));
+            writer = new BufferedWriter( new FileWriter( _path+"\\"+_toStem+"Dictionary.txt"));
             writer.write(dictionaryToString);
 
         }
@@ -110,6 +108,7 @@ public class Indexer {
             {
                 if ( writer != null)
                     writer.close( );
+            dictionary.clear();
             }
             catch ( IOException e)
             {
