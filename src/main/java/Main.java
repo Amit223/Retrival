@@ -14,8 +14,7 @@ public class Main {
         if(toLower.compareTo(notS)>0)
             System.out.println("yay");
     Parser p = new Parser();
-    StopWords.setStopWords();
-    p.Parse("Speaking at weekly press conference, the spokesman said that \n" +
+   p.Parse("Speaking at weekly press conference, the spokesman said that \n" +
             "Balladur's China tour is \"an important political visit.\" \n" +
             "  \"It will give major impetus to the further development of \n" +
             "the \n" +

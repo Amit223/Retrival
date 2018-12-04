@@ -19,24 +19,28 @@ public class Indexer {
     private Map<String,Integer> dictionary;
 
 
-    //lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
 
-    private File documents;//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
 
+    //docs
+    private File documents;//docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)|-54 bytes
+    private List<Byte> docsToWrite;
+    private Set<String> languages;
     private AtomicInteger _AtomicNumlineDocs;
+
+    //posting
+    // lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
     private AtomicInteger _numOfFiles;
     private String _path;
     private boolean _toStem;
-    private Mutex [] mutexesPosting; //mutexs of the posting files.
-    private Mutex [] mutexesList; //mutexs of the posting files.
-    ListOfByteArrays [] postingLines;
+    private ListOfByteArrays [] postingLines;
+    private int numOfTerms=0;
 
 
     //citys
-    private Map <String,Pair<Vector<String>,Integer>> cityDictionary;
+    private Map <String,Vector<String>> cityDictionary;
     private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
     private int lineNumCitys;
-    List<Byte> cityLines = new ArrayList<Byte>();
+    private List<String> cityLines = new ArrayList<String>();
 
 
 
@@ -44,7 +48,8 @@ public class Indexer {
     private Mutex docMutex;
     private Mutex cityMutex;
     private Mutex dictionaryMutex;
-
+    private Mutex [] mutexesPosting; //mutexs of the posting files.
+    private Mutex [] mutexesList; //mutexs of the posting files.
 
 
 
@@ -53,9 +58,121 @@ public class Indexer {
     }
 
     public int getNumberOfTerms() {
-        return dictionary.size();
+        return this.numOfTerms;
     }
 
+
+
+    /**
+     * the constructor.,
+     * @param toStem to stem - to decide the path of the file.
+     * @param path -the path of the directory of the posting files.
+     */
+    public Indexer(boolean toStem,String path) {
+        try {
+            _path=path;
+            _toStem=toStem;
+            if(toStem) {
+                documents = new File(path+"/Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+                //citys
+                citysPosting = new File(path+"/CityPosting.txt");
+            }
+            else{//not to stem
+                documents = new File(path+"/NotStemDocuments.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+                //citys
+                citysPosting = new File(path+"/NotStemCityPosting.txt");
+            }
+            documents.createNewFile();
+            dictionary = new ConcurrentHashMap<>();
+            _AtomicNumlineDocs = new AtomicInteger(0);
+            lineNumCitys = 0;
+            _numOfFiles=new AtomicInteger(0);
+            docsToWrite=new ArrayList<>();
+            languages=new HashSet<>();
+
+            //citys
+            cityDictionary = new HashMap<>();
+            citysPosting.createNewFile();
+            cityLines=new ArrayList<>();
+
+            //mutexes&&posting lines
+            cityMutex=new Mutex();
+            docMutex=new Mutex();
+            dictionaryMutex=new Mutex();
+            mutexesPosting =new Mutex[27];
+            mutexesList=new Mutex[27];
+            postingLines = new ListOfByteArrays[27];
+            for(int i=0; i<mutexesPosting.length;i++){
+                mutexesPosting[i]=new Mutex();
+                mutexesList[i]=new Mutex();
+                postingLines[i]=new ListOfByteArrays();
+
+            }
+
+            //files
+            File file;
+            for(char c='a';c<='z';c++){
+                file=new File(_path+"/"+c+_toStem+".txt");
+                file.createNewFile();
+            }
+            file=new File(_path+"/"+'0'+_toStem+".txt");
+            file.createNewFile();
+        }
+        catch (IOException e){
+
+        }
+    }
+
+    /**
+     * create inverted index and posting files.
+     * @param terms
+     * @param locations - vector of locations of the city
+     * @param nameOfDoc
+     * @param cityOfDoc
+     * @param numOfWords - the number of word in the document
+     */
+    public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
+                      int numOfWords,String language){
+
+
+        Set<String> keys=terms.keySet();
+         int maxtf=getMaxTf(terms.values());
+         docMutex.lock();
+         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
+         docMutex.unlock();
+        _AtomicNumlineDocs.getAndAdd(1);
+        int lineNumDocs = _AtomicNumlineDocs.get()-1;
+
+
+        Iterator<String>termsKeys=keys.iterator();
+        while (termsKeys.hasNext()) {
+            String term = termsKeys.next();
+            dictionaryMutex.lock();
+            ifExistUpdateTF(term); //updates dictionary df/ add new term
+            dictionaryMutex.unlock();
+            char FirstC = (Character.isDigit(term.charAt(0))||term.charAt(0)=='-') ? '0' : Character.toLowerCase(term.charAt(0));
+            writeToPosting(lineNumDocs,terms.get(term),FirstC,postingLines,term);
+        }
+        if(_numOfFiles.get()%1000==0)
+            writeListToPosting();
+
+
+        if(cityOfDoc.length()!=0) {
+             String details = getCityDetails(cityOfDoc);
+             String[] strings = details.split("-");
+             cityMutex.lock();
+             toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
+             if (locations.size() > 0 ) {//need only if in file to add
+                 toCityPosting(cityOfDoc,locations, lineNumDocs);
+                 lineNumCitys += 1;
+                }
+            cityMutex.unlock();
+        }
+
+        _numOfFiles.getAndAdd(1);
+        // System.out.println(_numOfFiles);
+
+    }
 
     /**
      * todo add!
@@ -108,125 +225,13 @@ public class Indexer {
             {
                 if ( writer != null)
                     writer.close( );
-            dictionary.clear();
+                numOfTerms=dictionary.size();
+                dictionary.clear();
             }
             catch ( IOException e)
             {
             }
         }
-    }
-
-    /**
-     * the constructor.,
-     * @param toStem to stem - to decide the path of the file.
-     * @param path -the path of the directory of the posting files.
-     */
-    public Indexer(boolean toStem,String path) {
-        try {
-            _path=path;
-            _toStem=toStem;
-            if(toStem) {
-                documents = new File(path+"/Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-                //citys
-                citysPosting = new File(path+"/CityPosting.txt");
-            }
-            else{//not to stem
-                documents = new File(path+"/NotStemDocuments.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-                //citys
-                citysPosting = new File(path+"/NotStemCityPosting.txt");
-            }
-            documents.createNewFile();
-            dictionary = new ConcurrentHashMap<>();
-            _AtomicNumlineDocs = new AtomicInteger(0);
-            lineNumCitys = 0;
-            _numOfFiles=new AtomicInteger(0);
-
-            //citys
-            cityDictionary = new HashMap<>();
-            citysPosting.createNewFile();
-
-            //mutexesPostingFiles
-            cityMutex=new Mutex();
-            docMutex=new Mutex();
-            dictionaryMutex=new Mutex();
-            mutexesPosting =new Mutex[27];
-            mutexesList=new Mutex[27];
-            postingLines = new ListOfByteArrays[27];
-            for(int i=0; i<mutexesPosting.length;i++){
-                mutexesPosting[i]=new Mutex();
-                mutexesList[i]=new Mutex();
-                postingLines[i]=new ListOfByteArrays();
-
-            }
-
-            //files
-            File file;
-            for(char c='a';c<='z';c++){
-                file=new File(_path+"/"+c+_toStem+".txt");
-                file.createNewFile();
-            }
-            file=new File(_path+"/"+'0'+_toStem+".txt");
-            file.createNewFile();
-        }
-        catch (IOException e){
-
-        }
-    }
-
-    /**
-     * create inverted index and posting files.
-     * @param terms
-     * @param locations - vector of locations of the city
-     * @param nameOfDoc
-     * @param cityOfDoc
-     * @param numOfWords - the number of word in the document
-     */
-    public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
-                      int numOfWords){
-
-
-        Set<String> keys=terms.keySet();
-        /**
-         int maxtf=getMaxTf(terms.values());
-         docMutex.lock();
-         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
-         docMutex.unlock();
-         **/
-        _AtomicNumlineDocs.getAndAdd(1);
-        int lineNumDocs = _AtomicNumlineDocs.get()-1;
-
-
-        Iterator<String>termsKeys=keys.iterator();
-        while (termsKeys.hasNext()) {
-            String term = termsKeys.next();
-            dictionaryMutex.lock();
-            ifExistUpdateTF(term); //updates dictionary df/ add new term
-            dictionaryMutex.unlock();
-            char FirstC = (Character.isDigit(term.charAt(0))||term.charAt(0)=='-') ? '0' : Character.toLowerCase(term.charAt(0));
-            //if(firstLineNum!=-1) {
-            //postingLinesNum= updateTheLastNodePtr(firstLineNum, FirstC,postingLines);//updates the term's ladt doc that new line will be added in lineNumPosting
-            //}
-            writeToPosting(lineNumDocs,terms.get(term),FirstC,postingLines,term);
-        }
-        if(_numOfFiles.get()%1000==0)
-            writeListToPosting();
-
-/**
- if(cityOfDoc.length()!=0) {
- String details = getCityDetails(cityOfDoc);
- String[] strings = details.split("-");
- cityMutex.lock(); //todo runtime
- toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2], locations.size());
- if (locations.size() > 0 ) {
- toCityPosting(locations, lineNumDocs);
- lineNumCitys += 1;
- }
- cityMutex.unlock();
- }
- **/
-        _numOfFiles.getAndAdd(1);
-        // System.out.println(_numOfFiles);
-
     }
 
     private void writeListToPosting() {
@@ -260,20 +265,31 @@ public class Indexer {
         for (int i=0;i<Bytes.length;i++){
             bytes[i]=Bytes[i];
         }
-        try ( FileOutputStream out = new FileOutputStream(citysPosting);) {
+        try {
+            FileOutputStream out = new FileOutputStream(citysPosting);
+            RandomAccessFile raf=new RandomAccessFile(documents,"rw");
+            byte[] bytesDocs=new byte[docsToWrite.size()];
+            for(int i=0;i<docsToWrite.size();i++){
+                bytesDocs[i]=docsToWrite.get(i);
+            }
+            raf.write(bytesDocs);
+            raf.close();
+            docsToWrite.clear();
             out.write(bytes);
             out.close();
         }
         catch (Exception e){
 
         }
+        writeListToPosting();
+
 
     }
 
     public Map<String,Integer> getDictionary() {
         return dictionary;
     }
-    public Map<String, Pair<Vector<String>, Integer>> getCityDictionary() {
+    public Map<String, Vector<String>> getCityDictionary() {
         return cityDictionary;
     }
 
@@ -314,7 +330,35 @@ public class Indexer {
      *
      * adds all vector of location to the state posting
      */
-    private void toCityPosting(Vector<Integer> locations,int lineNumDoc) {
+    //todo
+    private void toCityPosting(String city,Vector<Integer> locations,int lineNumDoc) {
+
+        StringBuilder toWrite=new StringBuilder();
+        int index=locations.size();
+        while(index>3){
+            toWrite.append(city);
+            toWrite.append(" ");
+            toWrite.append(lineNumDoc);
+            toWrite.append(" ");
+
+        }
+        for(int i=0;i<3;i++){
+            if(i<locations.size()){
+                toWrite.append(locations.get(i));
+            }
+            else
+                toWrite.append("#");
+        }
+
+        toWrite.append("\n");
+        cityMutex.lock();
+        cityLines.add(toWrite.toString());
+        mutexesList[index].unlock();
+
+
+
+        /**
+         *
         int size=locations.size();
         int index=0;
         Byte[] toWrite=new Byte[28];
@@ -357,18 +401,6 @@ public class Indexer {
                 toWrite[i]=ptr[i-24];
             }
             cityLines.addAll(Arrays.asList(toWrite));
-            /**
-             try {
-             RandomAccessFile raf=new RandomAccessFile(citysPosting,"rw");
-             raf.seek(raf.length());
-             raf.write(toWrite);
-             raf.close();
-             this.lineNumCitys+=1;
-             }
-             catch (Exception e){
-             System.out.println("problem in write to city posting");
-             }
-             **/
             index+=1;
             size=size-5;
         }
@@ -413,18 +445,7 @@ public class Indexer {
             toWrite[i]=ptr[i-24];
         }
         cityLines.addAll(Arrays.asList(toWrite));
-
-        /**
-         try {
-         RandomAccessFile raf=new RandomAccessFile(citysPosting,"rw");
-         raf.seek(raf.length());
-         raf.write(toWrite);
-         raf.close();
-         }
-         catch (Exception e){
-         System.out.println("problem in write to city posting");
-         }
-         **/
+**/
 
 
     }
@@ -458,95 +479,17 @@ public class Indexer {
             return "";
         }
     }
-    private void toStatesDictionary(String cityOfDoc,String country,String coin,String population,int size) {
-        if(!cityDictionary.containsKey(cityOfDoc)){
-            Vector<String> v=new Vector<>();
+    private void toStatesDictionary(String cityOfDoc,String country,String coin,String population) {
+        if(!cityDictionary.containsKey(cityOfDoc)) {
+            Vector<String> v = new Vector<>();
             v.add(country);
             v.add(coin);
             v.add(population);
-            if(size>0) {
-                Pair<Vector<String>, Integer> pair = new Pair<>(v, new Integer(this.lineNumCitys));
-                cityDictionary.put(cityOfDoc, pair);
-            }
-            else {
-                Pair<Vector<String>, Integer> pair = new Pair<>(v, -1);
-                cityDictionary.put(cityOfDoc, pair);
-            }
+            cityDictionary.put(cityOfDoc, v);
         }
-        else{//exist need to update the posting file's pointer
-            if(size>0) {
-                int lineInPosting = (cityDictionary.get(cityOfDoc)).getValue();
-                updateStatesPosting(lineInPosting);
-            }
-        }
-
-
+        //else- exist dont need to add
     }
 
-
-    private void updateStatesPosting(int lineInPosting) {
-        Byte b1=cityLines.get(lineInPosting*28+24);
-        Byte b2=cityLines.get(lineInPosting*28+25);
-        Byte b3=cityLines.get(lineInPosting*28+26);
-        Byte b4=cityLines.get(lineInPosting*28+27);
-        byte [] ptr={b1,b2,b3,b4};
-        int int_ptr=byteToInt(ptr);
-        int prev=lineInPosting;
-        while(int_ptr!=-1){
-            b1=cityLines.get(int_ptr*28+24);
-            b2=cityLines.get(int_ptr*28+25);
-            b3=cityLines.get(int_ptr*28+26);
-            b4=cityLines.get(int_ptr*28+27);
-            ptr=new byte[]{b1,b2,b3,b4};
-            int_ptr=byteToInt(ptr);
-        }
-        ptr=toBytes(this.lineNumCitys);
-        cityLines.set(prev*28+24,ptr[0]);
-        cityLines.set(prev*28+25,ptr[1]);
-        cityLines.set(prev*28+26,ptr[2]);
-        cityLines.set(prev*28+27,ptr[3]);
-
-
-
-
-
-        /**
-         try {
-         RandomAccessFile raf = new RandomAccessFile(citysPosting, "rw");
-         raf.seek(28*lineInPosting+24);
-         byte[] ptr = new byte[4];
-         raf.read(ptr);
-         int ptr_int=byteToInt(ptr);
-         int prevptr=lineInPosting;//to know what line is the last of the term's docs
-         while(ptr_int!=-1){
-         prevptr=ptr_int;
-         raf.seek(ptr_int*27+24);
-         ptr = new byte[4];
-         raf.read(ptr);
-         ptr_int=byteToInt(ptr);
-         }
-         //the last line.need to change the pointer!
-         raf.seek(prevptr*28);
-         byte[] line = new byte[28];
-         raf.read(line);
-         raf.close();
-         ptr=toBytes(this.lineNumCitys);
-         line[46]=ptr[0];
-         line[47]=ptr[1];
-         line[48]=ptr[2];
-         line[49]=ptr[3];
-         raf=new RandomAccessFile(citysPosting,"rw");
-         raf.seek(prevptr*28);
-         raf.write(line);
-         raf.close();
-
-
-         }
-         catch(Exception e){
-
-         }
-         **/
-    }
 
     /**
      *
@@ -597,40 +540,38 @@ public class Indexer {
      * docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
 
      */
-    private void writeToDocuments(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords) {
+    private void writeToDocuments(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language) {
         //docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-        byte[] name=stringToByteArray(nameOfDoc,20);
-        byte[] city=stringToByteArray(cityOfDoc,18);
+        byte[] name=stringToByteArray(nameOfDoc,16);
+        byte[] city=stringToByteArray(cityOfDoc,16);
+        byte [] lang_bytes=stringToByteArray(language,10);
+        if(language.length()>0){
+            languages.add(language);
+        }
         byte [] maxtf_bytes=toBytes(maxtf);
         byte [] size_bytes=toBytes(size);
         byte [] words_bytes=toBytes(numOfWords);
-        byte [] toWrite=new byte[50];
-        for (int i = 0; i < 20; i++) {
-            toWrite[i]=name[i];
+        for (int i = 0; i < 16; i++) {
+            docsToWrite.add(name[i]);
         }
-        for (int i = 20; i <38 ; i++) {
-            toWrite[i]=city[i-20];
+        for (int i = 0; i <16 ; i++) {
+            docsToWrite.add(city[i]);
         }
-
-        for (int i = 38; i < 42; i++) {
-            toWrite[i]=maxtf_bytes[i-38];
-        }
-        for (int i = 42; i <46 ; i++) {
-            toWrite[i]=size_bytes[i-42];
+        for (int i = 0; i <10 ; i++) {
+            docsToWrite.add(lang_bytes[i]);
         }
 
-        for (int i = 46; i < 50; i++) {
-            toWrite[i]=words_bytes[i-46];
+        for (int i = 0; i < 4; i++) {
+            docsToWrite.add(maxtf_bytes[i]);
         }
-        try {
-            RandomAccessFile raf=new RandomAccessFile(documents,"rw");
-            raf.seek(raf.length());
-            raf.write(toWrite);
-            raf.close();
+        for (int i = 0; i <4 ; i++) {
+            docsToWrite.add(size_bytes[i]);
         }
-        catch (Exception e){
-            System.out.println("problem in write to doc");
+
+        for (int i = 0; i < 4; i++) {
+            docsToWrite.add(words_bytes[i]);
         }
+
 
     }
 

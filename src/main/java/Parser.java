@@ -140,7 +140,7 @@ public class Parser {
                         break;
                     }
                 }
-                for (int i = termS.length() - 1; 0 < i && endIndex == termS.length(); i--) {
+                for (int i = termS.length() - 1; 0 <=i && endIndex == termS.length(); i--) {
                     if (Character.isDigit(termS.charAt(i))
                             || Character.isLetter(termS.charAt(i))
                             || termS.charAt(i) == '%') {
@@ -191,15 +191,17 @@ public class Parser {
      * @param finalTerm - a final _token to add to _token list
      */
     private void addToTermList(String finalTerm) {
-        if (_isMinus)
-            finalTerm = "-" + finalTerm;
-        if (finalTerm != null && !finalTerm.equalsIgnoreCase("")) {
-            if (!finalTerm.equalsIgnoreCase("between")
-                    && !finalTerm.equalsIgnoreCase("and") && !StopWords.isStopWord(finalTerm)) {
-                if (_termList.containsKey(finalTerm)) {
-                    _termList.put(finalTerm, _termList.get(finalTerm) + 1);
-                } else {
-                    _termList.put(finalTerm, 1);
+        if(!StopWords.isStopWord(finalTerm)) {
+            if (_isMinus)
+                finalTerm = "-" + finalTerm;
+            if (finalTerm != null && !finalTerm.equalsIgnoreCase("")) {
+                if (!finalTerm.equalsIgnoreCase("between")
+                        && !finalTerm.equalsIgnoreCase("and") && !StopWords.isStopWord(finalTerm)) {
+                    if (_termList.containsKey(finalTerm)) {
+                        _termList.put(finalTerm, _termList.get(finalTerm) + 1);
+                    } else {
+                        _termList.put(finalTerm, 1);
+                    }
                 }
             }
         }
@@ -243,34 +245,36 @@ public class Parser {
      */
     private void yesUndefinedTerm_parseCLAndAddToTermList(String termS) {
         termS=removeFromTheTermUndefindSigns(termS); // for " Balldur's " case after stem its  " Balldur' "
-        if (termS != null && !termS.equals("")) {
-            String termsLow = termS.toLowerCase();
-            Integer counterLow = _termList.get(termsLow);
-            String termsUp = termS.toUpperCase();
-            Integer counterUp = _termList.get(termsUp);
-            char firstC = termS.charAt(0);
-            if (counterLow != null) { //exist lower case
-                _termList.put(termsLow, counterLow + 1);
-            } else if (counterUp != null) { //exist upper case
-                if (Character.isLowerCase(firstC)) {
-                    _termList.remove(termsUp);
-                    _termList.put(termsLow, counterUp + 1);
-                } else if (Character.isUpperCase(firstC)) {
+        if(!StopWords.isStopWord(termS)) {
+            if (termS != null && !termS.equals("")) {
+                String termsLow = termS.toLowerCase();
+                Integer counterLow = _termList.get(termsLow);
+                String termsUp = termS.toUpperCase();
+                Integer counterUp = _termList.get(termsUp);
+                char firstC = termS.charAt(0);
+                if (counterLow != null) { //exist lower case
+                    _termList.put(termsLow, counterLow + 1);
+                } else if (counterUp != null) { //exist upper case
+                    if (Character.isLowerCase(firstC)) {
+                        _termList.remove(termsUp);
+                        _termList.put(termsLow, counterUp + 1);
+                    } else if (Character.isUpperCase(firstC)) {
 
-                    _termList.put(termsUp, counterUp + 1);
-                } else { //not going to happend because @see x
-                    _termList.remove(termsUp);
-                    _termList.put(termsLow, counterUp + 1);
+                        _termList.put(termsUp, counterUp + 1);
+                    } else { //not going to happend because @see x
+                        _termList.remove(termsUp);
+                        _termList.put(termsLow, counterUp + 1);
+                    }
+                } else {// *()
+                    if (Character.isUpperCase(firstC)) {
+                        if (termsUp.equals(_cityUp)) _cityLocations.add(_tokenCounter);
+                        _termList.put(termsUp, 1);
+                    } else {
+                        _termList.put(termsLow, 1); // x
+                    }
                 }
-            } else {// *()
-                if (Character.isUpperCase(firstC)) {
-                    if (termsUp.equals(_cityUp)) _cityLocations.add(_tokenCounter);
-                    _termList.put(termsUp, 1);
-                } else {
-                    _termList.put(termsLow, 1); // x
-                }
+                if (termsUp.equals(_cityUp)) _cityLocations.add(_tokenCounter);
             }
-            if (termsUp.equals(_cityUp)) _cityLocations.add(_tokenCounter);
         }
     }
 
