@@ -1,18 +1,18 @@
 
 import ParseObjects.Number;
-import javafx.util.Pair;
-import sun.awt.Mutex;
+        import javafx.util.Pair;
+        import sun.awt.Mutex;
 
-import java.io.*;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+        import java.io.*;
+        import java.net.URL;
+        import java.net.URLConnection;
+        import java.nio.charset.StandardCharsets;
+        import java.util.*;
+        import java.util.concurrent.ConcurrentHashMap;
+        import java.util.concurrent.ExecutorService;
+        import java.util.concurrent.Executors;
+        import java.util.concurrent.TimeUnit;
+        import java.util.concurrent.atomic.AtomicInteger;
 
 public class Indexer {
 
@@ -136,10 +136,10 @@ public class Indexer {
 
 
         Set<String> keys=terms.keySet();
-         int maxtf=getMaxTf(terms.values());
-         docMutex.lock();
-         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
-         docMutex.unlock();
+        int maxtf=getMaxTf(terms.values());
+        docMutex.lock();
+        writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
+        docMutex.unlock();
         _AtomicNumlineDocs.getAndAdd(1);
         int lineNumDocs = _AtomicNumlineDocs.get()-1;
 
@@ -156,18 +156,17 @@ public class Indexer {
         if(_numOfFiles.get()%1000==0)
             writeListToPosting();
 
-
+/**
         if(cityOfDoc.length()!=0) {
-             String details = getCityDetails(cityOfDoc);
-             String[] strings = details.split("-");
-             cityMutex.lock();
-             toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
-             if (locations.size() > 0 ) {//need only if in file to add
-                 toCityPosting(cityOfDoc,locations, lineNumDocs);
-                 lineNumCitys += 1;
-                }
-            cityMutex.unlock();
+            String details = getCityDetails(cityOfDoc);
+            String[] strings = details.split("-");
+            toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
+            if (locations.size() > 0 ) {//need only if in file to add
+                toCityPosting(cityOfDoc,locations, lineNumDocs);
+                lineNumCitys += 1;
+            }
         }
+ **/
 
         _numOfFiles.getAndAdd(1);
         // System.out.println(_numOfFiles);
@@ -335,119 +334,60 @@ public class Indexer {
 
         StringBuilder toWrite=new StringBuilder();
         int index=locations.size();
+        int iterator=0;
         while(index>3){
             toWrite.append(city);
             toWrite.append(" ");
             toWrite.append(lineNumDoc);
             toWrite.append(" ");
-
+            toWrite.append(locations.get(iterator));
+            iterator++;
+            toWrite.append(" ");
+            toWrite.append(locations.get(iterator));
+            iterator++;
+            toWrite.append(" ");
+            toWrite.append(locations.get(iterator));
+            iterator++;
+            toWrite.append("\n");
+            index=index-3;
         }
-        for(int i=0;i<3;i++){
-            if(i<locations.size()){
-                toWrite.append(locations.get(i));
-            }
-            else
-                toWrite.append("#");
+        toWrite.append(city);
+        toWrite.append(" ");
+        toWrite.append(lineNumDoc);
+        toWrite.append(" ");
+        //first
+        if(iterator<locations.size()) {
+            toWrite.append(locations.get(iterator));
+            toWrite.append(" ");
+            iterator++;
         }
-
-        toWrite.append("\n");
+        else{
+            toWrite.append("#");
+            toWrite.append(" ");
+        }
+        //seconds
+        if(iterator<locations.size()) {
+            toWrite.append(locations.get(iterator));
+            toWrite.append(" ");
+            iterator++;
+        }
+        else{
+            toWrite.append("#");
+            toWrite.append(" ");
+        }
+        //third-last
+        if(iterator<locations.size()) {
+            toWrite.append(locations.get(iterator));
+            iterator++;
+            toWrite.append("\n");
+        }
+        else{
+            toWrite.append("#");
+            toWrite.append("\n");
+        }
         cityMutex.lock();
         cityLines.add(toWrite.toString());
-        mutexesList[index].unlock();
-
-
-
-        /**
-         *
-        int size=locations.size();
-        int index=0;
-        Byte[] toWrite=new Byte[28];
-        byte [] docline=toBytes(lineNumDoc);
-        byte []loc1;
-        byte []loc2;
-        byte []loc3;
-        byte []loc4;
-        byte []loc5;
-        byte[]ptr;
-        while(size>5){
-            loc1=toBytes(locations.get(index*5));
-            loc2=toBytes(locations.get(index*5+1));
-            loc3=toBytes(locations.get(index*5+2));
-            loc4=toBytes(locations.get(index*5+3));
-            loc5=toBytes(locations.get(index*5+4));
-            ptr=toBytes(this.lineNumCitys);
-            for (int i = 0; i < 4; i++) {
-                toWrite[i]=docline[i];
-            }
-            for (int i = 4; i <8 ; i++) {
-                toWrite[i]=loc1[i-4];
-            }
-
-            for (int i = 8; i < 12; i++) {
-                toWrite[i]=loc2[i-8];
-            }
-            for (int i = 12; i <16 ; i++) {
-                toWrite[i]=loc3[i-12];
-            }
-
-            for (int i = 16; i < 20; i++) {
-                toWrite[i]=loc4[i-16];
-            }
-            for (int i = 20; i <24 ; i++) {
-                toWrite[i]=loc5[i-20];
-            }
-
-            for (int i = 24; i < 28; i++) {
-                toWrite[i]=ptr[i-24];
-            }
-            cityLines.addAll(Arrays.asList(toWrite));
-            index+=1;
-            size=size-5;
-        }
-        loc1=toBytes(-1);
-        loc2=toBytes(-1);
-        loc3=toBytes(-1);
-        loc4=toBytes(-1);
-        loc5=toBytes(-1);
-        ptr=toBytes(-1);
-        if(size>0)
-            loc1=toBytes(locations.get(index*5));
-        if(size>1)
-            loc2=toBytes(locations.get(index*5+1));
-        if(size>2)
-            loc3=toBytes(locations.get(index*5+2));
-        if(size>3)
-            loc4=toBytes(locations.get(index*5+3));
-        if(size>4)
-            loc5=toBytes(locations.get(index*5+4));
-        for (int i = 0; i < 4; i++) {
-            toWrite[i]=docline[i];
-        }
-        for (int i = 4; i <8 ; i++) {
-            toWrite[i]=loc1[i-4];
-        }
-
-        for (int i = 8; i < 12; i++) {
-            toWrite[i]=loc2[i-8];
-        }
-        for (int i = 12; i <16 ; i++) {
-            toWrite[i]=loc3[i-12];
-        }
-
-        for (int i = 16; i < 20; i++) {
-            toWrite[i]=loc4[i-16];
-        }
-        for (int i = 20; i <24 ; i++) {
-            toWrite[i]=loc5[i-20];
-        }
-
-        for (int i = 24; i < 28; i++) {
-            toWrite[i]=ptr[i-24];
-        }
-        cityLines.addAll(Arrays.asList(toWrite));
-**/
-
-
+        cityMutex.unlock();
     }
 
 
