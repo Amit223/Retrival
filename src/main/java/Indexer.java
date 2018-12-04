@@ -8,12 +8,11 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Indexer {
 
-    private Map<String,Pair<Integer,Integer>> dictionary;
+    private Map<String,Integer> dictionary;
 
 
     //lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
@@ -36,6 +35,73 @@ public class Indexer {
     private Mutex docMutex;
     private Mutex cityMutex;
 
+    public  int getNumberOfDocs() {
+        return _numOfFiles;
+    }
+
+    public int getNumberOfTerms() {
+        return dictionary.size();
+    }
+
+
+    /**
+     * todo add!
+     */
+    public void loadDictionaryToMemory() {
+        String dicString = "";
+        FileReader f = null;
+        try {
+            f = new FileReader(_path+"/Dictionary.txt");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        Scanner sc = new Scanner(f);
+        int i = 0, startIndex = 1, //cut the '{'
+                endindex = 1;
+        sc.useDelimiter(", ");
+        while (sc.hasNext()) {
+
+            String line = sc.next();
+            endindex = line.length(); //cut '/n' and ',' and ' '
+            if (i != 0) startIndex = 0;
+            if (!sc.hasNext()) endindex = line.length() - 1; //cut the '}'
+            line =line.substring(startIndex, endindex);
+            String[] pair = line.split("=");
+            dictionary.put(pair[0], Integer.parseInt(pair[1]));
+            i++;
+        }
+    }
+
+
+    /**
+     * todo add!
+     */
+    public void loadDictionaryToFile(){
+        String dictionaryToString="";
+        dictionaryToString = dictionary.toString();
+        BufferedWriter writer = null;
+        try
+        {
+            writer = new BufferedWriter( new FileWriter( "Dictionary.txt"));
+            writer.write(dictionaryToString);
+
+        }
+        catch ( IOException e)
+        {
+        }
+        finally
+        {
+            try
+            {
+                if ( writer != null)
+                    writer.close( );
+            }
+            catch ( IOException e)
+            {
+            }
+        }
+    }
+
     /**
      * the constructor.,
      * @param toStem to stem - to decide the path of the file.
@@ -56,7 +122,7 @@ public class Indexer {
                 citysPosting = new File(path+"/NotStemCityPosting.txt");
             }
             documents.createNewFile();
-            dictionary = new ConcurrentHashMap<>();
+            dictionary = new TreeMap<>();
             _AtomicNumlineDocs = new AtomicInteger(0);
             lineNumCitys = 0;
             _numOfFiles =0;
@@ -111,13 +177,19 @@ public class Indexer {
             }
             int lineNumPosting=writeToPosting(lineNumDocs,terms.get(term),FirstC);
             if(firstLineNum==-1){
-                dictionary.put(term,new Pair<Integer, Integer>(1,lineNumPosting));
+
+
+
+
+
+
+
             }
         }
         String details=getCityDetails(cityOfDoc);
         String[] strings=details.split("-");
         cityMutex.lock(); //todo runtime
-            toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2],locations.size());
+        toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2],locations.size());
         if(locations.size()>0&&!cityOfDoc.equals("")) {
             toCityPosting(locations,lineNumDocs);
         }
@@ -130,7 +202,7 @@ public class Indexer {
     }
 
 
-    public Map<String, Pair<Integer, Integer>> getDictionary() {
+    public Map<String, Integer> getDictionary() {
         return dictionary;
     }
     public Map<String, Pair<Vector<String>, Integer>> getCityDictionary() {
@@ -143,7 +215,7 @@ public class Indexer {
     public void delete(){
         try {
 
-             PrintWriter writer = new PrintWriter(documents);
+            PrintWriter writer = new PrintWriter(documents);
             writer.print("");
             writer.close();
             writer=new PrintWriter(citysPosting);
@@ -283,34 +355,34 @@ public class Indexer {
     }
 
 
-   private String getCityDetails(String city){
-       String s="http://getcitydetails.geobytes.com/GetCityDetails?fqcn=";
-       URL url;
-       try {
-           // get URL content
-           url = new URL(s+city);
-           URLConnection conn = url.openConnection();
+    private String getCityDetails(String city){
+        String s="http://getcitydetails.geobytes.com/GetCityDetails?fqcn=";
+        URL url;
+        try {
+            // get URL content
+            url = new URL(s+city);
+            URLConnection conn = url.openConnection();
 
-           // open the stream and put it into BufferedReader
-           BufferedReader br = new BufferedReader(
-                   new InputStreamReader(conn.getInputStream()));
-           String string=br.readLine();
-           String currency=string.substring(string.indexOf("\"geobytescurrencycode\":")+24,string.indexOf("geobytestitle")-3);
-           String country=string.substring(string.indexOf("\"geobytescountry\":")+19,string.indexOf("geobytesregionlocation")-3);
-           String population=string.substring(string.indexOf("\"geobytespopulation\":")+22,string.indexOf("geobytesnationalityplural")-3);
-           population=Number.Parse(population);
-           if(population.contains(".")) {
-               char mod=population.charAt(population.length() - 1);
-               double num=Double.parseDouble(population.substring(0,population.length()-1));
-               num= Math.round(num * 100.0) / 100.0;
-               population=Double.toString(num)+mod;
-           }
-           return country+"-"+currency+"-"+population;
+            // open the stream and put it into BufferedReader
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream()));
+            String string=br.readLine();
+            String currency=string.substring(string.indexOf("\"geobytescurrencycode\":")+24,string.indexOf("geobytestitle")-3);
+            String country=string.substring(string.indexOf("\"geobytescountry\":")+19,string.indexOf("geobytesregionlocation")-3);
+            String population=string.substring(string.indexOf("\"geobytespopulation\":")+22,string.indexOf("geobytesnationalityplural")-3);
+            population=Number.Parse(population);
+            if(population.contains(".")) {
+                char mod=population.charAt(population.length() - 1);
+                double num=Double.parseDouble(population.substring(0,population.length()-1));
+                num= Math.round(num * 100.0) / 100.0;
+                population=Double.toString(num)+mod;
+            }
+            return country+"-"+currency+"-"+population;
 
-       } catch (Exception e) {
+        } catch (Exception e) {
             return "";
-       }
-   }
+        }
+    }
     private void toStatesDictionary(String cityOfDoc,String country,String coin,String population,int size) {
         if(!cityDictionary.containsKey(cityOfDoc)){
             Vector<String> v=new Vector<>();
@@ -491,8 +563,8 @@ public class Indexer {
             raf.seek(lineOfFirstDoc*12);
             byte[] ptr = new byte[12];
             raf.read(ptr);
-           // byte [] line_={ptr[0],ptr[1],ptr[2],ptr[3]};
-           // byte [] tf={ptr[4],ptr[5],ptr[6],ptr[7]};
+            // byte [] line_={ptr[0],ptr[1],ptr[2],ptr[3]};
+            // byte [] tf={ptr[4],ptr[5],ptr[6],ptr[7]};
             byte [] pointer={ptr[8],ptr[9],ptr[10],ptr[11]};
             int ptr_int=byteToInt(pointer);
             //int line_int=byteToInt(line_);
@@ -529,7 +601,7 @@ public class Indexer {
         catch (Exception e){
             System.out.println("problem in updateTheLastNodePtr !");
         }
-            return -1;
+        return -1;
     }
 
     /**
@@ -538,7 +610,7 @@ public class Indexer {
      * @return the number of the first line of term in the posting document if exist, else:  -1.
      */
     private int ifExistUpdateTF(String term) {
-        if(dictionary.containsKey(term)){//just add to df and return the line in posting
+       /* if(dictionary.containsKey(term)){//just add to df and return the line in posting
            int df= dictionary.get(term).getKey();
            int pointerToPost= dictionary.get(term).getValue(); //pointer to posting file.
            df+=1;
@@ -567,7 +639,8 @@ public class Indexer {
         else {//new term completely
             //dictionary.put(term,new Pair<Integer, Integer>(1,-1));
             return -1;
-        }
+        }*/
+        return 0;
     }
 
     private String Reverse(String term) {
@@ -634,7 +707,5 @@ public class Indexer {
         return fullByteArray;
 
     }
-
-
 
 }

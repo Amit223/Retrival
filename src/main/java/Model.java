@@ -24,6 +24,11 @@ public class Model {
     public Model(Stage stage) {
         this.mainStage = stage;
         mutex=new Mutex();
+        this.indexer=new Indexer(false,"C:\\Users\\liadber\\IdeaProjects\\Retrival\\src\\main\\resources");
+    }
+
+    public void loadDictionaryToMemory(){
+        indexer.loadDictionaryToMemory();
     }
 
     public Stage getMainStage() {
@@ -83,6 +88,14 @@ public class Model {
 
 
     }
+
+    public int getNumberOfDocs() {
+        return indexer.getNumberOfDocs();
+    }
+
+    public int getNumberOfTerms() {
+        return indexer.getNumberOfTerms();
+    }
 }
 
 class ThreadedIndex extends Thread{
@@ -90,6 +103,7 @@ class ThreadedIndex extends Thread{
     private String path;
     private boolean toStem;
     private Indexer indexer;
+
 
     public ThreadedIndex(String path, boolean toStem,Indexer indexer) {
         this.path = path;
@@ -99,33 +113,33 @@ class ThreadedIndex extends Thread{
 
     public void run(){
         ReadFile.read(path);
-       Elements elements=ReadFile.getDocs();
+        Elements elements=ReadFile.getDocs();
         HashMap<String, Integer> termList;
-       for(int i=0;i<elements.size();i++){
-           String text=elements.get(i).getElementsByTag("TEXT").text();
-           String name=elements.get(i).getElementsByTag("DOCNO").text();
-           Elements Felements=elements.get(i).getElementsByTag("F");
-           String city="";
-           String language="";
-           for (Element element1: Felements){
-               if(element1.attr("P").equals("104")){//city
-                   city=element1.text();
-                   city=city.substring(0,city.indexOf(" "));
-               }
-               else if(element1.attr("P").equals("105"))//language
-               {
-                   language=element1.text();
-               }
-           }
-           Parser parser=new Parser();
-           parser.Parse(text,toStem,city);//return termlist
-           termList=parser.getTerms();
-           if(name.equals("FBIS3-52"))
-               System.out.println();
-           if(termList.containsKey("\"a"))
-               System.out.println();
-           indexer.Index(termList,parser.getLocations(),name,city,parser.getWordCount());
-           System.out.println(name);
-       }
+        for(int i=0;i<elements.size();i++){
+            String text=elements.get(i).getElementsByTag("TEXT").text();
+            String name=elements.get(i).getElementsByTag("DOCNO").text();
+            Elements Felements=elements.get(i).getElementsByTag("F");
+            String city="";
+            String language="";
+            for (Element element1: Felements){
+                if(element1.attr("P").equals("104")){//city
+                    city=element1.text();
+                    city=city.substring(0,city.indexOf(" "));
+                }
+                else if(element1.attr("P").equals("105"))//language
+                {
+                    language=element1.text();
+                }
+            }
+            Parser parser=new Parser();
+            parser.Parse(text,toStem,city);//return termlist
+            termList=parser.getTerms();
+            if(name.equals("FBIS3-52"))
+                System.out.println();
+            if(termList.containsKey("\"a"))
+                System.out.println();
+            indexer.Index(termList,parser.getLocations(),name,city,parser.getWordCount());
+            System.out.println(name);
+        }
     }
 }
