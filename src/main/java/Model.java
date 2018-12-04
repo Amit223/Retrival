@@ -80,7 +80,9 @@ public class Model {
                 }
              System.out.println("Start sorting");
                 indexer.loadDictionaryToFile();
-         //       indexer.sort(); todo free
+                StopWords.reset();
+                indexer.sort();
+
 
             }
         }
@@ -106,6 +108,7 @@ class ThreadedIndex extends Thread{
         ReadFile.read(path);
         Elements elements=ReadFile.getDocs();
         HashMap<String, Integer> termList;
+        StopWords.setStopwords(path);
         for(int i=0;i<elements.size();i++){
             String text=elements.get(i).getElementsByTag("TEXT").text();
             String name=elements.get(i).getElementsByTag("DOCNO").text();
@@ -123,7 +126,6 @@ class ThreadedIndex extends Thread{
                     language=element1.text();
                 }
             }
-            StopWords.setStopWords();
             Parser parser=new Parser();
             parser.Parse(text,toStem,city);//return termlist
             termList=parser.getTerms();

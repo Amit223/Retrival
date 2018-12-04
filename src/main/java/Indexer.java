@@ -909,7 +909,7 @@ class ThreadedSort extends Thread{
             }
             while((capital!=null&&capital.hasNext()) && (not!=null&&not.hasNext())){
                 String toLower=capitalS.toLowerCase();
-                if(toLower.compareTo(notS)>0){
+                if(toLower.compareTo(notS)<0){
                     //capital first
                     writer.write(mapCapital.get(capitalS)+'\n');
                     capitalS=capital.next();

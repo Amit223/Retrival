@@ -9,6 +9,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Main {
     public static void main(String[] args) {
+        String toLower="A".toLowerCase();
+        String notS="acq";
+        if(toLower.compareTo(notS)>0)
+            System.out.println("yay");
     Parser p = new Parser();
     StopWords.setStopWords();
     p.Parse("Speaking at weekly press conference, the spokesman said that \n" +
@@ -24,6 +28,5 @@ public class Main {
     p.printTermList();
 
     }
-
 }
 
