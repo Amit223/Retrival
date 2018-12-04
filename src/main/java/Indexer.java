@@ -121,9 +121,9 @@ public class Indexer {
          int maxtf=getMaxTf(terms.values());
          docMutex.lock();
          writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
-         _AtomicNumlineDocs.getAndAdd(1);
          docMutex.unlock();
          **/
+        _AtomicNumlineDocs.getAndAdd(1);
         int lineNumDocs = _AtomicNumlineDocs.get()-1;
 
 
@@ -721,6 +721,39 @@ public class Indexer {
     }
 
 
+    /**
+     * SORT EACH FILE
+     */
+    public void sort() {
+        long startTime = System.nanoTime();
+
+        Thread[] threads = new ThreadedSort[27];
+        ExecutorService pool = Executors.newFixedThreadPool(3);
+
+        int i = 1;
+
+        threads[0] = new ThreadedSort(_path + "/" + '0' + _toStem + ".txt");
+        pool.submit(threads[0]);
+        for (char c = 'a'; c < 'z'; c++) {
+            threads[i] = new ThreadedSort(_path + "/" + c + _toStem + ".txt");
+            pool.execute(threads[i]);
+            i++;
+        }
+        pool.shutdown();
+
+        try {
+            boolean flag = false;
+            while (!flag)
+                flag = pool.awaitTermination(1009, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        long endTime = System.nanoTime();
+        System.out.println("Took "+(endTime - startTime)/1000000000 + " s");
+    }
+
+
+
 
 }
 
@@ -756,59 +789,108 @@ class ThreadedWrite extends Thread{
             e.printStackTrace();
         }
     }
+
+
 }
-class ThreadedMerge extends Thread{
+class ThreadedSort extends Thread{
 
     String file;
 
 
-    public ThreadedMerge(String file) {
+    public ThreadedSort(String file) {
         this.file = file;
     }
 
     public void run() {
         try {
-            RandomAccessFile reader = new RandomAccessFile(new File(file),"r");
-            Map<String, byte[] > map = new TreeMap<String, byte[]>();
-            int lineNum=(int)reader.length()/24;
-            for(int i=0;i<lineNum;i++){
-                byte[] line=new byte[24];
-                reader.seek(i*24);
-                reader.read(line);
-                byte[]term=new byte[16];
-                byte[]docLine=new byte[4];
-                for (int j=0;j<16;j++)
-                    term[j]=line[j];
-                for (int j =16; j <20 ; j++) {
-                    docLine[j-16]=line[j];
+
+            System.out.println("here");
+            BufferedReader reader = new BufferedReader(new FileReader(new File(file)));
+            Map<String, String > mapCapital = new TreeMap<String,String>();
+            Map<String, String > mapNot = new TreeMap<String,String>();
+            String line;
+            while ((line=reader.readLine())!=null) {
+                if (Character.isUpperCase(line.charAt(0))) {
+                    mapCapital.put(getField(line), line);
+                } else {
+                    mapNot.put(getField(line), line);
+
                 }
-
-                String termInString=new String(term);
-                termInString=termInString.substring(0,termInString.indexOf("#"));
-                String lineInString=new String(docLine);
-                map.put(termInString+lineInString, line);
-
             }
             //delete the file completely
             reader.close();
             PrintWriter pwriter = new PrintWriter(new File(file));
             pwriter.print("");
             pwriter.close();
+            reader.close();
 
-            RandomAccessFile writer = new RandomAccessFile(file,"rw");
 
-            for (String val : map.keySet()) {
-                byte[] toWrite=map.get(val);
-                writer.seek(writer.length());
-                writer.write(toWrite);
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file,true));
+            Iterator<String> capital=null;
+            Iterator<String> not=null;
+            String capitalS="";
+            String notS="";
+            if(mapCapital.size()>0) {
+                capital = mapCapital.keySet().iterator();
+                capitalS=capital.next();
+            }
+            if(mapNot.size()>0) {
+                not = mapNot.keySet().iterator();
+                notS=not.next();
+            }
+            while((capital!=null&&capital.hasNext()) && (not!=null&&not.hasNext())){
+                String toLower=capitalS.toLowerCase();
+                if(toLower.compareTo(notS)>0){
+                    //capital first
+                    writer.write(mapCapital.get(capitalS)+'\n');
+                    capitalS=capital.next();
 
+                }
+                else{
+                    writer.write(mapNot.get(notS)+'\n');
+                    notS=not.next();
+                    System.out.println("bi");
+
+                }
+            }
+            while(not!=null &&not.hasNext()){//need to write the small letters
+                writer.write(mapNot.get(notS)+'\n');
+                notS=not.next();
+            }
+            while(capital!=null &&capital.hasNext()){//need to write the capitals
+                writer.write(mapCapital.get(capitalS)+'\n');
+                capitalS=capital.next();
             }
             writer.close();
 
+            /**
+             *  for(int i=0;i<lineNum;i++){
+             byte[] line=new byte[24];
+             reader.seek(i*24);
+             reader.read(line);
+             byte[]term=new byte[16];
+             byte[]docLine=new byte[4];
+             for (int j=0;j<16;j++)
+             term[j]=line[j];
+             for (int j =16; j <20 ; j++) {
+             docLine[j-16]=line[j];
+             }
+             // BufferedWriter bufferedWriter=new BufferedWriter(new FileWriter(file.getAbsolutePath(),true));
+             //  bufferedWriter.write(stringBuilder.toString());
+             String termInString=new String(term);
+             termInString=termInString.substring(0,termInString.indexOf("#"));
+             String lineInString=new String(docLine);
+             map.put(termInString+lineInString, line);
+
+             }
+             */
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    private static String getField(String line) {
+        return line.split("-")[0];//extract value you want to sort on
     }
 
 

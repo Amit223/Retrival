@@ -64,21 +64,8 @@ public class Model {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                /*
-                for (int i=0; i<threads.length;i++){
-                    try {
-                        threads[i].join();
-                        System.out.println(threads[i].isAlive());
-
-                        System.out.println(i);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        System.out.println("-1 shitttt");
-
-                    }
-
-                }
-                */
+                System.out.println("Start sorting");
+                indexer.sort();
 
             }
         }
