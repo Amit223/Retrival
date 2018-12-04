@@ -40,13 +40,11 @@ public class Model {
         indexer.delete();
     }
 
-    //todo
     public int getNumberOfDocs(){
-        return -1;
+        return indexer.getNumberOfDocs();
     }
-    //todo
     public int getNumberOfTerms(){
-        return -1;
+        return indexer.getNumberOfTerms();
     }
 
 
@@ -80,8 +78,11 @@ public class Model {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                System.out.println("Start sorting");
+             System.out.println("Start sorting");
+                indexer.loadDictionaryToFile();
+                StopWords.reset();
                 indexer.sort();
+
 
             }
         }
@@ -107,6 +108,7 @@ class ThreadedIndex extends Thread{
         ReadFile.read(path);
         Elements elements=ReadFile.getDocs();
         HashMap<String, Integer> termList;
+        StopWords.setStopwords(path);
         for(int i=0;i<elements.size();i++){
             String text=elements.get(i).getElementsByTag("TEXT").text();
             String name=elements.get(i).getElementsByTag("DOCNO").text();
