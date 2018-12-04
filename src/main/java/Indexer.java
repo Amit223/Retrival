@@ -1,18 +1,18 @@
 
 import ParseObjects.Number;
-        import javafx.util.Pair;
-        import sun.awt.Mutex;
+import javafx.util.Pair;
+import sun.awt.Mutex;
 
-        import java.io.*;
-        import java.net.URL;
-        import java.net.URLConnection;
-        import java.nio.charset.StandardCharsets;
-        import java.util.*;
-        import java.util.concurrent.ConcurrentHashMap;
-        import java.util.concurrent.ExecutorService;
-        import java.util.concurrent.Executors;
-        import java.util.concurrent.TimeUnit;
-        import java.util.concurrent.atomic.AtomicInteger;
+import java.io.*;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Indexer {
 
@@ -40,13 +40,14 @@ public class Indexer {
     private Map <String,Vector<String>> cityDictionary;
     private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
     private int lineNumCitys;
-    private List<String> cityLines = new ArrayList<String>();
+    private ListOfByteArrays cityLines;
 
 
 
     //postingMutex
     private Mutex docMutex;
     private Mutex cityMutex;
+    private Mutex cityFileMutex;
     private Mutex dictionaryMutex;
     private Mutex [] mutexesPosting; //mutexs of the posting files.
     private Mutex [] mutexesList; //mutexs of the posting files.
@@ -93,7 +94,7 @@ public class Indexer {
             //citys
             cityDictionary = new HashMap<>();
             citysPosting.createNewFile();
-            cityLines=new ArrayList<>();
+            cityLines=new ListOfByteArrays();
 
             //mutexes&&posting lines
             cityMutex=new Mutex();
@@ -108,6 +109,7 @@ public class Indexer {
                 postingLines[i]=new ListOfByteArrays();
 
             }
+            cityFileMutex=new Mutex();
 
             //files
             File file;
@@ -134,7 +136,7 @@ public class Indexer {
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
                       int numOfWords,String language){
 
-
+        //docs
         Set<String> keys=terms.keySet();
         int maxtf=getMaxTf(terms.values());
         docMutex.lock();
@@ -144,6 +146,7 @@ public class Indexer {
         int lineNumDocs = _AtomicNumlineDocs.get()-1;
 
 
+        //posting
         Iterator<String>termsKeys=keys.iterator();
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
@@ -156,21 +159,34 @@ public class Indexer {
         if(_numOfFiles.get()%1000==0)
             writeListToPosting();
 
-/**
+        //citys
         if(cityOfDoc.length()!=0) {
-            String details = getCityDetails(cityOfDoc);
-            String[] strings = details.split("-");
-            toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
+            if(cityDictionary.containsKey(cityOfDoc)) {
+                String details = getCityDetails(cityOfDoc);
+                String[] strings = details.split("-");
+                toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
+            }
             if (locations.size() > 0 ) {//need only if in file to add
                 toCityPosting(cityOfDoc,locations, lineNumDocs);
                 lineNumCitys += 1;
             }
         }
- **/
+        if(_numOfFiles.get()%5000==0){
+            writeCityList();
 
+        }
         _numOfFiles.getAndAdd(1);
-        // System.out.println(_numOfFiles);
 
+    }
+
+    private void writeCityList() {
+        Thread t=new ThreadedWrite(citysPosting,cityLines,cityMutex,cityFileMutex);
+        t.start();
+        try {
+            t.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -259,13 +275,7 @@ public class Indexer {
     }
 
     public void push(){
-        Byte[] Bytes = cityLines.toArray(new Byte[cityLines.size()]);
-        byte[] bytes=new byte[cityLines.size()];
-        for (int i=0;i<Bytes.length;i++){
-            bytes[i]=Bytes[i];
-        }
         try {
-            FileOutputStream out = new FileOutputStream(citysPosting);
             RandomAccessFile raf=new RandomAccessFile(documents,"rw");
             byte[] bytesDocs=new byte[docsToWrite.size()];
             for(int i=0;i<docsToWrite.size();i++){
@@ -274,13 +284,13 @@ public class Indexer {
             raf.write(bytesDocs);
             raf.close();
             docsToWrite.clear();
-            out.write(bytes);
-            out.close();
+
         }
         catch (Exception e){
 
         }
         writeListToPosting();
+        writeCityList();
 
 
     }
@@ -404,19 +414,27 @@ public class Indexer {
                     new InputStreamReader(conn.getInputStream()));
             String string=br.readLine();
             String currency=string.substring(string.indexOf("\"geobytescurrencycode\":")+24,string.indexOf("geobytestitle")-3);
+            if(currency.length()==0)
+                currency="X";
             String country=string.substring(string.indexOf("\"geobytescountry\":")+19,string.indexOf("geobytesregionlocation")-3);
+            if(country.length()==0)
+                currency="X";
             String population=string.substring(string.indexOf("\"geobytespopulation\":")+22,string.indexOf("geobytesnationalityplural")-3);
-            population=Number.Parse(population);
-            if(population.contains(".")) {
-                char mod=population.charAt(population.length() - 1);
-                double num=Double.parseDouble(population.substring(0,population.length()-1));
-                num= Math.round(num * 100.0) / 100.0;
-                population=Double.toString(num)+mod;
+            if(population.length()==0)
+                population="X";
+            else {
+                population = Number.Parse(population);
+                if (population.contains(".")) {
+                    char mod = population.charAt(population.length() - 1);
+                    double num = Double.parseDouble(population.substring(0, population.length() - 1));
+                    num = Math.round(num * 100.0) / 100.0;
+                    population = Double.toString(num) + mod;
+                }
             }
             return country+"-"+currency+"-"+population;
 
         } catch (Exception e) {
-            return "";
+            return "X-X-X";
         }
     }
     private void toStatesDictionary(String cityOfDoc,String country,String coin,String population) {
@@ -677,7 +695,7 @@ public class Indexer {
     public void sort() {
         long startTime = System.nanoTime();
 
-        Thread[] threads = new ThreadedSort[27];
+        Thread[] threads = new ThreadedSort[28];
         ExecutorService pool = Executors.newFixedThreadPool(3);
 
         int i = 1;
@@ -689,6 +707,11 @@ public class Indexer {
             pool.execute(threads[i]);
             i++;
         }
+        //the city
+        threads[27]=new ThreadedSort(_path+"/CityPosting.txt");
+        pool.execute(threads[27]);
+
+
         pool.shutdown();
 
         try {
