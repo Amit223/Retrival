@@ -8,7 +8,7 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
+<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.131" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller">
    <children>
       <CheckBox fx:id="toStem" layoutX="12.0" layoutY="200.0" mnemonicParsing="false" text="To Stem" />
       <Button fx:id="folderChooser" layoutX="14.0" layoutY="85.0" mnemonicParsing="false" onAction="#getFileChooser" text="Choose Folder" />
@@ -24,5 +24,7 @@
       <TextField fx:id="save" editable="false" layoutX="133.0" layoutY="121.0" prefHeight="25.0" prefWidth="298.0" promptText="folder to save posting files..." />
       <ChoiceBox fx:id="language" layoutX="133.0" layoutY="159.0" prefWidth="150.0" />
       <Label layoutX="14.0" layoutY="159.0" prefHeight="25.0" prefWidth="93.0" text="Choose language" />
+      <Button fx:id="showDictionary" layoutX="158.0" layoutY="236.0" mnemonicParsing="false" onAction="#showDictionary1" text="Show dictionary" />
+      <Button fx:id="loadDictionaryToMemory" layoutX="282.0" layoutY="235.0" mnemonicParsing="false" onAction="#loadDictionaryToMemory" prefHeight="25.0" prefWidth="138.0" text="DictionaryToMemory" />
    </children>
 </AnchorPane>

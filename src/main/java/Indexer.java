@@ -47,6 +47,73 @@ public class Indexer {
 
 
 
+    public  int getNumberOfDocs() {
+        return _numOfFiles;
+    }
+
+    public int getNumberOfTerms() {
+        return dictionary.size();
+    }
+
+
+    /**
+     * todo add!
+     */
+    public void loadDictionaryToMemory() {
+        String dicString = "";
+        FileReader f = null;
+        try {
+            f = new FileReader(_path+"/Dictionary.txt");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        Scanner sc = new Scanner(f);
+        int i = 0, startIndex = 1, //cut the '{'
+                endindex = 1;
+        sc.useDelimiter(", ");
+        while (sc.hasNext()) {
+
+            String line = sc.next();
+            endindex = line.length(); //cut '/n' and ',' and ' '
+            if (i != 0) startIndex = 0;
+            if (!sc.hasNext()) endindex = line.length() - 1; //cut the '}'
+            line =line.substring(startIndex, endindex);
+            String[] pair = line.split("=");
+            dictionary.put(pair[0], Integer.parseInt(pair[1]));
+            i++;
+        }
+    }
+
+
+    /**
+     * todo add!
+     */
+    public void loadDictionaryToFile(){
+        String dictionaryToString="";
+        dictionaryToString = dictionary.toString();
+        BufferedWriter writer = null;
+        try
+        {
+            writer = new BufferedWriter( new FileWriter( "Dictionary.txt"));
+            writer.write(dictionaryToString);
+
+        }
+        catch ( IOException e)
+        {
+        }
+        finally
+        {
+            try
+            {
+                if ( writer != null)
+                    writer.close( );
+            }
+            catch ( IOException e)
+            {
+            }
+        }
+    }
+
     /**
      * the constructor.,
      * @param toStem to stem - to decide the path of the file.
@@ -67,7 +134,7 @@ public class Indexer {
                 citysPosting = new File(path+"/NotStemCityPosting.txt");
             }
             documents.createNewFile();
-            dictionary = new ConcurrentHashMap<>();
+            dictionary = new TreeMap<>();
             _AtomicNumlineDocs = new AtomicInteger(0);
             lineNumCitys = 0;
             _numOfFiles=new AtomicInteger(0);
@@ -157,6 +224,25 @@ public class Indexer {
  **/
         _numOfFiles.getAndAdd(1);
         // System.out.println(_numOfFiles);
+
+            }
+            int lineNumPosting=writeToPosting(lineNumDocs,terms.get(term),FirstC);
+            if(firstLineNum==-1){
+
+
+
+
+
+
+
+            }
+        }
+        String details=getCityDetails(cityOfDoc);
+        String[] strings=details.split("-");
+        cityMutex.lock(); //todo runtime
+        toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2],locations.size());
+        if(locations.size()>0&&!cityOfDoc.equals("")) {
+            toCityPosting(locations,lineNumDocs);
 
     }
 
@@ -582,6 +668,8 @@ public class Indexer {
             raf.seek(lineOfFirstDoc*12);
             byte[] ptr = new byte[12];
             raf.read(ptr);
+            // byte [] line_={ptr[0],ptr[1],ptr[2],ptr[3]};
+            // byte [] tf={ptr[4],ptr[5],ptr[6],ptr[7]};
             byte [] pointer={ptr[8],ptr[9],ptr[10],ptr[11]};
             int ptr_int=byteToInt(pointer);
             int prevptr=lineOfFirstDoc;//to know what line is the last of the term's docs
@@ -627,6 +715,7 @@ public class Indexer {
      * @param term - update tf if exist- the df-++
      * @return the number of the first line of term in the posting document if exist, else:  -1.
      */
+
     private void ifExistUpdateTF(String term) {
         if(dictionary.containsKey(term)){//just add to df and return the line in posting
             int df= dictionary.get(term);
@@ -650,6 +739,9 @@ public class Indexer {
             dictionary.put(newTerm,df);
         }
         else {//new term completely
+            return -1;
+        }*/
+        return 0;
             dictionary.put(term,1);
 
         }

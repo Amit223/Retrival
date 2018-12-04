@@ -24,6 +24,11 @@ public class Model {
     public Model(Stage stage) {
         this.mainStage = stage;
         mutex=new Mutex();
+        this.indexer=new Indexer(false,"C:\\Users\\liadber\\IdeaProjects\\Retrival\\src\\main\\resources");
+    }
+
+    public void loadDictionaryToMemory(){
+        indexer.loadDictionaryToMemory();
     }
 
     public Stage getMainStage() {
@@ -73,6 +78,14 @@ public class Model {
 
 
     }
+
+    public int getNumberOfDocs() {
+        return indexer.getNumberOfDocs();
+    }
+
+    public int getNumberOfTerms() {
+        return indexer.getNumberOfTerms();
+    }
 }
 
 class ThreadedIndex extends Thread{
@@ -80,6 +93,7 @@ class ThreadedIndex extends Thread{
     private String path;
     private boolean toStem;
     private Indexer indexer;
+
 
     public ThreadedIndex(String path, boolean toStem,Indexer indexer) {
         this.path = path;
@@ -89,7 +103,7 @@ class ThreadedIndex extends Thread{
 
     public void run(){
         ReadFile.read(path);
-       Elements elements=ReadFile.getDocs();
+        Elements elements=ReadFile.getDocs();
         HashMap<String, Integer> termList;
        for(int i=0;i<elements.size();i++){
            String text=elements.get(i).getElementsByTag("TEXT").text();
