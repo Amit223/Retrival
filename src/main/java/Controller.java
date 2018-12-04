@@ -89,6 +89,8 @@ public class Controller {
                     "RunTime: "+ elapsedTime);
             alert.show();
             reset.setDisable(false);
+            long endTime = System.nanoTime();
+            System.out.println("Took "+(endTime - startTime)/1000000000 + " s");
         }
     }
 

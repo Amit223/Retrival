@@ -8,6 +8,10 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Indexer {
@@ -18,22 +22,30 @@ public class Indexer {
     //lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
 
     private File documents;//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+
     private AtomicInteger _AtomicNumlineDocs;
-    private int _numOfFiles;
+    private AtomicInteger _numOfFiles;
     private String _path;
     private boolean _toStem;
     private Mutex [] mutexesPosting; //mutexs of the posting files.
-    private boolean [] created;
+    private Mutex [] mutexesList; //mutexs of the posting files.
+    ListOfByteArrays [] postingLines;
+
 
     //citys
     private Map <String,Pair<Vector<String>,Integer>> cityDictionary;
     private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
     private int lineNumCitys;
+    List<Byte> cityLines = new ArrayList<Byte>();
 
 
-    //mutex
+
+    //postingMutex
     private Mutex docMutex;
     private Mutex cityMutex;
+    private Mutex dictionaryMutex;
+
+
 
     public  int getNumberOfDocs() {
         return _numOfFiles;
@@ -125,7 +137,7 @@ public class Indexer {
             dictionary = new TreeMap<>();
             _AtomicNumlineDocs = new AtomicInteger(0);
             lineNumCitys = 0;
-            _numOfFiles =0;
+            _numOfFiles=new AtomicInteger(0);
 
             //citys
             cityDictionary = new HashMap<>();
@@ -134,12 +146,25 @@ public class Indexer {
             //mutexesPostingFiles
             cityMutex=new Mutex();
             docMutex=new Mutex();
+            dictionaryMutex=new Mutex();
             mutexesPosting =new Mutex[27];
-            created=new boolean[27];
+            mutexesList=new Mutex[27];
+            postingLines = new ListOfByteArrays[27];
             for(int i=0; i<mutexesPosting.length;i++){
                 mutexesPosting[i]=new Mutex();
-                created[i]=false;
+                mutexesList[i]=new Mutex();
+                postingLines[i]=new ListOfByteArrays();
+
             }
+
+            //files
+            File file;
+            for(char c='a';c<='z';c++){
+                file=new File(_path+"/"+c+_toStem+".txt");
+                file.createNewFile();
+            }
+            file=new File(_path+"/"+'0'+_toStem+".txt");
+            file.createNewFile();
         }
         catch (IOException e){
 
@@ -156,23 +181,49 @@ public class Indexer {
      */
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
                       int numOfWords){
+
+
         Set<String> keys=terms.keySet();
-        int maxtf=getMaxTf(terms.values());
-        docMutex.lock();
-        writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
+        /**
+         int maxtf=getMaxTf(terms.values());
+         docMutex.lock();
+         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords);
+         docMutex.unlock();
+         **/
         _AtomicNumlineDocs.getAndAdd(1);
         int lineNumDocs = _AtomicNumlineDocs.get()-1;
-        docMutex.unlock();
-        Iterator<String>termsKeys=keys.iterator();
 
+
+        Iterator<String>termsKeys=keys.iterator();
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
-            if(term.charAt(0)=='"')
-                System.out.println(term);
-            int firstLineNum = ifExistUpdateTF(term); //the number of the first line of term in the posting document if exist, else:  -1.
+            dictionaryMutex.lock();
+            ifExistUpdateTF(term); //updates dictionary df/ add new term
+            dictionaryMutex.unlock();
             char FirstC = (Character.isDigit(term.charAt(0))||term.charAt(0)=='-') ? '0' : Character.toLowerCase(term.charAt(0));
-            if(firstLineNum!=-1) {
-                updateTheLastNodePtr(firstLineNum, FirstC);//updates the term's ladt doc that new line will be added in lineNumPosting
+            //if(firstLineNum!=-1) {
+            //postingLinesNum= updateTheLastNodePtr(firstLineNum, FirstC,postingLines);//updates the term's ladt doc that new line will be added in lineNumPosting
+            //}
+            writeToPosting(lineNumDocs,terms.get(term),FirstC,postingLines,term);
+        }
+        if(_numOfFiles.get()%1000==0)
+            writeListToPosting();
+
+/**
+ if(cityOfDoc.length()!=0) {
+ String details = getCityDetails(cityOfDoc);
+ String[] strings = details.split("-");
+ cityMutex.lock(); //todo runtime
+ toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2], locations.size());
+ if (locations.size() > 0 ) {
+ toCityPosting(locations, lineNumDocs);
+ lineNumCitys += 1;
+ }
+ cityMutex.unlock();
+ }
+ **/
+        _numOfFiles.getAndAdd(1);
+        // System.out.println(_numOfFiles);
 
             }
             int lineNumPosting=writeToPosting(lineNumDocs,terms.get(term),FirstC);
@@ -192,17 +243,51 @@ public class Indexer {
         toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2],locations.size());
         if(locations.size()>0&&!cityOfDoc.equals("")) {
             toCityPosting(locations,lineNumDocs);
-        }
-        lineNumCitys+=1;
-        _numOfFiles +=1;
-        cityMutex.unlock();
-
-        System.out.println(_numOfFiles);
 
     }
 
+    private void writeListToPosting() {
+        Thread [] threads=new ThreadedWrite[27];
+        ExecutorService pool= Executors.newFixedThreadPool(27);
 
-    public Map<String, Integer> getDictionary() {
+        int i=1;
+        File f=new File(_path + "/" + '0' + _toStem+".txt");
+        threads[0]=new ThreadedWrite(f,postingLines[0],mutexesPosting[0],mutexesList[0]);
+        pool.submit(threads[0]);
+        for(char c='a';c<'z';c++){
+            f=new File(_path + "/" + c + _toStem+".txt");
+            threads[i]=new ThreadedWrite(f,postingLines[i],mutexesPosting[i],mutexesList[i]);
+            pool.execute(threads[i]);
+            i++;
+        }
+        pool.shutdown();
+
+        try {
+            boolean flag = false;
+            while (!flag)
+                flag = pool.awaitTermination(1009, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void push(){
+        Byte[] Bytes = cityLines.toArray(new Byte[cityLines.size()]);
+        byte[] bytes=new byte[cityLines.size()];
+        for (int i=0;i<Bytes.length;i++){
+            bytes[i]=Bytes[i];
+        }
+        try ( FileOutputStream out = new FileOutputStream(citysPosting);) {
+            out.write(bytes);
+            out.close();
+        }
+        catch (Exception e){
+
+        }
+
+    }
+
+    public Map<String,Integer> getDictionary() {
         return dictionary;
     }
     public Map<String, Pair<Vector<String>, Integer>> getCityDictionary() {
@@ -231,7 +316,7 @@ public class Indexer {
 
 
     public int get_numOfFiles(){
-        return _numOfFiles;
+        return _numOfFiles.get();
     }
     /**
      *
@@ -249,7 +334,7 @@ public class Indexer {
     private void toCityPosting(Vector<Integer> locations,int lineNumDoc) {
         int size=locations.size();
         int index=0;
-        byte[] toWrite=new byte[28];
+        Byte[] toWrite=new Byte[28];
         byte [] docline=toBytes(lineNumDoc);
         byte []loc1;
         byte []loc2;
@@ -288,16 +373,19 @@ public class Indexer {
             for (int i = 24; i < 28; i++) {
                 toWrite[i]=ptr[i-24];
             }
-            try {
-                RandomAccessFile raf=new RandomAccessFile(citysPosting,"rw");
-                raf.seek(raf.length());
-                raf.write(toWrite);
-                raf.close();
-                this.lineNumCitys+=1;
-            }
-            catch (Exception e){
-                System.out.println("problem in write to city posting");
-            }
+            cityLines.addAll(Arrays.asList(toWrite));
+            /**
+             try {
+             RandomAccessFile raf=new RandomAccessFile(citysPosting,"rw");
+             raf.seek(raf.length());
+             raf.write(toWrite);
+             raf.close();
+             this.lineNumCitys+=1;
+             }
+             catch (Exception e){
+             System.out.println("problem in write to city posting");
+             }
+             **/
             index+=1;
             size=size-5;
         }
@@ -341,15 +429,19 @@ public class Indexer {
         for (int i = 24; i < 28; i++) {
             toWrite[i]=ptr[i-24];
         }
-        try {
-            RandomAccessFile raf=new RandomAccessFile(citysPosting,"rw");
-            raf.seek(raf.length());
-            raf.write(toWrite);
-            raf.close();
-        }
-        catch (Exception e){
-            System.out.println("problem in write to city posting");
-        }
+        cityLines.addAll(Arrays.asList(toWrite));
+
+        /**
+         try {
+         RandomAccessFile raf=new RandomAccessFile(citysPosting,"rw");
+         raf.seek(raf.length());
+         raf.write(toWrite);
+         raf.close();
+         }
+         catch (Exception e){
+         System.out.println("problem in write to city posting");
+         }
+         **/
 
 
     }
@@ -410,40 +502,67 @@ public class Indexer {
 
 
     private void updateStatesPosting(int lineInPosting) {
-        try {
-            RandomAccessFile raf = new RandomAccessFile(citysPosting, "rw");
-            raf.seek(28*lineInPosting+24);
-            byte[] ptr = new byte[4];
-            raf.read(ptr);
-            int ptr_int=byteToInt(ptr);
-            int prevptr=lineInPosting;//to know what line is the last of the term's docs
-            while(ptr_int!=-1){
-                prevptr=ptr_int;
-                raf.seek(ptr_int*27+24);
-                ptr = new byte[4];
-                raf.read(ptr);
-                ptr_int=byteToInt(ptr);
-            }
-            //the last line.need to change the pointer!
-            raf.seek(prevptr*28);
-            byte[] line = new byte[28];
-            raf.read(line);
-            raf.close();
-            ptr=toBytes(this.lineNumCitys);
-            line[46]=ptr[0];
-            line[47]=ptr[1];
-            line[48]=ptr[2];
-            line[49]=ptr[3];
-            raf=new RandomAccessFile(citysPosting,"rw");
-            raf.seek(prevptr*28);
-            raf.write(line);
-            raf.close();
-
-
+        Byte b1=cityLines.get(lineInPosting*28+24);
+        Byte b2=cityLines.get(lineInPosting*28+25);
+        Byte b3=cityLines.get(lineInPosting*28+26);
+        Byte b4=cityLines.get(lineInPosting*28+27);
+        byte [] ptr={b1,b2,b3,b4};
+        int int_ptr=byteToInt(ptr);
+        int prev=lineInPosting;
+        while(int_ptr!=-1){
+            b1=cityLines.get(int_ptr*28+24);
+            b2=cityLines.get(int_ptr*28+25);
+            b3=cityLines.get(int_ptr*28+26);
+            b4=cityLines.get(int_ptr*28+27);
+            ptr=new byte[]{b1,b2,b3,b4};
+            int_ptr=byteToInt(ptr);
         }
-        catch(Exception e){
+        ptr=toBytes(this.lineNumCitys);
+        cityLines.set(prev*28+24,ptr[0]);
+        cityLines.set(prev*28+25,ptr[1]);
+        cityLines.set(prev*28+26,ptr[2]);
+        cityLines.set(prev*28+27,ptr[3]);
 
-        }
+
+
+
+
+        /**
+         try {
+         RandomAccessFile raf = new RandomAccessFile(citysPosting, "rw");
+         raf.seek(28*lineInPosting+24);
+         byte[] ptr = new byte[4];
+         raf.read(ptr);
+         int ptr_int=byteToInt(ptr);
+         int prevptr=lineInPosting;//to know what line is the last of the term's docs
+         while(ptr_int!=-1){
+         prevptr=ptr_int;
+         raf.seek(ptr_int*27+24);
+         ptr = new byte[4];
+         raf.read(ptr);
+         ptr_int=byteToInt(ptr);
+         }
+         //the last line.need to change the pointer!
+         raf.seek(prevptr*28);
+         byte[] line = new byte[28];
+         raf.read(line);
+         raf.close();
+         ptr=toBytes(this.lineNumCitys);
+         line[46]=ptr[0];
+         line[47]=ptr[1];
+         line[48]=ptr[2];
+         line[49]=ptr[3];
+         raf=new RandomAccessFile(citysPosting,"rw");
+         raf.seek(prevptr*28);
+         raf.write(line);
+         raf.close();
+
+
+         }
+         catch(Exception e){
+
+         }
+         **/
     }
 
     /**
@@ -453,13 +572,12 @@ public class Indexer {
      * @param firstChar
      * @return the line number that wrote to.
      */
-    private int writeToPosting(int lineOfDoc,int tf, char firstChar) {
-
+    private void writeToPosting(int lineOfDoc,int tf, char firstChar,ListOfByteArrays [] postingLines,String term ) {
+/**
         byte [] tf_bytes=toBytes(tf);
         byte [] line_bytes=toBytes(lineOfDoc);
-        byte [] ptr_bytes=toBytes(-1);
 
-        byte [] toWrite=new byte[12];
+        byte [] toWrite=new byte[8];
         for (int i = 0; i < 4; i++) {
             toWrite[i]=line_bytes[i];
         }
@@ -467,34 +585,21 @@ public class Indexer {
             toWrite[i]=tf_bytes[i-4];
         }
 
-        for (int i = 8; i < 12; i++) {
-            toWrite[i]=ptr_bytes[i-8];
-        }
+**/
+        StringBuilder toWrite=new StringBuilder();
+        toWrite.append(term);
+        toWrite.append(" ");
+        toWrite.append(lineOfDoc);
+        toWrite.append("-");
+        toWrite.append(tf);
+        toWrite.append("\n");
+        int index = Character.toLowerCase(firstChar) - 'a' + 1;
+        if (index <0||index>26)//^^
+            index = 0;
+        mutexesList[index].lock();
+        postingLines[index].add(toWrite.toString());
+        mutexesList[index].unlock();
 
-        try {
-            File f = new File(_path + "/" + Character.toLowerCase(firstChar) + _toStem+".txt");
-            int index = Character.toLowerCase(firstChar) - 'a' + 1;
-            if (index == -48)//^^
-                index = 0;
-            mutexesPosting[index].lock();//todo runTime
-            if(!created[index]){
-                f.createNewFile();
-                created[index]=true;
-            }
-            RandomAccessFile raf = new RandomAccessFile(f, "rw");
-            int lineNumPosting=(int)raf.length()/12;
-            raf.seek(raf.length());
-            raf.write(toWrite);
-            raf.close();
-            mutexesPosting[index].unlock();
-            return lineNumPosting;
-
-
-        }
-        catch(Exception e){
-            System.out.println(Arrays.toString(toWrite));
-        }
-        return -1;
     }
 
     /**
@@ -552,11 +657,11 @@ public class Indexer {
      * searches for last row of doc of the term, updates its pointer to the new row.
      * @return the row to add on.
      */
-    private int updateTheLastNodePtr(int lineOfFirstDoc,char firstChar) {
+    private int updateTheLastNodePtr(int lineOfFirstDoc,char firstChar,ListOfByteArrays[] postingLines) {
         try {
             File f=new File(_path+"/"+Character.toLowerCase(firstChar)+_toStem+".txt");
             int index=Character.toLowerCase(firstChar) - 'a' + 1;
-            if(index==-48)//^^
+            if(index<0||index>26)//^^
                 index=0;
             mutexesPosting[index].lock();
             RandomAccessFile raf = new RandomAccessFile(f, "r");
@@ -567,36 +672,37 @@ public class Indexer {
             // byte [] tf={ptr[4],ptr[5],ptr[6],ptr[7]};
             byte [] pointer={ptr[8],ptr[9],ptr[10],ptr[11]};
             int ptr_int=byteToInt(pointer);
-            //int line_int=byteToInt(line_);
-            //int tf_int=byteToInt(tf);
             int prevptr=lineOfFirstDoc;//to know what line is the last of the term's docs
             while(ptr_int!=-1){
                 prevptr=ptr_int;
-                raf.seek(ptr_int*12+8);
-                ptr = new byte[4];
+                raf.seek(ptr_int*12);
+                ptr = new byte[12];
                 raf.read(ptr);
-                ptr_int=byteToInt(ptr);
+                pointer=new byte [4];
+                pointer[0]=ptr[8];
+                pointer[1]=ptr[9];
+                pointer[2]=ptr[10];
+                pointer[3]=ptr[11];
+                ptr_int=byteToInt(pointer);
             }
             //the last line.need to change the pointer!
             raf.seek(prevptr*12);
             byte[] line = new byte[12];
-            long lineToAdd=raf.length()/12;//todo check
+            long lineToAdd=raf.length()/12;
             raf.read(line);
             raf.close();
-            mutexesPosting[index].unlock();
-            ptr=toBytes((int)lineToAdd);
+            ptr=toBytes((int)lineToAdd+postingLines[index].size());
             line[8]=ptr[0];
             line[9]=ptr[1];
             line[10]=ptr[2];
             line[11]=ptr[3];
             //updates the line
-            mutexesPosting[index].lock();
             raf=new RandomAccessFile(f,"rw");
             raf.seek(prevptr*12);
             raf.write(line);
             raf.close();
             mutexesPosting[index].unlock();
-            return (int)lineToAdd;
+            return (int)lineToAdd+postingLines[index].size();
         }
         catch (Exception e){
             System.out.println("problem in updateTheLastNodePtr !");
@@ -609,38 +715,36 @@ public class Indexer {
      * @param term - update tf if exist- the df-++
      * @return the number of the first line of term in the posting document if exist, else:  -1.
      */
-    private int ifExistUpdateTF(String term) {
-       /* if(dictionary.containsKey(term)){//just add to df and return the line in posting
-           int df= dictionary.get(term).getKey();
-           int pointerToPost= dictionary.get(term).getValue(); //pointer to posting file.
-           df+=1;
-           dictionary.remove(term);
-           dictionary.put(term,new Pair<Integer, Integer>(df,pointerToPost));
-           return pointerToPost;
+
+    private void ifExistUpdateTF(String term) {
+        if(dictionary.containsKey(term)){//just add to df and return the line in posting
+            int df= dictionary.get(term);
+            df+=1;
+            dictionary.remove(term);
+            dictionary.put(term,df);
         }
         //check if exist in the dictionary in diffrent way.
         else if(dictionary.containsKey(Reverse(term))){//the reversed term in dictionary need to put the uppercase one //todo - fix.
             String newTerm;
-            if(Character.isLowerCase(Reverse(term).charAt(0))){//the term in dictionary is the uppercase one
+            if(Character.isLowerCase(Reverse(term).charAt(0))){//the term in dictionary is the lowercase one
                 newTerm=Reverse(term);
             }
-            else{//the new term is the upper case one!
+            else{//the new term is the lower case one!
                 newTerm=term;
             }
             //take the details of its if exist.
-            int df= dictionary.get(Reverse(term)).getKey();
-            int pointer= dictionary.get(Reverse(term)).getValue();
+            int df= dictionary.get(Reverse(term));
             df+=1;
             dictionary.remove(Reverse(term));
-            //todo newTerm = changeCase(newTerm); //todo
-            dictionary.put(newTerm,new Pair<Integer, Integer>(df,pointer));
-            return pointer;
+            dictionary.put(newTerm,df);
         }
         else {//new term completely
-            //dictionary.put(term,new Pair<Integer, Integer>(1,-1));
             return -1;
         }*/
         return 0;
+            dictionary.put(term,1);
+
+        }
     }
 
     private String Reverse(String term) {
@@ -707,5 +811,180 @@ public class Indexer {
         return fullByteArray;
 
     }
+
+
+    /**
+     * SORT EACH FILE
+     */
+    public void sort() {
+        long startTime = System.nanoTime();
+
+        Thread[] threads = new ThreadedSort[27];
+        ExecutorService pool = Executors.newFixedThreadPool(3);
+
+        int i = 1;
+
+        threads[0] = new ThreadedSort(_path + "/" + '0' + _toStem + ".txt");
+        pool.submit(threads[0]);
+        for (char c = 'a'; c < 'z'; c++) {
+            threads[i] = new ThreadedSort(_path + "/" + c + _toStem + ".txt");
+            pool.execute(threads[i]);
+            i++;
+        }
+        pool.shutdown();
+
+        try {
+            boolean flag = false;
+            while (!flag)
+                flag = pool.awaitTermination(1009, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        long endTime = System.nanoTime();
+        System.out.println("Took "+(endTime - startTime)/1000000000 + " s");
+    }
+
+
+
+
+}
+
+class ThreadedWrite extends Thread{
+
+    File file;
+    ListOfByteArrays list;
+    Mutex postingMutex;
+    Mutex listMutex;
+    public ThreadedWrite(File file,ListOfByteArrays list,Mutex postingMutex,Mutex listMutex) {
+        this.file=file;
+        this.list=list;
+        this.postingMutex =postingMutex;
+        this.listMutex=listMutex;
+    }
+
+    public void run(){
+        try {
+            listMutex.lock();
+            postingMutex.lock();
+
+            StringBuilder stringBuilder=new StringBuilder();
+            for(int i=0;i<list.size();i++){
+
+                stringBuilder.append(list.get(i));
+            }
+            BufferedWriter bufferedWriter=new BufferedWriter(new FileWriter(file.getAbsolutePath(),true));
+            bufferedWriter.write(stringBuilder.toString());
+            postingMutex.unlock();
+            list.delete();
+            listMutex.unlock();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+}
+class ThreadedSort extends Thread{
+
+    String file;
+
+
+    public ThreadedSort(String file) {
+        this.file = file;
+    }
+
+    public void run() {
+        try {
+
+            System.out.println("here");
+            BufferedReader reader = new BufferedReader(new FileReader(new File(file)));
+            Map<String, String > mapCapital = new TreeMap<String,String>();
+            Map<String, String > mapNot = new TreeMap<String,String>();
+            String line;
+            while ((line=reader.readLine())!=null) {
+                if (Character.isUpperCase(line.charAt(0))) {
+                    mapCapital.put(getField(line), line);
+                } else {
+                    mapNot.put(getField(line), line);
+
+                }
+            }
+            //delete the file completely
+            reader.close();
+            PrintWriter pwriter = new PrintWriter(new File(file));
+            pwriter.print("");
+            pwriter.close();
+            reader.close();
+
+
+            BufferedWriter writer = new BufferedWriter(new FileWriter(file,true));
+            Iterator<String> capital=null;
+            Iterator<String> not=null;
+            String capitalS="";
+            String notS="";
+            if(mapCapital.size()>0) {
+                capital = mapCapital.keySet().iterator();
+                capitalS=capital.next();
+            }
+            if(mapNot.size()>0) {
+                not = mapNot.keySet().iterator();
+                notS=not.next();
+            }
+            while((capital!=null&&capital.hasNext()) && (not!=null&&not.hasNext())){
+                String toLower=capitalS.toLowerCase();
+                if(toLower.compareTo(notS)>0){
+                    //capital first
+                    writer.write(mapCapital.get(capitalS)+'\n');
+                    capitalS=capital.next();
+
+                }
+                else{
+                    writer.write(mapNot.get(notS)+'\n');
+                    notS=not.next();
+                    System.out.println("bi");
+
+                }
+            }
+            while(not!=null &&not.hasNext()){//need to write the small letters
+                writer.write(mapNot.get(notS)+'\n');
+                notS=not.next();
+            }
+            while(capital!=null &&capital.hasNext()){//need to write the capitals
+                writer.write(mapCapital.get(capitalS)+'\n');
+                capitalS=capital.next();
+            }
+            writer.close();
+
+            /**
+             *  for(int i=0;i<lineNum;i++){
+             byte[] line=new byte[24];
+             reader.seek(i*24);
+             reader.read(line);
+             byte[]term=new byte[16];
+             byte[]docLine=new byte[4];
+             for (int j=0;j<16;j++)
+             term[j]=line[j];
+             for (int j =16; j <20 ; j++) {
+             docLine[j-16]=line[j];
+             }
+             // BufferedWriter bufferedWriter=new BufferedWriter(new FileWriter(file.getAbsolutePath(),true));
+             //  bufferedWriter.write(stringBuilder.toString());
+             String termInString=new String(term);
+             termInString=termInString.substring(0,termInString.indexOf("#"));
+             String lineInString=new String(docLine);
+             map.put(termInString+lineInString, line);
+
+             }
+             */
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    private static String getField(String line) {
+        return line.split("-")[0];//extract value you want to sort on
+    }
+
+
 
 }

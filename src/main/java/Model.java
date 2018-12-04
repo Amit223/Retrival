@@ -44,7 +44,7 @@ public class Model {
         indexer=new Indexer(toStem,toSave);
         String s=ReadFile.readStopWords(path);
         StopWords.setStopwords(s);
-        ExecutorService pool= Executors.newFixedThreadPool(20);
+        ExecutorService pool= Executors.newFixedThreadPool(10);
         File folder = new File(path);
         File[] listOfFiles = folder.listFiles();
 
@@ -54,10 +54,13 @@ public class Model {
                 Thread [] threads=new ThreadedIndex[directories.length];
                 for(int j=0;j<directories.length;j++){
                     threads[j]=new ThreadedIndex(directories[j].getAbsolutePath(),toStem,indexer);
-                    pool.submit(threads[j]);
+                    pool.execute(threads[j]);
+
                 }
 
+
                 pool.shutdown();
+
                 try {
                     boolean flag = false;
                     while (!flag)
@@ -66,21 +69,8 @@ public class Model {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                /*
-                for (int i=0; i<threads.length;i++){
-                    try {
-                        threads[i].join();
-                        System.out.println(threads[i].isAlive());
-
-                        System.out.println(i);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                        System.out.println("-1 shitttt");
-
-                    }
-
-                }
-                */
+                System.out.println("Start sorting");
+                indexer.sort();
 
             }
         }
@@ -115,31 +105,29 @@ class ThreadedIndex extends Thread{
         ReadFile.read(path);
         Elements elements=ReadFile.getDocs();
         HashMap<String, Integer> termList;
-        for(int i=0;i<elements.size();i++){
-            String text=elements.get(i).getElementsByTag("TEXT").text();
-            String name=elements.get(i).getElementsByTag("DOCNO").text();
-            Elements Felements=elements.get(i).getElementsByTag("F");
-            String city="";
-            String language="";
-            for (Element element1: Felements){
-                if(element1.attr("P").equals("104")){//city
-                    city=element1.text();
-                    city=city.substring(0,city.indexOf(" "));
-                }
-                else if(element1.attr("P").equals("105"))//language
-                {
-                    language=element1.text();
-                }
-            }
-            Parser parser=new Parser();
-            parser.Parse(text,toStem,city);//return termlist
-            termList=parser.getTerms();
-            if(name.equals("FBIS3-52"))
-                System.out.println();
-            if(termList.containsKey("\"a"))
-                System.out.println();
-            indexer.Index(termList,parser.getLocations(),name,city,parser.getWordCount());
-            System.out.println(name);
-        }
+       for(int i=0;i<elements.size();i++){
+           String text=elements.get(i).getElementsByTag("TEXT").text();
+           String name=elements.get(i).getElementsByTag("DOCNO").text();
+           Elements Felements=elements.get(i).getElementsByTag("F");
+           String city="";
+           String language="";
+           for (Element element1: Felements){
+               if(element1.attr("P").equals("104")){//city
+                   city=element1.text();
+                   if(city.contains(" "))
+                        city=city.substring(0,city.indexOf(" "));
+               }
+               else if(element1.attr("P").equals("105"))//language
+               {
+                   language=element1.text();
+               }
+           }
+           Parser parser=new Parser();
+           parser.Parse(text,toStem,city);//return termlist
+           termList=parser.getTerms();
+           indexer.Index(termList,parser.getLocations(),name,city,parser.getWordCount());
+           indexer.push();
+       }
+        System.out.println("DONE");
     }
 }
