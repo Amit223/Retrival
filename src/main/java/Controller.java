@@ -75,7 +75,7 @@ public class Controller {
             model.Start(toStem.isSelected(),path.getText(),save.getText());
             reset.setDisable(false);
             long endTime = System.nanoTime();
-            System.out.println("Took "+(endTime - startTime) + " ns");
+            System.out.println("Took "+(endTime - startTime)/1000000000 + " s");
         }
 
     }
