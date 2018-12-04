@@ -24,6 +24,12 @@ public class Model {
     public Model(Stage stage) {
         this.mainStage = stage;
         mutex=new Mutex();
+
+        this.indexer=new Indexer(false,"C:\\Users\\liadber\\IdeaProjects\\Retrival\\src\\main\\resources");
+    }
+
+    public boolean loadDictionaryToMemory(){
+        return indexer.loadDictionaryToMemory();
     }
 
     public Stage getMainStage() {

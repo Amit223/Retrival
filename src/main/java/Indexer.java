@@ -47,6 +47,76 @@ public class Indexer {
 
 
 
+
+    public  int getNumberOfDocs() {
+        return _numOfFiles.get();
+    }
+
+    public int getNumberOfTerms() {
+        return dictionary.size();
+    }
+
+
+    /**
+     * todo add!
+     */
+    public boolean loadDictionaryToMemory() {
+        String dicString = "";
+        FileReader f = null;
+        try {
+            System.out.println(_path+"/"+_toStem+"Dictionary.txt");
+            f = new FileReader(_path+"/"+_toStem+"Dictionary.txt");
+        } catch (FileNotFoundException e) {
+            return false;
+        }
+        Scanner sc = new Scanner(f);
+        int i = 0, startIndex = 1, //cut the '{'
+                endindex = 1;
+        sc.useDelimiter(", ");
+        while (sc.hasNext()) {
+
+            String line = sc.next();
+            endindex = line.length(); //cut '/n' and ',' and ' '
+            if (i != 0) startIndex = 0;
+            if (!sc.hasNext()) endindex = line.length() - 1; //cut the '}'
+            line =line.substring(startIndex, endindex);
+            String[] pair = line.split("=");
+            dictionary.put(pair[0], Integer.parseInt(pair[1]));
+            i++;
+        }
+        return true;
+    }
+
+
+    /**
+     * todo add!
+     */
+    public void loadDictionaryToFile(){
+        String dictionaryToString="";
+        dictionaryToString = dictionary.toString();
+        BufferedWriter writer = null;
+        try
+        {
+            writer = new BufferedWriter( new FileWriter( "Dictionary.txt"));
+            writer.write(dictionaryToString);
+
+        }
+        catch ( IOException e)
+        {
+        }
+        finally
+        {
+            try
+            {
+                if ( writer != null)
+                    writer.close( );
+            }
+            catch ( IOException e)
+            {
+            }
+        }
+    }
+
     /**
      * the constructor.,
      * @param toStem to stem - to decide the path of the file.
