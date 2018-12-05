@@ -128,14 +128,14 @@ public class Controller {
             long endTime = System.nanoTime(); //(endTime - startTime)
             long elapsedTime = endTime - startTime;
             double seconds = (double)elapsedTime / 1_000_000_000.0;
-            String timeInString=String.valueOf(seconds/60);
+            String timeInString=String.valueOf(seconds);
             if(timeInString.contains(".")){
                 timeInString=timeInString.substring(0,timeInString.indexOf(".")+4);
             }
             String numOfDocs=String.valueOf(model.getNumberOfDocs());
             alert.setContentText("Number of files that were indexed: " + numOfDocs+ "\n" +
                     "Number of files that were unique terms: "+ model.getNumberOfTerms()+ "\n"+
-                    "RunTime: "+ timeInString + " minutes!");
+                    "RunTime: "+ timeInString + " seconds!");
             alert.show();
             reset.setDisable(false);
             loadDictionaryToMemory.setDisable(false);
