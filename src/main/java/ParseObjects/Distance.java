@@ -1,10 +1,14 @@
 package ParseObjects;
 
+/**
+ * ***Our Extra.
+ * this static class parse String to Distance term form using {@link #Parse(String)}:
+ * "{@link Number} Unit-of-measure" {m, meters, meter, km, kilometer, kilometers} => {@link Number} km/m
+ */
 public class Distance {
-    //todo maybe need to add pounds ?
 
     /**
-     *
+     * "{@link Number} Unit-of-measure" {m, meters, meter, km, kilometer, kilometers} => {@link Number} km/m
      * @param distance= number modifier, modifier is- m , km, meter, meters, kilometer, kilometers
      * @return
      */
@@ -35,6 +39,11 @@ public class Distance {
         return dis;
     }
 
+    /**
+     * return true if nextTerm one of those {m, meters, meter, km, kilometer, kilometers}
+     * @param nextTerm
+     * @return true if nextTerm one of those {m, meters, meter, km, kilometer, kilometers}
+     */
     public static boolean isDistance(String nextTerm) {
         return (nextTerm.equalsIgnoreCase("m")
                 ||nextTerm.equalsIgnoreCase("meters")

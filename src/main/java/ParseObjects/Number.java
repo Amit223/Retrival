@@ -1,10 +1,23 @@
 package ParseObjects;
-
-import java.util.Vector;
-
+/**
+ * this static class parse String to Number term form using {@link #Parse(String)}:
+ * "Number"<1000 =>Number Modifier(K/M/B/T)/Fraction
+ * "Number">1000 =>Number Modifier(K/M/B/T)/Fraction
+ * "Number modifier" {modifier=Thousand,Million,Billion,Trillion,m,bn}=>Number Modifier(K/M/B/T)
+ * ***Our Extra: we can recognize bn, m as modifier and parse it and we can recognize  fractions for number that bigger than 1000 if they dont have a modifier.
+ * we decide to parse also divided form of Fraction to double form in Order to recognize same Numbers such: "10 3/4" and "10.75" to "10.75"
+ * and retrieve the same documents to same numbers.
+ */
 public class Number {
 
     /**
+     * parse String to Number Term form:
+     * "Number"<1000 =>Number Modifier(K/M/B/T)/Fraction
+     * "Number">1000 =>Number Modifier(K/M/B/T)/Fraction
+     * "Number modifier" {modifier=Thousand,Million,Billion,Trillion,m,bn}=>Number Modifier(K/M/B/T)
+     * ***Our Extra: we can recognize bn, m as modifier and parse it and we can recognize  fractions for number that bigger than 1000 if they dont have a modifier.
+     * we decide to parse also divided form of Fraction to double form in Order to recognize same Numbers such: "10 3/4" and "10.75" to "10.75"
+     * and retrieve the same documents to same numbers.
      * @param number-string represent full number- 1,000/ 1 Million  / 10.35 / 1 Thousends  / 1 Billion / 10 3/4  /10 3/4 Thousands
      * @return the number parsed by rules
      */
@@ -53,11 +66,13 @@ public class Number {
         }
     }
 
+    /**helpful functions to the {@link #Parse(String)} **/
+
     /**
      *
      * @param num- the number
      * @param modifier - million, billion...
-     * @return the num plus the modifier- 1 million - > 1000000
+     * @return the num plus the modifier- "1 million" => "1000000"
      */
     private static String addmodifier(String num, String modifier) {
         String out=num;
@@ -73,9 +88,8 @@ public class Number {
 
     }
 
-
     /**
-     *
+     * help to more classes.
      * @param number- single number in for
      * @return the number
      */
@@ -86,8 +100,8 @@ public class Number {
     /**
      *
      * @param number
-     * @param fraction
-     * @return the number.
+     * @param fraction- if exist, else ""
+     * @return the number in string
      */
     private static String toNum(String number, String fraction) {
         String out="";
@@ -126,6 +140,13 @@ public class Number {
         }
         return out;
     }
+
+    /**
+     * {@link Price#MabyeInteger(String)}
+     * this method remove from the string ".0" if its Integer.
+     * @param s
+     * @return s without ".0" if its Integer.
+     */
     private static String MabyeInteger(String s){//s is double in string
         int index=s.indexOf(".");
         if(index==s.length()-2&&s.charAt(s.length()-1)=='0'){//1.0
@@ -135,7 +156,7 @@ public class Number {
     }
 
     /**
-     *
+     *@see {@link Price#RemoveComas(String)}
      * @param s
      * @return the string without ","
      */
@@ -148,4 +169,22 @@ public class Number {
         }
         return sb.toString();
     }
+
+    /**helpful functions to the sort part in the #Parser**/
+
+    /**
+     * @param termS - _token in string.
+     * @return true - if the string is numeric. else false
+     */
+    public static boolean isNumeric(String termS) {
+        try {
+            termS = Number.RemoveComas(termS);
+            Double.parseDouble(termS);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
+
+
