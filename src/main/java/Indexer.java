@@ -202,6 +202,7 @@ public class Indexer {
                 String[] lines = line.split("=");
                 for (int i = 0; i < lines.length; i++) {
                     String[] pair = lines[i].split("--->");
+                    if(pair.length==2)
                     dictionary.put(pair[0], Integer.parseInt(pair[1]));
 
                 }
