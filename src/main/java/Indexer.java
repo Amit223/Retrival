@@ -50,6 +50,7 @@ public class Indexer {
     private Mutex docFileMutex;
     private Mutex cityMutex;
     private Mutex cityFileMutex;
+    private Mutex cityDictionaryMutex;
     private Mutex dictionaryMutex;
     private Mutex [] mutexesPosting; //mutexs of the posting files.
     private Mutex [] mutexesList; //mutexs of the posting files.
@@ -105,6 +106,7 @@ public class Indexer {
             //mutexes&&posting lines
             cityMutex=new Mutex();
             cityFileMutex=new Mutex();
+            cityDictionaryMutex=new Mutex();
             docMutex=new Mutex();
             docFileMutex=new Mutex();
             dictionaryMutex=new Mutex();
@@ -201,7 +203,9 @@ public class Indexer {
             if(!cityDictionary.containsKey(cityOfDoc)) {
                 String details = getCityDetails(cityOfDoc);
                 String[] strings = details.split("-");
+                cityDictionaryMutex.lock();
                 toCitysDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
+                cityDictionaryMutex.unlock();
             }
             if (locations.size() > 0 ) {//need only if in file to add
                 toCityPostingList(cityOfDoc,locations, lineNumDocs);
@@ -338,8 +342,13 @@ public class Indexer {
         Iterator<String> iterator=cityDictionary.keySet().iterator();
         while (iterator.hasNext()){
             String key=iterator.next();
-            String value=cityDictionary.get(key).toString();
-            stringBuilder.append(key+"--->"+value+"=");
+            if(cityDictionary.get(key)!=null) {
+                String value = cityDictionary.get(key).toString();
+                stringBuilder.append(key + "--->" + value + "=");
+            }
+            else{
+                System.out.println("");
+            }
         }
         BufferedWriter writer = null;
         try
@@ -370,7 +379,7 @@ public class Indexer {
      */
     private void writeListToPosting() {
         Thread [] threads=new ThreadedWrite[27];
-        ExecutorService pool= Executors.newFixedThreadPool(27);
+        ExecutorService pool= Executors.newFixedThreadPool(8);
 
         int i=1;
         File f=new File(_path + "/" + '0' + _toStem+".txt");
@@ -461,7 +470,7 @@ public class Indexer {
             //the dictionarys
             f=new File(_path+"/"+_toStem+"Dictionary.txt");
             f.delete();
-            f=new File(_path+"/"+_toStem+"CityDictionary.txt");
+            f=new File(_path+"/CityDictionary.txt");
             f.delete();
 
             if(dictionary!=null) {
@@ -821,7 +830,7 @@ public class Indexer {
         long startTime = System.nanoTime();
 
         Thread[] threads = new ThreadedSort[28];
-        ExecutorService pool = Executors.newFixedThreadPool(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
 
         int i = 1;
 
@@ -953,12 +962,29 @@ class ThreadedSort extends Thread{
             f.createNewFile();
             f=new File(letter+"3"+"_"+letter+"4");
             f.createNewFile();
-            String write1=X(letter+"1",letter+"2",letter+"1"+"_"+letter+"2",reader,lineCount/2);
-            String write2=X(letter+"3",letter+"4",letter+"3"+"_"+letter+"4",reader,lineCount/2);
+            f=new File(letter+"5"+"_"+letter+"6");
+            f.createNewFile();
+            f=new File(letter+"7"+"_"+letter+"8");
+            f.createNewFile();
+            String write1=SortFileByPart(letter+"1",letter+"2",letter+"1"+"_"+letter+"2",reader,lineCount/4);
+            String write2=SortFileByPart(letter+"3",letter+"4",letter+"3"+"_"+letter+"4",reader,lineCount/4);
+            String write3=SortFileByPart(letter+"5",letter+"6",letter+"5"+"_"+letter+"6",reader,lineCount/4);
+            String write4=SortFileByPart(letter+"7",letter+"8",letter+"7"+"_"+letter+"8",reader,lineCount/4);
+
+            String s1=write1+"_"+write2;
+            String s2=write3+"_"+write4;
+            f=new File(s1);
+            f.createNewFile();
+            f=new File(s2);
+            f.createNewFile();
+            Merge(write1,write2,s1);
+            Merge(write3,write4,s2);
+
             PrintWriter printWriter=new PrintWriter(new File(file));
             printWriter.write("");
             printWriter.close();
-            Merge(write1,write2,file);
+            Merge(s1,s2,file);
+
             reader.close();
 
             //String write3=X(letter+"1",letter+"2",reader,lineCount/4);
@@ -972,7 +998,7 @@ class ThreadedSort extends Thread{
 
     }
 
-    private String X(String firsthalf,String lasthalf,String toWrite,BufferedReader reader,int size){
+    private String SortFileByPart(String firsthalf,String lasthalf,String toWrite,BufferedReader reader,int size){
         try {
             //first half:
             Map<String, String> mapCapital = new TreeMap<>();
@@ -1137,7 +1163,9 @@ class ThreadedSort extends Thread{
 
 
     private static String getField(String line) {
-        return line.split("-")[0];//extract value you want to sort on
+        if(line.contains("-"))
+            return line.split("-")[0];//extract value you want to sort on
+        return line;
     }
 
 
