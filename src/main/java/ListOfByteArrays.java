@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 
-public class ListOfByteArrays {
+public class ListOfByteArrays <T>{
 
    /**
     private List<byte[]> thelist;
@@ -25,17 +25,17 @@ public class ListOfByteArrays {
         thelist.clear();
     }
     **/
-    private List<String > thelist;
+    private List<T > thelist;
     public ListOfByteArrays() {
         thelist=new ArrayList<>();
     }
 
-    public void add(String toAdd){
+    public void add(T toAdd){
         thelist.add(toAdd);
     }
 
 
-    public String get(int i){
+    public T get(int i){
         return thelist.get(i);
     }
 

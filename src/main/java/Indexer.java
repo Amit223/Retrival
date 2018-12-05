@@ -22,7 +22,7 @@ public class Indexer {
 
     //docs
     private File documents;//docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)|-54 bytes
-    private List<Byte> docsToWrite;
+    private ListOfByteArrays docsToWrite;
     private Set<String> languages;
     private AtomicInteger _AtomicNumlineDocs;
 
@@ -44,6 +44,7 @@ public class Indexer {
 
     //postingMutex
     private Mutex docMutex;
+    private Mutex docFileMutex;
     private Mutex cityMutex;
     private Mutex cityFileMutex;
     private Mutex dictionaryMutex;
@@ -85,7 +86,7 @@ public class Indexer {
             dictionary = new HashMap<>();
             _AtomicNumlineDocs = new AtomicInteger(0);
             _numOfFiles=new AtomicInteger(0);
-            docsToWrite=new ArrayList<>();
+            docsToWrite=new ListOfByteArrays();
             languages=new HashSet<>();
 
             //citys
@@ -95,18 +96,22 @@ public class Indexer {
 
             //mutexes&&posting lines
             cityMutex=new Mutex();
+            cityFileMutex=new Mutex();
             docMutex=new Mutex();
+            docFileMutex=new Mutex();
             dictionaryMutex=new Mutex();
             mutexesPosting =new Mutex[27];
             mutexesList=new Mutex[27];
             postingLines = new ListOfByteArrays[27];
             for(int i=0; i<mutexesPosting.length;i++){
+                if(i==26){
+                    System.out.println("");
+                }
                 mutexesPosting[i]=new Mutex();
                 mutexesList[i]=new Mutex();
                 postingLines[i]=new ListOfByteArrays();
 
             }
-            cityFileMutex=new Mutex();
 
             //files
             File file;
@@ -143,7 +148,9 @@ public class Indexer {
         docMutex.unlock();
         _AtomicNumlineDocs.getAndAdd(1);
         int lineNumDocs = _AtomicNumlineDocs.get()-1;
-
+        if(_numOfFiles.get()%5000==0){
+            writeDocsToFile();
+        }
 
         //posting
         Iterator<String>termsKeys=keys.iterator();
@@ -155,6 +162,7 @@ public class Indexer {
             char FirstC = (Character.isDigit(term.charAt(0))||term.charAt(0)=='-') ? '0' : Character.toLowerCase(term.charAt(0));
             writeToPosting(lineNumDocs,terms.get(term),FirstC,postingLines,term);
         }
+        terms.clear();
         if(_numOfFiles.get()%1000==0)
             writeListToPosting();
 
@@ -171,13 +179,23 @@ public class Indexer {
                 toCityPosting(cityOfDoc,locations, lineNumDocs);
             }
         }
+        locations.clear();
         if(_numOfFiles.get()%5000==0){
             writeCityList();
-
         }
 
         _numOfFiles.getAndAdd(1);
 
+    }
+
+    private void writeDocsToFile() {
+        Thread t=new ThreadedWrite(documents,docsToWrite,docMutex,docFileMutex);
+        t.start();
+        try {
+            t.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void writeCityList() {
@@ -261,7 +279,7 @@ public class Indexer {
         File f=new File(_path + "/" + '0' + _toStem+".txt");
         threads[0]=new ThreadedWrite(f,postingLines[0],mutexesPosting[0],mutexesList[0]);
         pool.execute(threads[0]);
-        for(char c='a';c<'z';c++){
+        for(char c='a';c<='z';c++){
             f=new File(_path + "/" + c + _toStem+".txt");
             threads[i]=new ThreadedWrite(f,postingLines[i],mutexesPosting[i],mutexesList[i]);
             pool.execute(threads[i]);
@@ -279,22 +297,9 @@ public class Indexer {
     }
 
     public void push(){
-        try {
-            RandomAccessFile raf=new RandomAccessFile(documents,"rw");
-            byte[] bytesDocs=new byte[docsToWrite.size()];
-            for(int i=0;i<docsToWrite.size();i++){
-                bytesDocs[i]=docsToWrite.get(i);
-            }
-            raf.write(bytesDocs);
-            raf.close();
-            docsToWrite.clear();
-
-        }
-        catch (Exception e){
-
-        }
         writeListToPosting();
         writeCityList();
+        writeDocsToFile();
 
 
     }
@@ -501,6 +506,7 @@ public class Indexer {
  }
 
  **/
+
         StringBuilder toWrite=new StringBuilder();
         toWrite.append(term);
         toWrite.append(" ");
@@ -671,20 +677,23 @@ public class Indexer {
         long startTime = System.nanoTime();
 
         Thread[] threads = new ThreadedSort[28];
-        ExecutorService pool = Executors.newFixedThreadPool(3);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
 
         int i = 1;
 
         threads[0] = new ThreadedSort(_path + "/" + '0' + _toStem + ".txt");
         pool.execute(threads[0]);
-        for (char c = 'a'; c < 'z'; c++) {
+        for (char c = 'a'; c <= 'z'; c++) {
             threads[i] = new ThreadedSort(_path + "/" + c + _toStem + ".txt");
-            pool.execute(threads[i]);
             i++;
         }
         //the city
         threads[27]=new ThreadedSort(_path+"/CityPosting.txt");
-        pool.execute(threads[27]);
+        for(int j=1;j<=27;j++){
+            if(j!=20){
+                pool.execute(threads[j]);
+            }
+        }
 
 
         pool.shutdown();
@@ -692,7 +701,14 @@ public class Indexer {
         try {
             boolean flag = false;
             while (!flag)
-                flag = pool.awaitTermination(1009, TimeUnit.MILLISECONDS);
+                flag = pool.awaitTermination(500, TimeUnit.MILLISECONDS);
+            threads[20].run();
+            try {
+                threads[20].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -809,6 +825,8 @@ class ThreadedSort extends Thread{
                 writer.write(mapCapital.get(capitalS)+'\n');
                 capitalS=capital.next();
             }
+            mapCapital.clear();
+            mapNot.clear();
             writer.flush();
             writer.close();
 
