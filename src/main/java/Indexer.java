@@ -50,6 +50,7 @@ public class Indexer {
     private Mutex docFileMutex;
     private Mutex cityMutex;
     private Mutex cityFileMutex;
+    private Mutex cityDictionaryMutex;
     private Mutex dictionaryMutex;
     private Mutex [] mutexesPosting; //mutexs of the posting files.
     private Mutex [] mutexesList; //mutexs of the posting files.
@@ -105,6 +106,7 @@ public class Indexer {
             //mutexes&&posting lines
             cityMutex=new Mutex();
             cityFileMutex=new Mutex();
+            cityDictionaryMutex=new Mutex();
             docMutex=new Mutex();
             docFileMutex=new Mutex();
             dictionaryMutex=new Mutex();
@@ -201,7 +203,9 @@ public class Indexer {
             if(!cityDictionary.containsKey(cityOfDoc)) {
                 String details = getCityDetails(cityOfDoc);
                 String[] strings = details.split("-");
+                cityDictionaryMutex.lock();
                 toCitysDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
+                cityDictionaryMutex.unlock();
             }
             if (locations.size() > 0 ) {//need only if in file to add
                 toCityPostingList(cityOfDoc,locations, lineNumDocs);
@@ -338,8 +342,13 @@ public class Indexer {
         Iterator<String> iterator=cityDictionary.keySet().iterator();
         while (iterator.hasNext()){
             String key=iterator.next();
-            String value=cityDictionary.get(key).toString();
-            stringBuilder.append(key+"--->"+value+"=");
+            if(cityDictionary.get(key)!=null) {
+                String value = cityDictionary.get(key).toString();
+                stringBuilder.append(key + "--->" + value + "=");
+            }
+            else{
+                System.out.println("");
+            }
         }
         BufferedWriter writer = null;
         try
@@ -370,7 +379,7 @@ public class Indexer {
      */
     private void writeListToPosting() {
         Thread [] threads=new ThreadedWrite[27];
-        ExecutorService pool= Executors.newFixedThreadPool(27);
+        ExecutorService pool= Executors.newFixedThreadPool(8);
 
         int i=1;
         File f=new File(_path + "/" + '0' + _toStem+".txt");
@@ -461,7 +470,7 @@ public class Indexer {
             //the dictionarys
             f=new File(_path+"/"+_toStem+"Dictionary.txt");
             f.delete();
-            f=new File(_path+"/"+_toStem+"CityDictionary.txt");
+            f=new File(_path+"/CityDictionary.txt");
             f.delete();
 
             if(dictionary!=null) {
@@ -1154,7 +1163,9 @@ class ThreadedSort extends Thread{
 
 
     private static String getField(String line) {
-        return line.split("-")[0];//extract value you want to sort on
+        if(line.contains("-"))
+            return line.split("-")[0];//extract value you want to sort on
+        return line;
     }
 
 
