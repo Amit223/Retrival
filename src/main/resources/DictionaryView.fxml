@@ -5,16 +5,16 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane xmlns="http://javafx.com/javafx/8.0.131" xmlns:fx="http://javafx.com/fxml/1" fx:controller="DictionaryController">
+<ScrollPane fx:id="scroller" prefHeight="402.0" prefWidth="239.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="DictionaryController">
     <content>
         <AnchorPane fx:id="pane" prefHeight="400.0" prefWidth="600.0">
             <children>
-                <Label layoutX="52.0" layoutY="22.0" prefHeight="36.0" prefWidth="390.0" text="The Dictionary">
+                <Label fx:id="dictionary" layoutX="52.0" layoutY="22.0" prefHeight="36.0" prefWidth="390.0" text="The Dictionary">
                     <font>
                         <Font name="System Bold Italic" size="18.0" />
                     </font>
                 </Label>
-                <Label fx:id="dictionary" layoutX="14.0" layoutY="58.0"  text="" />
+            <Label fx:id="toShow" layoutX="34.0" layoutY="103.0" prefHeight="17.0" prefWidth="153.0" />
             </children>
         </AnchorPane>
     </content>

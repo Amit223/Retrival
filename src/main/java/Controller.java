@@ -4,6 +4,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
@@ -11,7 +12,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class Controller {
@@ -26,21 +29,47 @@ public class Controller {
     @FXML
     private Button reset;
     @FXML
+    private Button start;
+    @FXML
     private Button showDictionary;
     @FXML
     private Button loadDictionaryToMemory;
+
+
+
+
     private String pathS;
     Model model;
 
 
     @FXML
     public void initialize() {
-        language.getItems().removeAll(language.getItems());
-        language.getItems().addAll("English", "Hebrew ", "Arabic", "Spanish", "Italian", "Romanian", "Russian", "Other");
-        language.getSelectionModel().select("English");
+        language.setDisable(true);
         reset.setDisable(true);
+        showDictionary.setDisable(true);
+        loadDictionaryToMemory.setDisable(true);
     }
 
+    public void setCitys(){
+        Set<String>langs= model.getLanguages();
+        language.getItems().removeAll(language.getItems());
+        Iterator<String> iterator=langs.iterator();
+        if(iterator.hasNext()) {
+            String languageString = iterator.next();
+            while (iterator.hasNext()) {
+                if (!Character.isDigit(languageString.charAt(0)) || languageString.charAt(0) != ' ')
+                    language.getItems().add(languageString);
+                languageString = iterator.next();
+
+            }
+            language.getSelectionModel().selectFirst();
+        }
+        else{
+            language.getItems().add("No languges :(");
+            language.getSelectionModel().selectFirst();
+
+        }
+    }
 
     public void setModel(Stage stage) {
         model = new Model(stage);
@@ -67,11 +96,26 @@ public class Controller {
     }
 
     public void reset(ActionEvent actionEvent) {
-        model.Reset();
+        boolean flag=model.Reset();
+        if(!flag){//didnt succeed
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setContentText("Deletion failed. Please try again later :( ");
+            alert.show();
+        }
+        else{//succeeded
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setContentText("Deletion of all the posting files, dictionary and memory succeeded!");
+            alert.show();
+            showDictionary.setDisable(true);
+            loadDictionaryToMemory.setDisable(true);
+            language.setDisable(true);
+            start.setDisable(false);
+            reset.setDisable(true);
+        }
     }
 
     public void startProcess(ActionEvent actionEvent) {
-        if (path.getText().equals("") || save.getText().equals("")) {
+        if (path.getText().equals("") && save.getText().equals("")) {
             pathS=path.getText();
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setContentText("Can't start process without all paths filled!\n Choose the folders and try again! ");
@@ -84,12 +128,22 @@ public class Controller {
             long endTime = System.nanoTime(); //(endTime - startTime)
             long elapsedTime = endTime - startTime;
             double seconds = (double)elapsedTime / 1_000_000_000.0;
-            alert.setContentText("Number of files that were indexed: +" + model.getNumberOfDocs()+ "\n" +
+            String timeInString=String.valueOf(seconds/60);
+            if(timeInString.contains(".")){
+                timeInString=timeInString.substring(0,timeInString.indexOf(".")+4);
+            }
+            String numOfDocs=String.valueOf(model.getNumberOfDocs());
+            alert.setContentText("Number of files that were indexed: " + numOfDocs+ "\n" +
                     "Number of files that were unique terms: "+ model.getNumberOfTerms()+ "\n"+
-                    "RunTime: "+ seconds/60 + " minutes!");
+                    "RunTime: "+ timeInString + " minutes!");
             alert.show();
             reset.setDisable(false);
-            System.out.println("Took "+(endTime - startTime)/1000000000 + " s");
+            loadDictionaryToMemory.setDisable(false);
+            showDictionary.setDisable(false);
+            language.setDisable(false);
+            setCitys();
+            start.setDisable(true);
+
         }
     }
 
@@ -103,8 +157,8 @@ public class Controller {
             e.printStackTrace();
         }
         Stage DicStage = new Stage();
-        //DictionaryController controller = fxmlLoader.getController();
-        //controller.showDictionary(pathS);
+        DictionaryController controller = fxmlLoader.getController();
+        controller.showDictionary(save.getText()+"/"+toStem.isSelected()+"Dictionary.txt",model.getDictionary());
         Scene scene = new Scene(root, 500, 500);
         DicStage.setTitle("Retrival Project - Dictionary");
         DicStage.setScene(scene);
@@ -120,7 +174,9 @@ public class Controller {
             alert.show();
         } else {
             if(model.loadDictionaryToMemory()){
-                //success
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setContentText("Load was successful ");
+                alert.show();
             }
             else{
                 Alert alert = new Alert(Alert.AlertType.ERROR);
