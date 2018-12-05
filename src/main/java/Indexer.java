@@ -942,7 +942,7 @@ class ThreadedSort extends Thread{
             Map<String, String > mapCapital = new TreeMap<>();
             Map<String, String > mapNot = new TreeMap<>();
             String line;
-            while ((line=reader.readLine())!=null) {
+            for ( line = reader.readLine(); line != null; line = reader.readLine()) {
                 if (Character.isUpperCase(line.charAt(0))) {
                     mapCapital.put(getField(line), line);
                 } else {

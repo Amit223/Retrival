@@ -23,6 +23,7 @@ public class Model {
     private Indexer indexer;
     private Mutex mutex;
 
+
     public Model(Stage stage) {
         this.mainStage = stage;
         mutex=new Mutex();
@@ -92,8 +93,14 @@ public class Model {
         indexer.loadDictionaryToFile();
         indexer.loadCityDictionaryToFile();
         StopWords.reset();
-        indexer.sort();
 
+        /**
+        indexer = null;
+        System.gc();
+        indexer = new Indexer(toStem, toSave);
+
+        indexer.sort();
+**/
 
 
     }
