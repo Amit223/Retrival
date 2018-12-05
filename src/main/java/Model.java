@@ -8,6 +8,8 @@ import sun.nio.ch.ThreadPool;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,12 +34,10 @@ public class Model {
         return indexer.loadDictionaryToMemory();
     }
 
-    public Stage getMainStage() {
-        return mainStage;
-    }
 
-    public void Reset(){
-        indexer.delete();
+    public boolean Reset(){
+        return indexer.delete();
+
     }
 
     public int getNumberOfDocs(){
@@ -46,8 +46,13 @@ public class Model {
     public int getNumberOfTerms(){
         return indexer.getNumberOfTerms();
     }
+    public Set<String> getLanguages(){
+        return indexer.getLanguages();
+    }
 
-
+    public Map<String, Integer> getDictionary() {
+        return indexer.getDictionary();
+    }
 
     public void Start(boolean toStem,String path,String toSave){
         indexer=new Indexer(toStem,toSave);
@@ -78,16 +83,15 @@ public class Model {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                System.out.println("last push!");
-                indexer.push();
-                System.out.println("Start sorting");
-                indexer.loadDictionaryToFile();
-                StopWords.reset();
-                indexer.sort();
-
 
             }
         }
+        System.out.println("last push!");
+        indexer.push();
+        System.out.println("Start sorting");
+        indexer.loadDictionaryToFile();
+        StopWords.reset();
+        indexer.sort();
 
 
 
@@ -112,26 +116,27 @@ class ThreadedIndex extends Thread{
         HashMap<String, Integer> termList;
         //StopWords.setStopwords(path);
         for(int i=0;i<elements.size();i++){
-            String text=elements.get(i).getElementsByTag("TEXT").text();
-            String name=elements.get(i).getElementsByTag("DOCNO").text();
-            Elements Felements=elements.get(i).getElementsByTag("F");
-            String city="";
-            String language="";
-            for (Element element1: Felements){
-                if(element1.attr("P").equals("104")){//city
-                    city=element1.text();
-                    if(city.contains(" "))
-                        city=city.substring(0,city.indexOf(" "));
+            if(elements.get(i)!=null&&elements.get(i).getElementsByTag("TEXT")!=null) {
+                String text = elements.get(i).getElementsByTag("TEXT").text();
+                String name = elements.get(i).getElementsByTag("DOCNO").text();
+                Elements Felements = elements.get(i).getElementsByTag("F");
+                String city = "";
+                String language = "";
+                for (Element element1 : Felements) {
+                    if (element1.attr("P").equals("104")) {//city
+                        city = element1.text();
+                        if (city.contains(" "))
+                            city = city.substring(0, city.indexOf(" "));
+                    } else if (element1.attr("P").equals("105"))//language
+                    {
+                        language = element1.text();
+                    }
                 }
-                else if(element1.attr("P").equals("105"))//language
-                {
-                    language=element1.text();
-                }
+                Parser parser = new Parser();
+                parser.Parse(text, toStem, city);//return termlist
+                termList = parser.getTerms();
+                indexer.Index(termList, parser.getLocations(), name, city, parser.getWordCount(), language);
             }
-            Parser parser=new Parser();
-            parser.Parse(text,toStem,city);//return termlist
-            termList=parser.getTerms();
-            indexer.Index(termList,parser.getLocations(),name,city,parser.getWordCount(),language);
         }
         System.out.println("DONE");
     }

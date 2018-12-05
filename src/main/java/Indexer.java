@@ -1,6 +1,5 @@
 
 import ParseObjects.Number;
-import javafx.util.Pair;
 import sun.awt.Mutex;
 
 import java.io.*;
@@ -39,7 +38,6 @@ public class Indexer {
     //citys
     private Map <String,Vector<String>> cityDictionary;
     private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
-    private int lineNumCitys;
     private ListOfByteArrays cityLines;
 
 
@@ -84,9 +82,8 @@ public class Indexer {
                 citysPosting = new File(path+"/NotStemCityPosting.txt");
             }
             documents.createNewFile();
-            dictionary = new ConcurrentHashMap<>();
+            dictionary = new HashMap<>();
             _AtomicNumlineDocs = new AtomicInteger(0);
-            lineNumCitys = 0;
             _numOfFiles=new AtomicInteger(0);
             docsToWrite=new ArrayList<>();
             languages=new HashSet<>();
@@ -139,7 +136,7 @@ public class Indexer {
         //docs
         Set<String> keys=terms.keySet();
         int maxtf=0;
-        if(keys.size()>0)
+        if(terms.values()!=null&&terms.values().size()>0)
             maxtf=getMaxTf(terms.values());
         docMutex.lock();
         writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
@@ -161,22 +158,24 @@ public class Indexer {
         if(_numOfFiles.get()%1000==0)
             writeListToPosting();
 
+
+
         //citys
         if(cityOfDoc.length()!=0) {
             if(cityDictionary.containsKey(cityOfDoc)) {
                 String details = getCityDetails(cityOfDoc);
                 String[] strings = details.split("-");
-                toStatesDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
+                toCitysDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
             }
             if (locations.size() > 0 ) {//need only if in file to add
                 toCityPosting(cityOfDoc,locations, lineNumDocs);
-                lineNumCitys += 1;
             }
         }
         if(_numOfFiles.get()%5000==0){
             writeCityList();
 
         }
+
         _numOfFiles.getAndAdd(1);
 
     }
@@ -195,60 +194,63 @@ public class Indexer {
      * todo add!
      */
     public boolean loadDictionaryToMemory() {
-        String dicString = "";
-        FileReader f = null;
-        try {
-            f = new FileReader(_path+"\\"+_toStem+"Dictionary.txt");
-        } catch (FileNotFoundException e) {
-            return false;
-        }
-        Scanner sc = new Scanner(f);
-        int i = 0, startIndex = 1, //cut the '{'
-                endindex = 1;
-        sc.useDelimiter(", ");
-        while (sc.hasNext()) {
-            String line = sc.next();
-            endindex = line.length(); //cut '/n' and ',' and ' '
-            if (i != 0) startIndex = 0;
-            if (!sc.hasNext()) endindex = line.length() - 1; //cut the '}'
-            line =line.substring(startIndex, endindex);
-            String[] pair = line.split("=");
-            dictionary.put(pair[0], Integer.parseInt(pair[1]));
-            i++;
+        if(dictionary==null) {
+            try {
+                dictionary = new TreeMap<>();
+                BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + _toStem + "Dictionary.txt"));
+                String line = bufferedReader.readLine();
+                String[] lines = line.split("=");
+                for (int i = 0; i < lines.length; i++) {
+                    String[] pair = lines[i].split("--->");
+                    if(pair.length==2)
+                    dictionary.put(pair[0], Integer.parseInt(pair[1]));
+
+                }
+                bufferedReader.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return true;
+
     }
 
+
+    public Map<String, Integer> getDictionary() {
+        return dictionary;
+    }
 
     /**
      * todo add!
      */
     public void loadDictionaryToFile(){
-        String dictionaryToString="";
-        dictionaryToString = dictionary.toString();
+        StringBuilder stringBuilder=new StringBuilder();
+        Iterator<String> iterator=dictionary.keySet().iterator();
+        while (iterator.hasNext()){
+            String key=iterator.next();
+            stringBuilder.append(key+"--->"+dictionary.get(key)+"=");
+        }
         BufferedWriter writer = null;
         try
         {
-            writer = new BufferedWriter( new FileWriter( _path+"\\"+_toStem+"Dictionary.txt"));
-            writer.write(dictionaryToString);
+            writer = new BufferedWriter( new FileWriter( _path+"/"+_toStem+"Dictionary.txt"));
+            writer.write(stringBuilder.toString());
+            writer.flush();
+            writer.close();
+            numOfTerms=dictionary.size();
+            dictionary.clear();
+            dictionary=null;
+
+
 
         }
         catch ( IOException e)
         {
         }
-        finally
-        {
-            try
-            {
-                if ( writer != null)
-                    writer.close( );
-                numOfTerms=dictionary.size();
-                dictionary.clear();
-            }
-            catch ( IOException e)
-            {
-            }
-        }
+
+
     }
 
     private void writeListToPosting() {
@@ -258,7 +260,7 @@ public class Indexer {
         int i=1;
         File f=new File(_path + "/" + '0' + _toStem+".txt");
         threads[0]=new ThreadedWrite(f,postingLines[0],mutexesPosting[0],mutexesList[0]);
-        pool.submit(threads[0]);
+        pool.execute(threads[0]);
         for(char c='a';c<'z';c++){
             f=new File(_path + "/" + c + _toStem+".txt");
             threads[i]=new ThreadedWrite(f,postingLines[i],mutexesPosting[i],mutexesList[i]);
@@ -270,7 +272,7 @@ public class Indexer {
         try {
             boolean flag = false;
             while (!flag)
-                flag = pool.awaitTermination(1009, TimeUnit.MILLISECONDS);
+                flag = pool.awaitTermination(1000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -297,31 +299,45 @@ public class Indexer {
 
     }
 
-    public Map<String,Integer> getDictionary() {
-        return dictionary;
-    }
-    public Map<String, Vector<String>> getCityDictionary() {
-        return cityDictionary;
-    }
 
+    public Set<String> getLanguages(){
+        return languages;
+    }
     /**
      * delete the files text
      */
-    public void delete(){
+    public boolean delete(){
         try {
-
-            PrintWriter writer = new PrintWriter(documents);
-            writer.print("");
-            writer.close();
-            writer=new PrintWriter(citysPosting);
-            writer.print("");
-            writer.close();
-            lineNumCitys=0;
+            //docs
             _AtomicNumlineDocs.set(0); ;
+            documents.delete();
+            //city
+            citysPosting.delete();
+            //files
+            for(char c='a';c<='z';c++){
+                File f=new File(_path + "/" + c + _toStem+".txt");
+                f.delete();
+
+            }
+            File f=new File(_path + "/" + '0' + _toStem+".txt");
+            f.delete();
+            //the dictionary
+            f=new File(_path+"/"+_toStem+"Dictionary.txt");
+            f.delete();
+
+            if(dictionary!=null) {
+                dictionary.clear();
+                dictionary=null;
+            }
+            cityDictionary.clear();
+            languages.clear();
+
+            return true;
         }
         catch (Exception e){
             System.out.println("problem in indexer->delete");
         }
+        return false;
     }
 
 
@@ -341,7 +357,6 @@ public class Indexer {
      *
      * adds all vector of location to the state posting
      */
-    //todo
     private void toCityPosting(String city,Vector<Integer> locations,int lineNumDoc) {
 
         StringBuilder toWrite=new StringBuilder();
@@ -403,6 +418,11 @@ public class Indexer {
     }
 
 
+    /**
+     *
+     * @param city
+     * @return
+     */
     private String getCityDetails(String city){
         String s="http://getcitydetails.geobytes.com/GetCityDetails?fqcn=";
         URL url;
@@ -439,7 +459,16 @@ public class Indexer {
             return "X-X-X";
         }
     }
-    private void toStatesDictionary(String cityOfDoc,String country,String coin,String population) {
+
+    /**
+     *
+     * @param cityOfDoc
+     * @param country
+     * @param coin
+     * @param population
+     * add to dictionary of citys
+     */
+    private void toCitysDictionary(String cityOfDoc, String country, String coin, String population) {
         if(!cityDictionary.containsKey(cityOfDoc)) {
             Vector<String> v = new Vector<>();
             v.add(country);
@@ -501,7 +530,7 @@ public class Indexer {
 
      */
     private void writeToDocuments(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language) {
-        //docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+        //docName(16 bytes)|city(16)|language(16)|maxtf(4)|num of terms(4)|words(4)-50 bytes
         byte[] name=stringToByteArray(nameOfDoc,16);
         byte[] city=stringToByteArray(cityOfDoc,16);
         byte [] lang_bytes=stringToByteArray(language,10);
@@ -537,63 +566,6 @@ public class Indexer {
 
     /**
      *
-     * @param lineOfFirstDoc - the index of line in posting file of the first in the linked list.
-     * searches for last row of doc of the term, updates its pointer to the new row.
-     * @return the row to add on.
-     */
-    private int updateTheLastNodePtr(int lineOfFirstDoc,char firstChar,ListOfByteArrays[] postingLines) {
-        try {
-            File f=new File(_path+"/"+Character.toLowerCase(firstChar)+_toStem+".txt");
-            int index=Character.toLowerCase(firstChar) - 'a' + 1;
-            if(index<0||index>26)//^^
-                index=0;
-            mutexesPosting[index].lock();
-            RandomAccessFile raf = new RandomAccessFile(f, "r");
-            raf.seek(lineOfFirstDoc*12);
-            byte[] ptr = new byte[12];
-            raf.read(ptr);
-            byte [] pointer={ptr[8],ptr[9],ptr[10],ptr[11]};
-            int ptr_int=byteToInt(pointer);
-            int prevptr=lineOfFirstDoc;//to know what line is the last of the term's docs
-            while(ptr_int!=-1){
-                prevptr=ptr_int;
-                raf.seek(ptr_int*12);
-                ptr = new byte[12];
-                raf.read(ptr);
-                pointer=new byte [4];
-                pointer[0]=ptr[8];
-                pointer[1]=ptr[9];
-                pointer[2]=ptr[10];
-                pointer[3]=ptr[11];
-                ptr_int=byteToInt(pointer);
-            }
-            //the last line.need to change the pointer!
-            raf.seek(prevptr*12);
-            byte[] line = new byte[12];
-            long lineToAdd=raf.length()/12;
-            raf.read(line);
-            raf.close();
-            ptr=toBytes((int)lineToAdd+postingLines[index].size());
-            line[8]=ptr[0];
-            line[9]=ptr[1];
-            line[10]=ptr[2];
-            line[11]=ptr[3];
-            //updates the line
-            raf=new RandomAccessFile(f,"rw");
-            raf.seek(prevptr*12);
-            raf.write(line);
-            raf.close();
-            mutexesPosting[index].unlock();
-            return (int)lineToAdd+postingLines[index].size();
-        }
-        catch (Exception e){
-            System.out.println("problem in updateTheLastNodePtr !");
-        }
-        return -1;
-    }
-
-    /**
-     *
      * @param term - update tf if exist- the df-++
      * @return the number of the first line of term in the posting document if exist, else:  -1.
      */
@@ -605,7 +577,7 @@ public class Indexer {
             dictionary.put(term,df);
         }
         //check if exist in the dictionary in diffrent way.
-        else if(dictionary.containsKey(Reverse(term))){//the reversed term in dictionary need to put the uppercase one //todo - fix.
+        else if(dictionary.containsKey(Reverse(term))){//the reversed term in dictionary need to put the uppercase one
             String newTerm;
             if(Character.isLowerCase(Reverse(term).charAt(0))){//the term in dictionary is the lowercase one
                 newTerm=Reverse(term);
@@ -647,6 +619,7 @@ public class Indexer {
         }
         return val;
     }
+
     private byte[] toBytes(int i)
     {
         byte[] result = new byte[4];
@@ -703,7 +676,7 @@ public class Indexer {
         int i = 1;
 
         threads[0] = new ThreadedSort(_path + "/" + '0' + _toStem + ".txt");
-        pool.submit(threads[0]);
+        pool.execute(threads[0]);
         for (char c = 'a'; c < 'z'; c++) {
             threads[i] = new ThreadedSort(_path + "/" + c + _toStem + ".txt");
             pool.execute(threads[i]);
@@ -757,6 +730,8 @@ class ThreadedWrite extends Thread{
             }
             BufferedWriter bufferedWriter=new BufferedWriter(new FileWriter(file.getAbsolutePath(),true));
             bufferedWriter.write(stringBuilder.toString());
+            bufferedWriter.flush();
+            bufferedWriter.close();
             postingMutex.unlock();
             list.delete();
             listMutex.unlock();
@@ -781,8 +756,8 @@ class ThreadedSort extends Thread{
 
             System.out.println("here");
             BufferedReader reader = new BufferedReader(new FileReader(new File(file)));
-            Map<String, String > mapCapital = new TreeMap<String,String>();
-            Map<String, String > mapNot = new TreeMap<String,String>();
+            Map<String, String > mapCapital = new TreeMap<>();
+            Map<String, String > mapNot = new TreeMap<>();
             String line;
             while ((line=reader.readLine())!=null) {
                 if (Character.isUpperCase(line.charAt(0))) {
@@ -834,29 +809,9 @@ class ThreadedSort extends Thread{
                 writer.write(mapCapital.get(capitalS)+'\n');
                 capitalS=capital.next();
             }
+            writer.flush();
             writer.close();
 
-            /**
-             *  for(int i=0;i<lineNum;i++){
-             byte[] line=new byte[24];
-             reader.seek(i*24);
-             reader.read(line);
-             byte[]term=new byte[16];
-             byte[]docLine=new byte[4];
-             for (int j=0;j<16;j++)
-             term[j]=line[j];
-             for (int j =16; j <20 ; j++) {
-             docLine[j-16]=line[j];
-             }
-             // BufferedWriter bufferedWriter=new BufferedWriter(new FileWriter(file.getAbsolutePath(),true));
-             //  bufferedWriter.write(stringBuilder.toString());
-             String termInString=new String(term);
-             termInString=termInString.substring(0,termInString.indexOf("#"));
-             String lineInString=new String(docLine);
-             map.put(termInString+lineInString, line);
-
-             }
-             */
 
         } catch (Exception e) {
             e.printStackTrace();
