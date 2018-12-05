@@ -35,6 +35,7 @@ public class Indexer {
     private boolean _toStem;
     private ListOfByteArrays [] postingLines;
     private int numOfTerms=0;
+    private AtomicInteger [] lineCounter;
 
 
     //citys
@@ -75,6 +76,10 @@ public class Indexer {
         try {
             _path=path;
             _toStem=toStem;
+            lineCounter= new AtomicInteger[28];//'0', 'a'-'z' , city
+            for (int i=0;i<28;i++){
+                lineCounter[i]=new AtomicInteger(0);
+            }
             if(toStem) {
                 documents = new File(path+"/Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
                 //citys
@@ -369,11 +374,11 @@ public class Indexer {
 
         int i=1;
         File f=new File(_path + "/" + '0' + _toStem+".txt");
-        threads[0]=new ThreadedWrite(f,postingLines[0],mutexesPosting[0],mutexesList[0]);
+        threads[0]=new ThreadedWrite(f,postingLines[0],mutexesPosting[0],mutexesList[0],lineCounter[0]);
         pool.execute(threads[0]);
         for(char c='a';c<='z';c++){
             f=new File(_path + "/" + c + _toStem+".txt");
-            threads[i]=new ThreadedWrite(f,postingLines[i],mutexesPosting[i],mutexesList[i]);
+            threads[i]=new ThreadedWrite(f,postingLines[i],mutexesPosting[i],mutexesList[i],lineCounter[i]);
             pool.execute(threads[i]);
             i++;
         }
@@ -391,7 +396,7 @@ public class Indexer {
      * call {@link ThreadedWrite} to write the list of files to end of documents, erase the list.
      */
     private void writeDocsToFile() {
-        Thread t=new ThreadedWrite(documents,docsToWrite,docMutex,docFileMutex);
+        Thread t=new ThreadedWrite(documents,docsToWrite,docMutex,docFileMutex,new AtomicInteger(0));//dont care
         t.start();
         try {
             t.join();
@@ -403,7 +408,7 @@ public class Indexer {
      * call {@link ThreadedWrite} to write the list of citys to end of city posting, erase the list.
      */
     private void writeCityList() {
-        Thread t=new ThreadedWrite(citysPosting,cityLines,cityMutex,cityFileMutex);
+        Thread t=new ThreadedWrite(citysPosting,cityLines,cityMutex,cityFileMutex,lineCounter[27]);
         t.start();
         try {
             t.join();
@@ -820,14 +825,14 @@ public class Indexer {
 
         int i = 1;
 
-        threads[0] = new ThreadedSort(_path + "/" + '0' + _toStem + ".txt");
+        threads[0] = new ThreadedSort(_path + "/" + '0' + _toStem + ".txt",lineCounter[0].intValue(),'0');
         pool.execute(threads[0]);
         for (char c = 'a'; c <= 'z'; c++) {
-            threads[i] = new ThreadedSort(_path + "/" + c + _toStem + ".txt");
+            threads[i] = new ThreadedSort(_path + "/" + c + _toStem + ".txt",lineCounter[i].intValue(),c);
             i++;
         }
         //the city
-        threads[27]=new ThreadedSort(_path+"/CityPosting.txt");
+        threads[27]=new ThreadedSort(_path+"/CityPosting.txt",lineCounter[27].intValue(),'A');
         for(int j=1;j<=27;j++){
             if(j!=20){
                 pool.execute(threads[j]);
@@ -869,6 +874,7 @@ class ThreadedWrite extends Thread{
     ListOfByteArrays list;
     Mutex postingMutex;
     Mutex listMutex;
+    AtomicInteger counter;
 
     /**
      *
@@ -877,11 +883,12 @@ class ThreadedWrite extends Thread{
      * @param postingMutex
      * @param listMutex
      */
-    public ThreadedWrite(File file,ListOfByteArrays list,Mutex postingMutex,Mutex listMutex) {
+    public ThreadedWrite(File file,ListOfByteArrays list,Mutex postingMutex,Mutex listMutex,AtomicInteger lineCount) {
         this.file=file;
         this.list=list;
         this.postingMutex =postingMutex;
         this.listMutex=listMutex;
+        this.counter=lineCount;
     }
 
     /**
@@ -901,6 +908,7 @@ class ThreadedWrite extends Thread{
             bufferedWriter.write(stringBuilder.toString());
             bufferedWriter.flush();
             bufferedWriter.close();
+            counter.addAndGet(list.size());
             postingMutex.unlock();
             list.delete();
             listMutex.unlock();
@@ -918,77 +926,103 @@ class ThreadedWrite extends Thread{
 class ThreadedSort extends Thread{
 
     String file;
+    int lineCount;
+    char letter;
 
 
     /**
      * Constructor
      * @param file- to sort
      */
-    public ThreadedSort(String file) {
+    public ThreadedSort(String file,int lineCount,char letter) {
         this.file = file;
+        this.lineCount=lineCount;
+        this.letter=letter;
     }
 
     public void run() {
         long minRunningMemory = (1024*1024);
-
         Runtime runtime = Runtime.getRuntime();
-
         if(runtime.freeMemory()<minRunningMemory)
             System.gc();
-        try {
 
+        try {
             System.out.println("here");
             BufferedReader reader = new BufferedReader(new FileReader(new File(file)));
-            Map<String, String > mapCapital = new TreeMap<>();
-            Map<String, String > mapNot = new TreeMap<>();
+            File f=new File(letter+"1"+"_"+letter+"2");
+            f.createNewFile();
+            f=new File(letter+"3"+"_"+letter+"4");
+            f.createNewFile();
+            String write1=X(letter+"1",letter+"2",letter+"1"+"_"+letter+"2",reader,lineCount/2);
+            String write2=X(letter+"3",letter+"4",letter+"3"+"_"+letter+"4",reader,lineCount/2);
+            PrintWriter printWriter=new PrintWriter(new File(file));
+            printWriter.write("");
+            printWriter.close();
+            Merge(write1,write2,file);
+            reader.close();
+
+            //String write3=X(letter+"1",letter+"2",reader,lineCount/4);
+            //String write4=X(letter+"1",letter+"2",reader,lineCount/8);
+
+
+        }
+        catch(Exception e){
+
+        }
+
+    }
+
+    private String X(String firsthalf,String lasthalf,String toWrite,BufferedReader reader,int size){
+        try {
+            //first half:
+            Map<String, String> mapCapital = new TreeMap<>();
+            Map<String, String> mapNot = new TreeMap<>();
             String line;
-            for ( line = reader.readLine(); line != null; line = reader.readLine()) {
+            int i = 0;
+            for (line = reader.readLine(); line != null && i < (int)size/2; line = reader.readLine()) {
                 if (Character.isUpperCase(line.charAt(0))) {
                     mapCapital.put(getField(line), line);
                 } else {
                     mapNot.put(getField(line), line);
 
                 }
+                i++;
             }
-            //delete the file completely
-            reader.close();
-            PrintWriter pwriter = new PrintWriter(new File(file));
-            pwriter.print("");
-            pwriter.close();
 
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file,true));
-            Iterator<String> capital=null;
-            Iterator<String> not=null;
-            String capitalS="";
-            String notS="";
-            if(mapCapital.size()>0) {
+            File file1 = new File(firsthalf);
+            file1.createNewFile();
+            BufferedWriter writer = new BufferedWriter(new FileWriter(firsthalf, true));
+            Iterator<String> capital = null;
+            Iterator<String> not = null;
+            String capitalS = "";
+            String notS = "";
+            if (mapCapital.size() > 0) {
                 capital = mapCapital.keySet().iterator();
-                capitalS=capital.next();
+                capitalS = capital.next();
             }
-            if(mapNot.size()>0) {
+            if (mapNot.size() > 0) {
                 not = mapNot.keySet().iterator();
-                notS=not.next();
+                notS = not.next();
             }
-            while((capital!=null&&capital.hasNext()) && (not!=null&&not.hasNext())){
-                String toLower=capitalS.toLowerCase();
-                if(toLower.compareTo(notS)<0){
+            while ((capital != null && capital.hasNext()) && (not != null && not.hasNext())) {
+                String toLower = capitalS.toLowerCase();
+                if (toLower.compareTo(notS) < 0) {
                     //capital first
-                    writer.write(mapCapital.get(capitalS)+'\n');
-                    capitalS=capital.next();
+                    writer.write(mapCapital.get(capitalS) + '\n');
+                    capitalS = capital.next();
 
-                }
-                else{
-                    writer.write(mapNot.get(notS)+'\n');
-                    notS=not.next();
+                } else {
+                    writer.write(mapNot.get(notS) + '\n');
+                    notS = not.next();
                 }
             }
-            while(not!=null &&not.hasNext()){//need to write the small letters
-                writer.write(mapNot.get(notS)+'\n');
-                notS=not.next();
+            while (not != null && not.hasNext()) {//need to write the small letters
+                writer.write(mapNot.get(notS) + '\n');
+                notS = not.next();
             }
-            while(capital!=null &&capital.hasNext()){//need to write the capitals
-                writer.write(mapCapital.get(capitalS)+'\n');
-                capitalS=capital.next();
+            while (capital != null && capital.hasNext()) {//need to write the capitals
+                writer.write(mapCapital.get(capitalS) + '\n');
+                capitalS = capital.next();
             }
             mapCapital.clear();
             mapNot.clear();
@@ -996,10 +1030,112 @@ class ThreadedSort extends Thread{
             writer.close();
 
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            //second half:
+            mapCapital = new TreeMap<>();
+            mapNot = new TreeMap<>();
+            for (line = reader.readLine(); line != null&&i<size; line = reader.readLine()) {
+                if (Character.isUpperCase(line.charAt(0))) {
+                    mapCapital.put(getField(line), line);
+                } else {
+                    mapNot.put(getField(line), line);
+
+                }
+                i++;
+            }
+
+            File f = new File(letter + lasthalf);
+            f.createNewFile();
+            writer = new BufferedWriter(new FileWriter(lasthalf, true));
+            capital = null;
+            not = null;
+            capitalS = "";
+            notS = "";
+            if (mapCapital.size() > 0) {
+                capital = mapCapital.keySet().iterator();
+                capitalS = capital.next();
+            }
+            if (mapNot.size() > 0) {
+                not = mapNot.keySet().iterator();
+                notS = not.next();
+            }
+            while ((capital != null && capital.hasNext()) && (not != null && not.hasNext())) {
+                String toLower = capitalS.toLowerCase();
+                if (toLower.compareTo(notS) < 0) {
+                    //capital first
+                    writer.write(mapCapital.get(capitalS) + '\n');
+                    capitalS = capital.next();
+
+                } else {
+                    writer.write(mapNot.get(notS) + '\n');
+                    notS = not.next();
+                }
+            }
+            while (not != null && not.hasNext()) {//need to write the small letters
+                writer.write(mapNot.get(notS) + '\n');
+                notS = not.next();
+            }
+            while (capital != null && capital.hasNext()) {//need to write the capitals
+                writer.write(mapCapital.get(capitalS) + '\n');
+                capitalS = capital.next();
+            }
+            mapCapital.clear();
+            mapNot.clear();
+            writer.flush();
+            writer.close();
+
+
+
+            //merge to 1 file /f1,/f2
+            Merge(firsthalf,lasthalf,firsthalf+"_"+lasthalf);
+            return firsthalf+"_"+lasthalf;
+        }
+        catch (Exception e){
+        System.out.println("thats why");
+
+    }
+    return "";
+    }
+    private void Merge(String firstHalf,String lastHalf,String toWrite) {
+        try {
+            BufferedReader bufferedReader1 = new BufferedReader(new FileReader(firstHalf));
+            BufferedReader bufferedReader2 = new BufferedReader(new FileReader(lastHalf));
+            BufferedWriter bufferedWriter=new BufferedWriter(new FileWriter(toWrite));
+
+            String file1=bufferedReader1.readLine();
+            String file2=bufferedReader2.readLine();
+            while(file1!=null&&file2!=null){
+                if(file1.compareToIgnoreCase(file2)<0){
+                    bufferedWriter.write(file1+'\n');
+                    file1=bufferedReader1.readLine();
+                }
+                else{
+                    bufferedWriter.write(file2+'\n');
+                    file2=bufferedReader2.readLine();
+                }
+            }
+            while(file1!=null){//need to write the small letters
+                bufferedWriter.write(file1+'\n');
+                file1=bufferedReader1.readLine();
+            }
+            while(file2!=null){//need to write the capitals
+                bufferedWriter.write(file2+'\n');
+                file2=bufferedReader2.readLine();
+            }
+            bufferedReader1.close();
+            bufferedReader2.close();
+            bufferedWriter.flush();
+            bufferedWriter.close();
+            File f1=new File(firstHalf);
+            File f2=new File(lastHalf);
+            f1.delete();
+            f2.delete();
+        }
+        catch (Exception e){
+
         }
     }
+
+
     private static String getField(String line) {
         return line.split("-")[0];//extract value you want to sort on
     }

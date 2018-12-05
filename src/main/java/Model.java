@@ -93,6 +93,7 @@ public class Model {
         indexer.loadDictionaryToFile();
         indexer.loadCityDictionaryToFile();
         StopWords.reset();
+        indexer.sort();
 
         /**
         indexer = null;
