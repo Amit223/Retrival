@@ -821,7 +821,7 @@ public class Indexer {
         long startTime = System.nanoTime();
 
         Thread[] threads = new ThreadedSort[28];
-        ExecutorService pool = Executors.newFixedThreadPool(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
 
         int i = 1;
 
@@ -953,12 +953,29 @@ class ThreadedSort extends Thread{
             f.createNewFile();
             f=new File(letter+"3"+"_"+letter+"4");
             f.createNewFile();
-            String write1=X(letter+"1",letter+"2",letter+"1"+"_"+letter+"2",reader,lineCount/2);
-            String write2=X(letter+"3",letter+"4",letter+"3"+"_"+letter+"4",reader,lineCount/2);
+            f=new File(letter+"5"+"_"+letter+"6");
+            f.createNewFile();
+            f=new File(letter+"7"+"_"+letter+"8");
+            f.createNewFile();
+            String write1=SortFileByPart(letter+"1",letter+"2",letter+"1"+"_"+letter+"2",reader,lineCount/4);
+            String write2=SortFileByPart(letter+"3",letter+"4",letter+"3"+"_"+letter+"4",reader,lineCount/4);
+            String write3=SortFileByPart(letter+"5",letter+"6",letter+"5"+"_"+letter+"6",reader,lineCount/4);
+            String write4=SortFileByPart(letter+"7",letter+"8",letter+"7"+"_"+letter+"8",reader,lineCount/4);
+
+            String s1=write1+"_"+write2;
+            String s2=write3+"_"+write4;
+            f=new File(s1);
+            f.createNewFile();
+            f=new File(s2);
+            f.createNewFile();
+            Merge(write1,write2,s1);
+            Merge(write3,write4,s2);
+
             PrintWriter printWriter=new PrintWriter(new File(file));
             printWriter.write("");
             printWriter.close();
-            Merge(write1,write2,file);
+            Merge(s1,s2,file);
+
             reader.close();
 
             //String write3=X(letter+"1",letter+"2",reader,lineCount/4);
@@ -972,7 +989,7 @@ class ThreadedSort extends Thread{
 
     }
 
-    private String X(String firsthalf,String lasthalf,String toWrite,BufferedReader reader,int size){
+    private String SortFileByPart(String firsthalf,String lasthalf,String toWrite,BufferedReader reader,int size){
         try {
             //first half:
             Map<String, String> mapCapital = new TreeMap<>();
