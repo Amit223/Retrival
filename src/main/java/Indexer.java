@@ -7,7 +7,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -166,7 +165,7 @@ public class Indexer {
         if(terms.values()!=null&&terms.values().size()>0)
             maxtf=getMaxTf(terms.values());
         docMutex.lock();
-        writeToDocuments(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
+        writeToDocumentsList(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
         docMutex.unlock();
         _AtomicNumlineDocs.getAndAdd(1);
         int lineNumDocs = _AtomicNumlineDocs.get()-1;
@@ -181,8 +180,10 @@ public class Indexer {
             dictionaryMutex.lock();
             ifExistUpdateTF(term); //updates dictionary df/ add new term
             dictionaryMutex.unlock();
-            char FirstC = (Character.isDigit(term.charAt(0))||term.charAt(0)=='-') ? '0' : Character.toLowerCase(term.charAt(0));
-            writeToPosting(lineNumDocs,terms.get(term),FirstC,postingLines,term);
+            int index = Character.toLowerCase(term.charAt(0)) - 'a' + 1;
+            if (index <0||index>26)//^^
+                index = 0;
+            writeToPostingList(lineNumDocs,terms.get(term),postingLines[index],term);
         }
         terms.clear();
         if(_numOfFiles.get()%1000==0)
@@ -198,7 +199,7 @@ public class Indexer {
                 toCitysDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
             }
             if (locations.size() > 0 ) {//need only if in file to add
-                toCityPosting(cityOfDoc,locations, lineNumDocs);
+                toCityPostingList(cityOfDoc,locations, lineNumDocs);
             }
         }
         locations.clear();
@@ -210,58 +211,6 @@ public class Indexer {
 
     }
 
-    /**
-     * call {@link ThreadedWrite} to write the list of files to end of documents, erase the list.
-     */
-    private void writeDocsToFile() {
-        Thread t=new ThreadedWrite(documents,docsToWrite,docMutex,docFileMutex);
-        t.start();
-        try {
-            t.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-    /**
-     * call {@link ThreadedWrite} to write the list of citys to end of city posting, erase the list.
-     */
-    private void writeCityList() {
-        Thread t=new ThreadedWrite(citysPosting,cityLines,cityMutex,cityFileMutex);
-        t.start();
-        try {
-            t.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * this function load to dictionary ( if not loaded yet) the information from dictionary file.
-     * return true if successful, false otherwise
-     */
-    public boolean loadDictionaryToMemory() {
-        if(dictionary==null) {
-            try {
-                dictionary = new TreeMap<>();
-                BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + _toStem + "Dictionary.txt"));
-                String line = bufferedReader.readLine();
-                String[] lines = line.split("=");
-                for (int i = 0; i < lines.length; i++) {
-                    String[] pair = lines[i].split("--->");
-                    if(pair.length==2)
-                    dictionary.put(pair[0], Integer.parseInt(pair[1]));
-
-                }
-                bufferedReader.close();
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return true;
-
-    }
 
 
     /**
@@ -280,6 +229,34 @@ public class Indexer {
     public Map<String, Vector<String>> getCityDictionary() {
         loadCityDictionaryToMemory();
         return cityDictionary;
+    }
+
+    /**
+     * this function load to dictionary ( if not loaded yet) the information from dictionary file.
+     * return true if successful, false otherwise
+     */
+    public boolean loadDictionaryToMemory() {
+        if(dictionary==null) {
+            try {
+                dictionary = new TreeMap<>();
+                BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + _toStem + "Dictionary.txt"));
+                String line = bufferedReader.readLine();
+                String[] lines = line.split("=");
+                for (int i = 0; i < lines.length; i++) {
+                    String[] pair = lines[i].split("--->");
+                    if(pair.length==2)
+                        dictionary.put(pair[0], Integer.parseInt(pair[1]));
+
+                }
+                bufferedReader.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return true;
+
     }
 
     /**
@@ -348,6 +325,9 @@ public class Indexer {
     }
 
 
+    /**
+     * load the city dictionary to the file and deletes it
+     */
     public void loadCityDictionaryToFile(){
         StringBuilder stringBuilder=new StringBuilder();
         Iterator<String> iterator=cityDictionary.keySet().iterator();
@@ -378,6 +358,11 @@ public class Indexer {
 
 
 
+    //write functions
+    /**
+     * this functiob creates 27 {@link ThreadedWrite} objects that each one write to it's own file.
+     *
+     */
     private void writeListToPosting() {
         Thread [] threads=new ThreadedWrite[27];
         ExecutorService pool= Executors.newFixedThreadPool(27);
@@ -402,7 +387,37 @@ public class Indexer {
             e.printStackTrace();
         }
     }
+    /**
+     * call {@link ThreadedWrite} to write the list of files to end of documents, erase the list.
+     */
+    private void writeDocsToFile() {
+        Thread t=new ThreadedWrite(documents,docsToWrite,docMutex,docFileMutex);
+        t.start();
+        try {
+            t.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+    /**
+     * call {@link ThreadedWrite} to write the list of citys to end of city posting, erase the list.
+     */
+    private void writeCityList() {
+        Thread t=new ThreadedWrite(citysPosting,cityLines,cityMutex,cityFileMutex);
+        t.start();
+        try {
+            t.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
+
+
+    /**
+     * this function activated at the end of the index process, activates all the write functions - writeListToPosting(),
+     * writeDocsToFile(),writeCityList() so data isn't lost.
+     */
     public void push(){
         writeListToPosting();
         writeCityList();
@@ -412,11 +427,16 @@ public class Indexer {
     }
 
 
+    /**
+     *
+     * @return the languages set
+     */
     public Set<String> getLanguages(){
         return languages;
     }
+
     /**
-     * delete the files text
+     * delete all the files- posting and dictionarys
      */
     public boolean delete(){
         try {
@@ -433,17 +453,21 @@ public class Indexer {
             }
             File f=new File(_path + "/" + '0' + _toStem+".txt");
             f.delete();
-            //the dictionary
+            //the dictionarys
             f=new File(_path+"/"+_toStem+"Dictionary.txt");
+            f.delete();
+            f=new File(_path+"/"+_toStem+"CityDictionary.txt");
             f.delete();
 
             if(dictionary!=null) {
                 dictionary.clear();
                 dictionary=null;
             }
-            cityDictionary.clear();
+            if(cityDictionary!=null) {
+                cityDictionary.clear();
+                cityDictionary=null;
+            }
             languages.clear();
-
             return true;
         }
         catch (Exception e){
@@ -453,23 +477,22 @@ public class Indexer {
     }
 
 
+    /**
+     *
+     * @return num of files the were indexed
+     */
     public int get_numOfFiles(){
         return _numOfFiles.get();
     }
-    /**
-     *
-     * @param lineInPosting
-     * updates the pointer of last doc of the city
-     */
 
 
     /**
      *
-     * @param locations
+     * @param locations of city in the doc
      *
-     * adds all vector of location to the state posting
+     * adds all vector of location to the city posting list ( not to file)
      */
-    private void toCityPosting(String city,Vector<Integer> locations,int lineNumDoc) {
+    private void toCityPostingList(String city, Vector<Integer> locations, int lineNumDoc) {
 
         StringBuilder toWrite=new StringBuilder();
         int index=locations.size();
@@ -530,11 +553,102 @@ public class Indexer {
     }
 
 
+    /**
+     *
+     * @param lineOfDoc- line in doc file of document of term
+     * @param tf of term in document
+     * @param postingLine the lists we
+     * @param term we want to add
+     *
+     *            writes to the list the term line
+     */
+    private void writeToPostingList(int lineOfDoc, int tf, ListOfByteArrays postingLine, String term ) {
+        StringBuilder toWrite=new StringBuilder();
+        toWrite.append(term);
+        toWrite.append(" ");
+        toWrite.append(lineOfDoc);
+        toWrite.append("-");
+        toWrite.append(tf);
+        toWrite.append("\n");
+        int index = Character.toLowerCase(term.charAt(0)) - 'a' + 1;
+        if (index <0||index>26)//^^
+            index = 0;
+        mutexesList[index].lock();
+        postingLine.add(toWrite.toString());
+        mutexesList[index].unlock();
+
+    }
+
+    /**
+     *
+     * @param nameOfDoc
+     * @param cityOfDoc
+     * @param maxtf
+     * @param size- num of unique words in document
+     * @param numOfWords - num of total words in doc
+     *
+     * writes to the docs file the document details-
+     * docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+
+     */
+    private void writeToDocumentsList(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language) {
+        //docName(16 bytes)|city(16)|language(16)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+        byte[] name=stringToByteArray(nameOfDoc,16);
+        byte[] city=stringToByteArray(cityOfDoc,16);
+        byte [] lang_bytes=stringToByteArray(language,10);
+        if(language.length()>0){
+            languages.add(language);
+        }
+        byte [] maxtf_bytes=toBytes(maxtf);
+        byte [] size_bytes=toBytes(size);
+        byte [] words_bytes=toBytes(numOfWords);
+        for (int i = 0; i < 16; i++) {
+            docsToWrite.add(name[i]);
+        }
+        for (int i = 0; i <16 ; i++) {
+            docsToWrite.add(city[i]);
+        }
+        for (int i = 0; i <10 ; i++) {
+            docsToWrite.add(lang_bytes[i]);
+        }
+
+        for (int i = 0; i < 4; i++) {
+            docsToWrite.add(maxtf_bytes[i]);
+        }
+        for (int i = 0; i <4 ; i++) {
+            docsToWrite.add(size_bytes[i]);
+        }
+
+        for (int i = 0; i < 4; i++) {
+            docsToWrite.add(words_bytes[i]);
+        }
+
+
+    }
+
+    /**
+     *
+     * @param cityOfDoc
+     * @param country
+     * @param coin
+     * @param population
+     * add to dictionary of citys so key is city and value is vector of it's info
+     */
+    private void toCitysDictionary(String cityOfDoc, String country, String coin, String population) {
+        if(!cityDictionary.containsKey(cityOfDoc)) {
+            Vector<String> v = new Vector<>();
+            v.add(country);
+            v.add(coin);
+            v.add(population);
+            cityDictionary.put(cityOfDoc, v);
+        }
+        //else- exist dont need to add
+    }
 
     /**
      *
      * @param city
-     * @return
+     * @return state, coin, population of the city from API-geobytes
      */
     private String getCityDetails(String city){
         String s="http://getcitydetails.geobytes.com/GetCityDetails?fqcn=";
@@ -573,115 +687,11 @@ public class Indexer {
         }
     }
 
-    /**
-     *
-     * @param cityOfDoc
-     * @param country
-     * @param coin
-     * @param population
-     * add to dictionary of citys
-     */
-    private void toCitysDictionary(String cityOfDoc, String country, String coin, String population) {
-        if(!cityDictionary.containsKey(cityOfDoc)) {
-            Vector<String> v = new Vector<>();
-            v.add(country);
-            v.add(coin);
-            v.add(population);
-            cityDictionary.put(cityOfDoc, v);
-        }
-        //else- exist dont need to add
-    }
 
 
     /**
      *
-     * @param lineOfDoc
-     * @param tf
-     * @param firstChar
-     * @return the line number that wrote to.
-     */
-    private void writeToPosting(int lineOfDoc,int tf, char firstChar,ListOfByteArrays [] postingLines,String term ) {
-/**
- byte [] tf_bytes=toBytes(tf);
- byte [] line_bytes=toBytes(lineOfDoc);
-
- byte [] toWrite=new byte[8];
- for (int i = 0; i < 4; i++) {
- toWrite[i]=line_bytes[i];
- }
- for (int i = 4; i <8 ; i++) {
- toWrite[i]=tf_bytes[i-4];
- }
-
- **/
-
-        StringBuilder toWrite=new StringBuilder();
-        toWrite.append(term);
-        toWrite.append(" ");
-        toWrite.append(lineOfDoc);
-        toWrite.append("-");
-        toWrite.append(tf);
-        toWrite.append("\n");
-        int index = Character.toLowerCase(firstChar) - 'a' + 1;
-        if (index <0||index>26)//^^
-            index = 0;
-        mutexesList[index].lock();
-        postingLines[index].add(toWrite.toString());
-        mutexesList[index].unlock();
-
-    }
-
-    /**
-     *
-     * @param nameOfDoc
-     * @param cityOfDoc
-     * @param maxtf
-     * @param size
-     * @param numOfWords
-     *
-     * writes to the docs file the document details-
-     * docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-
-     */
-    private void writeToDocuments(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language) {
-        //docName(16 bytes)|city(16)|language(16)|maxtf(4)|num of terms(4)|words(4)-50 bytes
-        byte[] name=stringToByteArray(nameOfDoc,16);
-        byte[] city=stringToByteArray(cityOfDoc,16);
-        byte [] lang_bytes=stringToByteArray(language,10);
-        if(language.length()>0){
-            languages.add(language);
-        }
-        byte [] maxtf_bytes=toBytes(maxtf);
-        byte [] size_bytes=toBytes(size);
-        byte [] words_bytes=toBytes(numOfWords);
-        for (int i = 0; i < 16; i++) {
-            docsToWrite.add(name[i]);
-        }
-        for (int i = 0; i <16 ; i++) {
-            docsToWrite.add(city[i]);
-        }
-        for (int i = 0; i <10 ; i++) {
-            docsToWrite.add(lang_bytes[i]);
-        }
-
-        for (int i = 0; i < 4; i++) {
-            docsToWrite.add(maxtf_bytes[i]);
-        }
-        for (int i = 0; i <4 ; i++) {
-            docsToWrite.add(size_bytes[i]);
-        }
-
-        for (int i = 0; i < 4; i++) {
-            docsToWrite.add(words_bytes[i]);
-        }
-
-
-    }
-
-    /**
-     *
-     * @param term - update tf if exist- the df-++
-     * @return the number of the first line of term in the posting document if exist, else:  -1.
+     * @param term - update df if exist- the df-++, else add to dictionary
      */
     private void ifExistUpdateTF(String term) {
         if(dictionary.containsKey(term)){//just add to df and return the line in posting
@@ -711,6 +721,11 @@ public class Indexer {
         }
     }
 
+    /**
+     *
+     * @param term
+     * @return term in lowercase if is uppercase and lower case otherwise
+     */
     private String Reverse(String term) {
         int offset = 'a' - 'A';
         char c=term.charAt(0);
@@ -725,6 +740,11 @@ public class Indexer {
     }
 
 
+    /**
+     *
+     * @param bytes
+     * @return take byte[4] and turn into int- will use next part of project
+     */
     private int byteToInt(byte[] bytes) {
         int val = 0;
         for (int i = 0; i < 4; i++) {
@@ -734,6 +754,11 @@ public class Indexer {
         return val;
     }
 
+    /**
+     *
+     * @param i-integer
+     * @return integer in byte array of size 4
+     */
     private byte[] toBytes(int i)
     {
         byte[] result = new byte[4];
@@ -747,6 +772,11 @@ public class Indexer {
     }
 
 
+    /**
+     *
+     * @param elements
+     * @return the max tf of term in doc
+     */
     private int getMaxTf(Collection<Integer> elements) {
         Iterator<Integer> iterator=elements.iterator();
         int max=iterator.next();
@@ -761,7 +791,7 @@ public class Indexer {
     /**
      *
      * @param term
-     * @return converts string into byte array of size 30
+     * @return converts string into byte array of size length
      */
 
     private byte[] stringToByteArray(String term,int length){
@@ -779,7 +809,8 @@ public class Indexer {
 
 
     /**
-     * SORT EACH FILE
+     * SORT EACH FILE-
+     * calls {@link ThreadedSort} for each file- posting and citys
      */
     public void sort() {
         long startTime = System.nanoTime();
@@ -829,12 +860,23 @@ public class Indexer {
 
 }
 
+/**
+ * this class extends thread and execute write to file
+ */
 class ThreadedWrite extends Thread{
 
     File file;
     ListOfByteArrays list;
     Mutex postingMutex;
     Mutex listMutex;
+
+    /**
+     *
+     * @param file to write to
+     * @param list to write from
+     * @param postingMutex
+     * @param listMutex
+     */
     public ThreadedWrite(File file,ListOfByteArrays list,Mutex postingMutex,Mutex listMutex) {
         this.file=file;
         this.list=list;
@@ -842,6 +884,9 @@ class ThreadedWrite extends Thread{
         this.listMutex=listMutex;
     }
 
+    /**
+     * write the list to the file
+     */
     public void run(){
         try {
             listMutex.lock();
@@ -866,11 +911,19 @@ class ThreadedWrite extends Thread{
 
 
 }
+
+/**
+ * this class extends thread and execute sort of file
+ */
 class ThreadedSort extends Thread{
 
     String file;
 
 
+    /**
+     * Constructor
+     * @param file- to sort
+     */
     public ThreadedSort(String file) {
         this.file = file;
     }
