@@ -13,6 +13,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * this class index all documents in corpus to 28 files: 'a'-'z' , '0' (to digit and signs) and to city posting the city details.
+ */
 public class Indexer {
 
     private Map<String,Integer> dictionary;
@@ -37,7 +40,7 @@ public class Indexer {
 
     //citys
     private Map <String,Vector<String>> cityDictionary;
-    private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|loc4|loc5|ptr nxt==28 bytes (4 each)
+    private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|
     private ListOfByteArrays cityLines;
 
 
@@ -65,8 +68,9 @@ public class Indexer {
 
     /**
      * the constructor.,
-     * @param toStem to stem - to decide the path of the file.
-     * @param path -the path of the directory of the posting files.
+     * @param toStem to stem - to decide the path of the file- so we have different files to each option.
+     * @param path -the path of the directory of the posting files the user wants to save on.
+     * initialize all files, mutexes,lists ADT used in indexer(only 1 indexer for program!)
      */
     public Indexer(boolean toStem,String path) {
         try {
@@ -129,11 +133,29 @@ public class Indexer {
 
     /**
      * create inverted index and posting files.
-     * @param terms
+     * @param terms- dictionary of terms, term frequency of the document
      * @param locations - vector of locations of the city
      * @param nameOfDoc
      * @param cityOfDoc
      * @param numOfWords - the number of word in the document
+     *
+     * * 1) it takes all information needed from {@link Parser}: the dictionary of each doc- list of unique terms and their frequency,
+     * vector of location of the city of the documents, name of the document, name of the city, number of words(not unique) in doc,
+     * the language of the doc.
+     * 1)writes to the list of documents details in bytes:docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)|-54 bytes
+     * 2)for each term in dictionary: writes to the dictionary if new term, add to doc frequency if exist. Next write the
+     * term details: the line in the doc file that represent the document it was found in, it's term frequency and itself so we can
+     * use it on stage 5
+     * It writes each line to the list of the term first letter-'a'-'z' or if digit or sign writes to the list of '0'
+     * 3)for the city of doc find it's details on geobytes, write to the dictionary of citys all the details:the city,
+     * the population and the coin if new.
+     * next writes to the list of citys - the city, 3 locations and line of document int the doc file. (if there is more than 3,
+     *                   it will make another line. it will be used later when we write the details in bytes and then can
+     *                   access directly to the line(fixed size)
+     *4)every few docs, it will write the lists to the file and erase it,
+     *5) when we done indexing from outside we will sort each file.
+     *
+     *
      */
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
                       int numOfWords,String language){
@@ -170,7 +192,7 @@ public class Indexer {
 
         //citys
         if(cityOfDoc.length()!=0) {
-            if(cityDictionary.containsKey(cityOfDoc)) {
+            if(!cityDictionary.containsKey(cityOfDoc)) {
                 String details = getCityDetails(cityOfDoc);
                 String[] strings = details.split("-");
                 toCitysDictionary(cityOfDoc, strings[0], strings[1], strings[2]);
@@ -188,6 +210,9 @@ public class Indexer {
 
     }
 
+    /**
+     * call {@link ThreadedWrite} to write the list of files to end of documents, erase the list.
+     */
     private void writeDocsToFile() {
         Thread t=new ThreadedWrite(documents,docsToWrite,docMutex,docFileMutex);
         t.start();
@@ -197,7 +222,9 @@ public class Indexer {
             e.printStackTrace();
         }
     }
-
+    /**
+     * call {@link ThreadedWrite} to write the list of citys to end of city posting, erase the list.
+     */
     private void writeCityList() {
         Thread t=new ThreadedWrite(citysPosting,cityLines,cityMutex,cityFileMutex);
         t.start();
@@ -209,7 +236,8 @@ public class Indexer {
     }
 
     /**
-     * todo add!
+     * this function load to dictionary ( if not loaded yet) the information from dictionary file.
+     * return true if successful, false otherwise
      */
     public boolean loadDictionaryToMemory() {
         if(dictionary==null) {
@@ -236,12 +264,26 @@ public class Indexer {
     }
 
 
+    /**
+     *
+     * @return dictionary- can be null if loaded to disk
+     */
     public Map<String, Integer> getDictionary() {
         return dictionary;
     }
 
+
     /**
-     * todo add!
+     *
+     * @return city dictionary- can be null
+     */
+    public Map<String, Vector<String>> getCityDictionary() {
+        loadCityDictionaryToMemory();
+        return cityDictionary;
+    }
+
+    /**
+     * load the dictionary to the file and deletes it
      */
     public void loadDictionaryToFile(){
         StringBuilder stringBuilder=new StringBuilder();
@@ -270,6 +312,71 @@ public class Indexer {
 
 
     }
+
+    /**
+     * load
+     * @return
+     */
+    public boolean loadCityDictionaryToMemory() {
+        if(cityDictionary==null) {
+            try {
+                cityDictionary = new HashMap<>();
+                BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + "CityDictionary.txt"));
+                String line = bufferedReader.readLine();
+                String[] lines = line.split("=");
+                for (int i = 0; i < lines.length; i++) {
+                    String[] pair = lines[i].split("--->");
+                    if(pair.length==2){
+                        String[] values=pair[1].split(",");
+                        Vector<String> vector=new Vector();
+                        vector.add(values[0].substring(1,values[0].length()));//the country
+                        vector.add(values[1]);//the coin
+                        vector.add(values[2].substring(0,values[2].length()-1));//population
+                        cityDictionary.put(pair[0],vector);
+                    }
+
+                }
+                bufferedReader.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return true;
+
+    }
+
+
+    public void loadCityDictionaryToFile(){
+        StringBuilder stringBuilder=new StringBuilder();
+        Iterator<String> iterator=cityDictionary.keySet().iterator();
+        while (iterator.hasNext()){
+            String key=iterator.next();
+            String value=cityDictionary.get(key).toString();
+            stringBuilder.append(key+"--->"+value+"=");
+        }
+        BufferedWriter writer = null;
+        try
+        {
+            writer = new BufferedWriter( new FileWriter( _path+"/"+"CityDictionary.txt"));
+            writer.write(stringBuilder.toString());
+            writer.flush();
+            writer.close();
+            cityDictionary.clear();
+            cityDictionary=null;
+
+
+
+        }
+        catch ( IOException e)
+        {
+        }
+
+
+    }
+
+
 
     private void writeListToPosting() {
         Thread [] threads=new ThreadedWrite[27];
@@ -421,6 +528,7 @@ public class Indexer {
         cityLines.add(toWrite.toString());
         cityMutex.unlock();
     }
+
 
 
     /**
@@ -677,7 +785,7 @@ public class Indexer {
         long startTime = System.nanoTime();
 
         Thread[] threads = new ThreadedSort[28];
-        ExecutorService pool = Executors.newFixedThreadPool(2);
+        ExecutorService pool = Executors.newFixedThreadPool(1);
 
         int i = 1;
 
@@ -768,6 +876,12 @@ class ThreadedSort extends Thread{
     }
 
     public void run() {
+        long minRunningMemory = (1024*1024);
+
+        Runtime runtime = Runtime.getRuntime();
+
+        if(runtime.freeMemory()<minRunningMemory)
+            System.gc();
         try {
 
             System.out.println("here");
@@ -788,8 +902,6 @@ class ThreadedSort extends Thread{
             PrintWriter pwriter = new PrintWriter(new File(file));
             pwriter.print("");
             pwriter.close();
-            reader.close();
-
 
             BufferedWriter writer = new BufferedWriter(new FileWriter(file,true));
             Iterator<String> capital=null;

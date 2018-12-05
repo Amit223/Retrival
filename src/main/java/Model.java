@@ -90,6 +90,7 @@ public class Model {
         indexer.push();
         System.out.println("Start sorting");
         indexer.loadDictionaryToFile();
+        indexer.loadCityDictionaryToFile();
         StopWords.reset();
         indexer.sort();
 
