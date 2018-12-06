@@ -1,5 +1,6 @@
 
 import ParseObjects.Number;
+import javafx.util.Pair;
 import sun.awt.Mutex;
 
 import java.io.*;
@@ -17,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Indexer {
 
-    private Map<String,Integer> dictionary;
+    private Map<String,Pair<Integer,Integer>> dictionary;
 
 
 
@@ -185,7 +186,7 @@ public class Indexer {
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
             dictionaryMutex.lock();
-            ifExistUpdateTF(term); //updates dictionary df/ add new term
+            ifExistUpdateTF(term,terms.get(term)); //updates dictionary df/ add new term
             dictionaryMutex.unlock();
             int index = Character.toLowerCase(term.charAt(0)) - 'a' + 1;
             if (index <0||index>26)//^^
@@ -226,7 +227,7 @@ public class Indexer {
      *
      * @return dictionary- can be null if loaded to disk
      */
-    public Map<String, Integer> getDictionary() {
+    public Map<String, Pair<Integer, Integer>> getDictionary() {
         return dictionary;
     }
 
@@ -253,8 +254,13 @@ public class Indexer {
                 String[] lines = line.split("=");
                 for (int i = 0; i < lines.length; i++) {
                     String[] pair = lines[i].split("--->");
-                    if(pair.length==2)
-                        dictionary.put(pair[0], Integer.parseInt(pair[1]));
+                    if(pair.length==2){
+                        String [] values=pair[1].split("&");
+                        int df=Integer.parseInt(values[0].substring(1,values[0].length()));
+                        int tf=Integer.parseInt(values[1].substring(0,values[1].length()-1));
+                        dictionary.put(pair[0], new Pair<Integer, Integer>(df,tf));
+
+                    }
 
                 }
                 bufferedReader.close();
@@ -274,22 +280,27 @@ public class Indexer {
     public void loadDictionaryToFile(){
         StringBuilder stringBuilder=new StringBuilder();
         Iterator<String> iterator=dictionary.keySet().iterator();
-        while (iterator.hasNext()){
-            String key=iterator.next();
-            stringBuilder.append(key+"--->"+dictionary.get(key)+"=");
-        }
+        int i=0;
         BufferedWriter writer = null;
-        try
-        {
-            writer = new BufferedWriter( new FileWriter( _path+"/"+_toStem+"Dictionary.txt"));
+        try {
+
+            writer = new BufferedWriter(new FileWriter(_path + "/" + _toStem + "Dictionary.txt"));
+            while (iterator.hasNext()) {
+                String key = iterator.next();
+                stringBuilder.append(key + "--->{" + dictionary.get(key).getKey() + "&" + dictionary.get(key).getValue() + "}=");
+                if (i % 5000 == 0){
+                    writer.write(stringBuilder.toString());
+                    stringBuilder.setLength(0);
+
+                }
+                i++;
+            }
             writer.write(stringBuilder.toString());
             writer.flush();
             writer.close();
-            numOfTerms=dictionary.size();
+            numOfTerms = dictionary.size();
             dictionary.clear();
-            dictionary=null;
-
-
+            dictionary = null;
 
         }
         catch ( IOException e)
@@ -707,12 +718,13 @@ public class Indexer {
      *
      * @param term - update df if exist- the df-++, else add to dictionary
      */
-    private void ifExistUpdateTF(String term) {
+    private void ifExistUpdateTF(String term, int tf) {
         if(dictionary.containsKey(term)){//just add to df and return the line in posting
-            int df= dictionary.get(term);
-            df+=1;
+            Pair<Integer,Integer> df_totTf= dictionary.get(term);
+            int df=df_totTf.getKey()+1;
+            int tottf=df_totTf.getValue()+tf;
             dictionary.remove(term);
-            dictionary.put(term,df);
+            dictionary.put(term,new Pair<Integer, Integer>(df,tottf));
         }
         //check if exist in the dictionary in diffrent way.
         else if(dictionary.containsKey(Reverse(term))){//the reversed term in dictionary need to put the uppercase one
@@ -724,13 +736,14 @@ public class Indexer {
                 newTerm=term;
             }
             //take the details of its if exist.
-            int df= dictionary.get(Reverse(term));
-            df+=1;
-            dictionary.remove(Reverse(term));
-            dictionary.put(newTerm,df);
+            Pair<Integer,Integer> df_totTf= dictionary.get(Reverse(term));
+            int df=df_totTf.getKey()+1;
+            int tottf=df_totTf.getValue()+tf;
+            dictionary.remove(term);
+            dictionary.put(newTerm,new Pair<Integer, Integer>(df,tottf));
         }
         else {//new term completely
-            dictionary.put(term,1);
+            dictionary.put(term,new Pair<Integer, Integer>(1,tf) );
 
         }
     }
