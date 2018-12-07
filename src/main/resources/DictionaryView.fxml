@@ -2,6 +2,8 @@
 
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.Font?>
 
@@ -15,6 +17,12 @@
                     </font>
                 </Label>
             <Label fx:id="toShow" layoutX="34.0" layoutY="103.0" prefHeight="17.0" prefWidth="153.0" />
+            <TableView fx:id="tab" layoutX="13.0" layoutY="58.0" prefHeight="322.0" prefWidth="208.0">
+              <columns>
+                <TableColumn prefWidth="75.0" text="Term" />
+                <TableColumn prefWidth="124.0" text="Term Frequency" />
+              </columns>
+            </TableView>
             </children>
         </AnchorPane>
     </content>

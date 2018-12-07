@@ -2,15 +2,12 @@ import javafx.stage.Stage;
 import javafx.util.Pair;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.testng.internal.thread.ExecutorAdapter;
 import sun.awt.Mutex;
-import sun.nio.ch.ThreadPool;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -51,7 +48,7 @@ public class Model {
         return indexer.getLanguages();
     }
 
-    public Map<String, Integer> getDictionary() {
+    public Map<String, Pair<Integer, Integer>> getDictionary() {
         return indexer.getDictionary();
     }
 
