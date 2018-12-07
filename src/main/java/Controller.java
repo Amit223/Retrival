@@ -152,7 +152,7 @@ public class Controller {
             }
             String numOfDocs=String.valueOf(model.getNumberOfDocs());
             alert.setContentText("Number of files that were indexed: " + numOfDocs+ "\n" +
-                    "Number of files that were unique terms: "+ model.getNumberOfTerms()+ "\n"+
+                    "Number of unique terms: "+ model.getNumberOfTerms()+ "\n"+
                     "RunTime: "+ timeInString + " seconds!");
             alert.show();
             reset.setDisable(false);
