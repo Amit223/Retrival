@@ -137,7 +137,6 @@ public class Indexer {
 
         }
     }
-
     /**
      * create inverted index and posting files.
      * @param terms- dictionary of terms, term frequency of the document
@@ -148,22 +147,23 @@ public class Indexer {
      *
      * * 1) it takes all information needed from {@link Parser}: the dictionary of each doc- list of unique terms and their frequency,
      * vector of location of the city of the documents, name of the document, name of the city, number of words(not unique) in doc,
-     * the language of the doc.
-     * 1)writes to the list of documents details in bytes:docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)|-54 bytes
-     * 2)for each term in dictionary: writes to the dictionary if new term, add to doc frequency if exist. Next write the
+     * 2)writes to the list of documents details in bytes:docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)|-54 bytes
+     * 3)for each term in dictionary: writes to the dictionary if new term, add to doc frequency and total frequency if exist. Next write the
      * term details: the line in the doc file that represent the document it was found in, it's term frequency and itself so we can
-     * use it on stage 5
+     * use it on stage 6
      * It writes each line to the list of the term first letter-'a'-'z' or if digit or sign writes to the list of '0'
-     * 3)for the city of doc find it's details on geobytes, write to the dictionary of citys all the details:the city,
+     * 4)for the city of doc find it's details on geobytes, write to the dictionary of citys all the details:the city,
      * the population and the coin if new.
-     * next writes to the list of citys - the city, 3 locations and line of document int the doc file. (if there is more than 3,
+     * next writes to the list of citys - the city, 3 locations and line of document (if there is more than 3,
      *                   it will make another line. it will be used later when we write the details in bytes and then can
      *                   access directly to the line(fixed size)
-     *4)every few docs, it will write the lists to the file and erase it,
-     *5) when we done indexing from outside we will sort each file.
+     *5)every few docs(1000 to terms and 5000 to citys and docs), it will write the lists to the file and erase the lists.
+     *6) when we done indexing from outside we will sort each file-the posting
+     *               and citys(not docs!)
      *
      *
      */
+
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
                       int numOfWords,String language){
 
