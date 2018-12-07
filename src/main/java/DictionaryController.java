@@ -43,6 +43,7 @@ public class DictionaryController {
 
                     }
                 }
+                reader.close();
 
             } catch (Exception e) {
 

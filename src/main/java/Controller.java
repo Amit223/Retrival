@@ -4,18 +4,13 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.Scanner;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 public class Controller {
     @FXML
@@ -50,7 +45,10 @@ public class Controller {
         loadDictionaryToMemory.setDisable(true);
     }
 
-    public void setCitys(){
+    /**
+     * set languages on the list in gui
+     */
+    private void setLanguages(){
         Set<String>langs= model.getLanguages();
         language.getItems().removeAll(language.getItems());
         Iterator<String> iterator=langs.iterator();
@@ -71,12 +69,18 @@ public class Controller {
         }
     }
 
-    public void setModel(Stage stage) {
-        model = new Model(stage);
+    /**
+     *sets model
+     */
+    public void setModel() {
+        model = new Model();
     }
 
     @FXML
-    public void getFileChooser(ActionEvent actionEvent) {
+    /**
+     * do a directory chooser of path of corpus and stop words
+     */
+    public void getDirChooser(ActionEvent actionEvent) {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle("Select Directory Of Stop-Words & Corpus");
         File file = chooser.showDialog(new Stage());
@@ -86,7 +90,10 @@ public class Controller {
     }
 
     @FXML
-    public void getFileChooserSave(ActionEvent actionEvent) {
+    /**
+     * do a directory chooser of path of corpus and stop words
+     */
+    public void getDirChooserSave(ActionEvent actionEvent) {
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle("Select Directory To Save Posting In");
         File file = chooser.showDialog(new Stage());
@@ -95,6 +102,12 @@ public class Controller {
         }
     }
 
+    /**
+     *
+     * @param actionEvent
+     *
+     * resets all posting and dictionary files
+     */
     public void reset(ActionEvent actionEvent) {
         boolean flag=model.Reset();
         if(!flag){//didnt succeed
@@ -114,6 +127,11 @@ public class Controller {
         }
     }
 
+    /**
+     *
+     * @param actionEvent
+     * start indexing process
+     */
     public void startProcess(ActionEvent actionEvent) {
         if (path.getText().equals("") && save.getText().equals("")) {
             pathS=path.getText();
@@ -141,13 +159,16 @@ public class Controller {
             loadDictionaryToMemory.setDisable(false);
             showDictionary.setDisable(false);
             language.setDisable(false);
-            setCitys();
+            setLanguages();
             start.setDisable(true);
 
         }
     }
 
     @FXML
+    /**
+     * shows dictionary to user
+     */
     public void showDictionary1(ActionEvent actionEvent) {
         FXMLLoader fxmlLoader = new FXMLLoader();
         Parent root = null;
@@ -166,6 +187,9 @@ public class Controller {
     }
 
     @FXML
+    /**
+     * load dictionary to memory
+     */
     public void loadDictionaryToMemory(ActionEvent actionEvent){
         if (path.getText().equals("") || save.getText().equals("")) {
             pathS=path.getText();

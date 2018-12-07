@@ -705,6 +705,7 @@ public class Indexer {
                     population = Double.toString(num) + mod;
                 }
             }
+            br.close();
             return country+"-"+currency+"-"+population;
 
         } catch (Exception e) {
@@ -995,11 +996,6 @@ class ThreadedSort extends Thread{
             printWriter.close();
             Merge(s1,s2,file);
 
-
-            //String write3=X(letter+"1",letter+"2",reader,lineCount/4);
-            //String write4=X(letter+"1",letter+"2",reader,lineCount/8);
-
-
         }
         catch(Exception e){
 
@@ -1007,6 +1003,16 @@ class ThreadedSort extends Thread{
 
     }
 
+    /**
+     *
+     * @param firsthalf name of file of firsthalf
+     * @param lasthalf name of file of lasthalf
+     * @param toWrite the file we will write to
+     * @param reader the reader of main file
+     * @param size we want to read
+     * @return string of file we wrote to
+     * this function read size of lines from main file , split to 2 sorted files, merges to 1.
+     */
     private String SortFileByPart(String firsthalf,String lasthalf,String toWrite,BufferedReader reader,int size){
         try {
             //first half:

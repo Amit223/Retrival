@@ -8,11 +8,14 @@ public class GUI extends Application {
         launch(args);
     }
     @Override
+    /**
+     * start function of gui
+     */
     public void start(Stage primaryStage) throws Exception {
         FXMLLoader fxmlLoader=new FXMLLoader();
         Parent root = fxmlLoader.load(getClass().getResource("/View.fxml").openStream());
         Controller controller =fxmlLoader.getController();
-        controller.setModel(primaryStage);
+        controller.setModel();
         Scene scene = new Scene(root, 500, 350);
         primaryStage.setTitle("Retrival Project");
         primaryStage.setScene(scene);

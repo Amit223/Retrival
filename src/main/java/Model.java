@@ -16,42 +16,66 @@ import java.util.concurrent.TimeUnit;
 public class Model {
 
 
-    private Stage mainStage;
     private Indexer indexer;
-    private Mutex mutex;
 
-
-    public Model(Stage stage) {
-        this.mainStage = stage;
-        mutex=new Mutex();
-
-        this.indexer=new Indexer(false,"C:\\Users\\liadber\\IdeaProjects\\Retrival\\src\\main\\resources");
-    }
-
+    /**
+     *
+     * @return true if load of dictionary to memort successful and false otherwise
+     */
     public boolean loadDictionaryToMemory(){
         return indexer.loadDictionaryToMemory();
     }
 
 
+    /**
+     *
+     * @return true if reset successful and false otherwise
+     */
     public boolean Reset(){
         return indexer.delete();
 
     }
 
+    /**
+     *
+     * @return number of documents indexed
+     */
     public int getNumberOfDocs(){
         return indexer.getNumberOfDocs();
     }
+
+    /**
+     *
+     * @return number of unique terms
+     */
     public int getNumberOfTerms(){
         return indexer.getNumberOfTerms();
     }
+
+    /**
+     *
+     * @return the languages of files found
+     */
     public Set<String> getLanguages(){
         return indexer.getLanguages();
     }
 
+    /**
+     *
+     * @return dictionary
+     */
     public Map<String, Pair<Integer, Integer>> getDictionary() {
         return indexer.getDictionary();
     }
 
+    /**
+     *
+     * @param toStem
+     * @param path of corpus and stop words
+     * @param toSave- path that posting files will be saved in
+     *
+     * this function set stopwords and do the index process
+     */
     public void Start(boolean toStem,String path,String toSave){
         indexer=new Indexer(toStem,toSave);
         String s=ReadFile.readStopWords(path);
@@ -92,30 +116,54 @@ public class Model {
         StopWords.reset();
         indexer.sort();
 
-        /**
-        indexer = null;
-        System.gc();
-        indexer = new Indexer(toStem, toSave);
-
-        indexer.sort();
-**/
-
-
+        //delets unwanted files:
+        File f;
+        for (char c='a'; c<='z'; c++){
+            f=new File(c+c+"2");
+            f.delete();
+            f=new File(c+c+"4");
+            f.delete();
+            f=new File(c+c+"6");
+            f.delete();
+            f=new File(c+c+"8");
+            f.delete();
+        }
+        f=new File("002");
+        f.delete();
+        f=new File("004");
+        f.delete();
+        f=new File("006");
+        f.delete();
+        f=new File("008");
+        f.delete();
     }
 }
 
+/**
+ * this class extend thread
+ */
 class ThreadedIndex extends Thread{
 
     private String path;
     private boolean toStem;
     private Indexer indexer;
 
+    /**
+     * constructor
+     * @param path of the file
+     * @param toStem
+     * @param indexer
+     *
+     */
     public ThreadedIndex(String path, boolean toStem,Indexer indexer) {
         this.path = path;
         this.toStem = toStem;
         this.indexer=indexer;
     }
 
+    /**
+     * for each file seperato to docs and parse and index each one
+     */
     public void run(){
         ReadFile.read(path);
         Elements elements=ReadFile.getDocs();
