@@ -1,19 +1,16 @@
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TableView;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.text.Text;
 import javafx.util.Pair;
 
 
 import java.io.*;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Scanner;
-import java.util.TreeMap;
+import java.util.*;
 
 public class DictionaryController {
     @FXML
@@ -24,32 +21,28 @@ public class DictionaryController {
     private AnchorPane pane;
     @FXML
     private ScrollPane scroller;
-    @FXML
-    private TableView tab;
+
+    private TableView<Record> tab;
+
+    Map<String,Integer> map=new HashMap<>();
 
     @FXML
     public  void showDictionary(String path,Map dictionary) {
-        String toShow="";
-        Map<String,String> map=new TreeMap();
         if (dictionary == null) {
             try {
 
                 BufferedReader reader = new BufferedReader(new FileReader(path));
                 String line = reader.readLine();
-                //toShow = line.replaceAll("=", "\n");
                 String [] lines=line.split("=");
                 for(int i=0;i<lines.length;i++){
                     String []strings=lines[i].split("--->");
                     if(strings.length==2){
                         String [] values=strings[1].split("&");
                         int tf=Integer.parseInt(values[1].substring(0,values[1].length()-1));
-                        map.put(strings[0],String.valueOf(tf));
+                        map.put(strings[0],tf);
 
                     }
                 }
-                String s=map.toString().replaceAll("=","--->");
-                s=s.replaceAll(",","");
-                toShow=s.substring(1,s.length()-1);
 
             } catch (Exception e) {
 
@@ -64,19 +57,41 @@ public class DictionaryController {
             while (iterator.hasNext()){
                 String key=iterator.next();
                 Pair<Integer, Integer> pair= (Pair<Integer, Integer>) dictionary.get(key);
-                map.put(key, String.valueOf(pair.getValue()));
+                map.put(key, pair.getValue());
             }
-            String s=map.toString().replaceAll("=","--->");
-            s=s.replaceAll(" ","\n");
-            s=s.replaceAll(",","");
-            toShow=s.substring(1,s.length()-1);
+
 
         }
-        tab.getItems().setAll(map);
-        //Text text = new Text(100, 100, "Term=Term Frequency\n" + toShow);
-        //text.setStyle("-fx-font: 16 arial;");
-        //scroller.setFitToWidth(true);
-        //scroller.setContent(text);
+
+        //write to table
+        //term column
+        TableColumn<Record,String> termColumn=new TableColumn<>("Term");
+        termColumn.setMinWidth(200);
+        termColumn.setCellValueFactory(new PropertyValueFactory("term"));
+        termColumn.setSortType(TableColumn.SortType.ASCENDING);
+
+        //tf column
+        TableColumn<Record,Integer> tfColumn=new TableColumn<>("Total tf");
+        tfColumn.setMinWidth(100);
+        tfColumn.setCellValueFactory(new PropertyValueFactory("total_tf"));
+
+        tab=new TableView<>();
+        tab.setItems(getRecords());
+        tab.getColumns().addAll(termColumn,tfColumn);
+        tab.getSortOrder().add(termColumn);
+
+        pane.getChildren().add(tab);
+
+    }
+
+    public ObservableList<Record> getRecords(){
+        ObservableList<Record> records= FXCollections.observableArrayList();
+        Iterator<String> iterator=map.keySet().iterator();
+        while(iterator.hasNext()){
+            String key=iterator.next();
+            records.add(new Record(key,map.get(key)));
+        }
+        return records;
     }
 
 }

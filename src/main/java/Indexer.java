@@ -963,10 +963,6 @@ class ThreadedSort extends Thread{
     }
 
     public void run() {
-        long minRunningMemory = (1024*1024);
-        Runtime runtime = Runtime.getRuntime();
-        if(runtime.freeMemory()<minRunningMemory)
-            System.gc();
 
         try {
             System.out.println("here");
@@ -983,6 +979,7 @@ class ThreadedSort extends Thread{
             String write2=SortFileByPart(letter+"3",letter+"4",letter+"3"+"_"+letter+"4",reader,lineCount/4);
             String write3=SortFileByPart(letter+"5",letter+"6",letter+"5"+"_"+letter+"6",reader,lineCount/4);
             String write4=SortFileByPart(letter+"7",letter+"8",letter+"7"+"_"+letter+"8",reader,lineCount/4);
+            reader.close();
 
             String s1=write1+"_"+write2;
             String s2=write3+"_"+write4;
@@ -998,7 +995,6 @@ class ThreadedSort extends Thread{
             printWriter.close();
             Merge(s1,s2,file);
 
-            reader.close();
 
             //String write3=X(letter+"1",letter+"2",reader,lineCount/4);
             //String write4=X(letter+"1",letter+"2",reader,lineCount/8);
