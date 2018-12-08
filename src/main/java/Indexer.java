@@ -1000,7 +1000,6 @@ class ThreadedSort extends Thread{
         catch(Exception e){
 
         }
-
     }
 
     /**
@@ -1028,10 +1027,8 @@ class ThreadedSort extends Thread{
 
                 }
                 i++;
-            }
+            }///888888888888888888888888
 
-            File file1 = new File(firsthalf);
-            file1.createNewFile();
             BufferedWriter writer = new BufferedWriter(new FileWriter(firsthalf, true));
             Iterator<String> capital = null;
             Iterator<String> not = null;
@@ -1084,8 +1081,7 @@ class ThreadedSort extends Thread{
                 i++;
             }
 
-            File f = new File(letter + lasthalf);
-            f.createNewFile();
+
             writer = new BufferedWriter(new FileWriter(lasthalf, true));
             capital = null;
             not = null;
@@ -1123,9 +1119,6 @@ class ThreadedSort extends Thread{
             mapNot.clear();
             writer.flush();
             writer.close();
-
-
-
             //merge to 1 file /f1,/f2
             Merge(firsthalf,lasthalf,firsthalf+"_"+lasthalf);
             return firsthalf+"_"+lasthalf;

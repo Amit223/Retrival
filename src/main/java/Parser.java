@@ -200,7 +200,7 @@ public class Parser {
             if (i == 0) //the first one is the one and only between term
                 addToTermList(finalTerms.get(i));
             else
-                yesUndefinedTerm_parseCLAndAddToTermList(removeFromTheTermUndefindSigns(finalTerms.get(i)));
+                _ListOfTokens.add(removeFromTheTermUndefindSigns(finalTerms.get(i)));
         } // sdfjk-"Y&^%%^&%15,  sdfjk, %15
     }
 
