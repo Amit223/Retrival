@@ -139,7 +139,6 @@ public class Controller {
             alert.setContentText("Can't start process without all paths filled!\n Choose the folders and try again! ");
             alert.show();
         } else {
-            System.out.println("Started");
             long startTime = System.nanoTime();
             model.Start(toStem.isSelected(), path.getText(), save.getText());
             Alert alert = new Alert(Alert.AlertType.INFORMATION);

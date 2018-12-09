@@ -880,7 +880,6 @@ public class Indexer {
             e.printStackTrace();
         }
         long endTime = System.nanoTime();
-        System.out.println("Took "+(endTime - startTime)/1000000000 + " s");
     }
 
 
@@ -966,7 +965,6 @@ class ThreadedSort extends Thread{
     public void run() {
 
         try {
-            System.out.println("here");
             BufferedReader reader = new BufferedReader(new FileReader(new File(file)));
             File f=new File(letter+"1"+"_"+letter+"2");
             f.createNewFile();

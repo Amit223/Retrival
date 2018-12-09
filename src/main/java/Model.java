@@ -101,16 +101,13 @@ public class Model {
                     boolean flag = false;
                     while (!flag)
                         flag = pool.awaitTermination(1009, TimeUnit.MILLISECONDS);
-                    System.out.println("Finished threadpool");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
 
             }
         }
-        System.out.println("last push!");
         indexer.push();
-        System.out.println("Start sorting");
         indexer.loadDictionaryToFile();
         indexer.loadCityDictionaryToFile();
         StopWords.reset();
@@ -192,6 +189,5 @@ class ThreadedIndex extends Thread{
                 indexer.Index(termList, parser.getLocations(), name, city, parser.getWordCount(), language);
             }
         }
-        System.out.println("DONE");
     }
 }
