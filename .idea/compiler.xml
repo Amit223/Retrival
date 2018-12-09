@@ -7,10 +7,12 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="Retrieval" />
         <module name="Retrival" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="Retrieval" target="1.7" />
       <module name="Retrival" target="1.7" />
     </bytecodeTargetLevel>
   </component>
