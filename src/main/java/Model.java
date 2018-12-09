@@ -17,7 +17,6 @@ public class Model {
 
 
     private Indexer indexer;
-
     /**
      *
      * @return true if load of dictionary to memort successful and false otherwise
@@ -26,18 +25,17 @@ public class Model {
         return indexer.loadDictionaryToMemory();
     }
 
-
     /**
-     *
+     * delete all the posting files from the results
+     * folder using {@link Indexer#delete()}
      * @return true if reset successful and false otherwise
      */
     public boolean Reset(){
         return indexer.delete();
-
     }
 
     /**
-     *
+     * using {@link Indexer#getNumberOfDocs()}
      * @return number of documents indexed
      */
     public int getNumberOfDocs(){
@@ -45,7 +43,7 @@ public class Model {
     }
 
     /**
-     *
+     * using {@link Indexer#getNumberOfTerms()}
      * @return number of unique terms
      */
     public int getNumberOfTerms(){
@@ -53,7 +51,7 @@ public class Model {
     }
 
     /**
-     *
+     * using {@link Indexer#getLanguages()}
      * @return the languages of files found
      */
     public Set<String> getLanguages(){
@@ -61,7 +59,7 @@ public class Model {
     }
 
     /**
-     *
+     * using {@link #getDictionary()}
      * @return dictionary
      */
     public Map<String, Pair<Integer, Integer>> getDictionary() {
@@ -69,12 +67,15 @@ public class Model {
     }
 
     /**
-     *
-     * @param toStem
+     * This function is the main function of the program.
+     * First, use {@link ReadFile} to set {@link StopWords}.
+     * and then, use {@link ThreadedIndex} that that do
+     * the read file, parse and index processes parallelity.
+     * it also load program's dictionaries to files in memory
+     * and sort the posting files.
+     * @param toStem - get from the {@link Controller}
      * @param path of corpus and stop words
      * @param toSave- path that posting files will be saved in
-     *
-     * this function set stopwords and do the index process
      */
     public void Start(boolean toStem,String path,String toSave){
         indexer=new Indexer(toStem,toSave);
@@ -140,13 +141,19 @@ public class Model {
 }
 
 /**
- * this class extend thread
+ * used for the {@link #start()}
+ * this class extend thread and implements a thread that:
+ * read file using {@link ReadFile}
+ * get the relevant information from the tags
+ * parse the text to #termList
+ * and index the files using it.
+ *
  */
 class ThreadedIndex extends Thread{
 
-    private String path;
-    private boolean toStem;
-    private Indexer indexer;
+    private String path; // the path of the documents to read files.
+    private boolean toStem; // if the user want  to stem = true
+    private Indexer indexer; //the indexer of the program
 
     /**
      * constructor
@@ -162,13 +169,19 @@ class ThreadedIndex extends Thread{
     }
 
     /**
-     * for each file seperato to docs and parse and index each one
+     *
+     * this function:
+     * read file using {@link ReadFile}
+     * get the relevant information from the tags
+     * <TEXT></TEXT> <DOCNO></DOCNO> <F></F> <P 104></P> <P 105></P>
+     * seprate to douments.
+     * parse the text to #termList using {@link Parser}
+     * and index the files using it by {@link Indexer}
      */
     public void run(){
         ReadFile.read(path);
         Elements elements=ReadFile.getDocs();
         HashMap<String, Integer> termList;
-        //StopWords.setStopwords(path);
         for(int i=0;i<elements.size();i++){
             if(elements.get(i)!=null&&elements.get(i).getElementsByTag("TEXT")!=null) {
                 String text = elements.get(i).getElementsByTag("TEXT").text();

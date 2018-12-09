@@ -21,7 +21,6 @@ import java.util.Vector;
 public class Between {
 
     /**
-
      * ***Our Extra: we add the {@link Between} term to the _termList as one term, and parse his components as more terms.
      * that's in order to retrieve in the next part documents that include also those terms.  (like: word-number-price, price-price, distance-distance)
      * we also deal with bigger {@link Between} terms then 3 components. (like: word-word-word-word)
@@ -131,7 +130,7 @@ public class Between {
      * this function check if the given part is numeric, for private using, so don't treat #partidx!=0||1
      * @param termS   - term of between
      * @param partidx - zero or one
-     * @return
+     * @return true if its 2 components and the asking part is numeric
      */
     public static boolean isThePartOfBetweenIsNumeric(String termS, int partidx) {
         String[] termComponnents = (termS).split("-"); //array 13

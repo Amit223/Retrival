@@ -89,9 +89,10 @@ public class Number {
     }
 
     /**
+     * using {@link #toNum(String, String)} when fraction=""
      * help to more classes.
      * @param number- single number in for
-     * @return the number
+     * @return the
      */
     public static String toNum(String number){
         return toNum(number,"");

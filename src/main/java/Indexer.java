@@ -20,9 +20,6 @@ public class Indexer {
 
     private Map<String,Pair<Integer,Integer>> dictionary;
 
-
-
-
     //docs
     private File documents;//docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)|-54 bytes
     private ListOfByteArrays docsToWrite;
@@ -38,13 +35,10 @@ public class Indexer {
     private int numOfTerms=0;
     private AtomicInteger [] lineCounter;
 
-
     //citys
     private Map <String,Vector<String>> cityDictionary;
     private File citysPosting;//docLine(4 B)|loc1|loc2|loc3|
     private ListOfByteArrays cityLines;
-
-
 
     //postingMutex
     private Mutex docMutex;
@@ -55,7 +49,6 @@ public class Indexer {
     private Mutex dictionaryMutex;
     private Mutex [] mutexesPosting; //mutexs of the posting files.
     private Mutex [] mutexesList; //mutexs of the posting files.
-
 
 
     public  int getNumberOfDocs() {
@@ -163,7 +156,6 @@ public class Indexer {
      *
      *
      */
-
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
                       int numOfWords,String language){
 
@@ -224,7 +216,7 @@ public class Indexer {
 
 
     /**
-     *
+     * using for {@link Model}
      * @return dictionary- can be null if loaded to disk
      */
     public Map<String, Pair<Integer, Integer>> getDictionary() {
@@ -242,6 +234,7 @@ public class Indexer {
     }
 
     /**
+     * using for {@link Model}
      * this function load to dictionary ( if not loaded yet) the information from dictionary file.
      * return true if successful, false otherwise
      */
@@ -275,6 +268,7 @@ public class Indexer {
     }
 
     /**
+     * using for {@link Model}
      * load the dictionary to the file and deletes it
      */
     public void loadDictionaryToFile(){
@@ -346,6 +340,7 @@ public class Indexer {
 
 
     /**
+     * using for {@link Model#Start(boolean, String, String)}
      * load the city dictionary to the file and deletes it
      */
     public void loadCityDictionaryToFile(){
@@ -385,6 +380,7 @@ public class Indexer {
 
     //write functions
     /**
+     * using for {@link #push()} and {@link #Index(Map, Vector, String, String, int, String)}
      * this functiob creates 27 {@link ThreadedWrite} objects that each one write to it's own file.
      *
      */
@@ -821,7 +817,6 @@ public class Indexer {
      * @param term
      * @return converts string into byte array of size length
      */
-
     private byte[] stringToByteArray(String term,int length){
         byte [] stringInByte=term.getBytes(StandardCharsets.UTF_8);
         byte [] fullByteArray=new byte[length];
@@ -963,8 +958,10 @@ class ThreadedSort extends Thread{
         this.letter=letter;
     }
 
+    /**
+     * this function split the file into 4 sorted files, merges them into the original one(file)
+     */
     public void run() {
-
         try {
             System.out.println("here");
             BufferedReader reader = new BufferedReader(new FileReader(new File(file)));
@@ -995,10 +992,8 @@ class ThreadedSort extends Thread{
             printWriter.write("");
             printWriter.close();
             Merge(s1,s2,file);
-
         }
         catch(Exception e){
-
         }
     }
 
@@ -1027,7 +1022,7 @@ class ThreadedSort extends Thread{
 
                 }
                 i++;
-            }///888888888888888888888888
+            }
 
             BufferedWriter writer = new BufferedWriter(new FileWriter(firsthalf, true));
             Iterator<String> capital = null;

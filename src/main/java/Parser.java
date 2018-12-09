@@ -6,13 +6,19 @@ import java.util.HashMap;
 import java.util.Vector;
 
 /**
- * this class is for parsing sentence in the text.
+ * this class goal is parsing text in file.
+ * the goal: its focus on sort the token to the next auxiliary classes' parse functions:
+ * {@link Number}
+ * {@link Price}
+ * {@link Percentage}
+ * {@link Date}
+ * {@link Distance}
+ * {@link Between}
  **/
 public class Parser {
 
-    //todo - remove from stop words may and between, and add a, mrs. mr. dr. &amp  m,bn
     //private variables for the parser work:
-    private Vector<String> _ListOfTokens = new Vector<>();
+    private Vector<String> _ListOfTokens = new Vector<>(); //list of tokens in sentence
     private int _index = 0; //the token that we work on from the list of token.
     private PorterStemmer _stemmer; //use for stemming
     private boolean _toStem = false; // true if want to stem the terms before insert to dictionary, false if not.
@@ -25,6 +31,7 @@ public class Parser {
     private String _token4 = "";
     private String _token5 = "";
     private String _token6 = "";
+
 
     public Parser() {
         _ListOfTokens = new Vector<>();
@@ -47,7 +54,7 @@ public class Parser {
     private Vector<Integer> _cityLocations = new Vector<>(); //vector of the city's locations in the document.
     private int _wordCounter = 0; // count the word in the document.
 
-    /*helpful functions for the whole program*/
+    /*Auxiliary functions for the whole program*/
 
     /**
      * stem only if _toStem=true.
@@ -82,7 +89,7 @@ public class Parser {
      * ***Our Extra: stem for each part of word-word, word-number, number-word.
      * stem only the part0 of between or the part1 if _toStem=true.
      *
-     * @param theBetweenToken - to stem. ex. 13-dogs
+     * @param theBetweenToken - to stem ex. 13-dogs
      * @param idxPartToStem   - 0 or 1, else not stem
      * @return theBetweenToken - after the one part stem.
      * @see #stem(String)
@@ -108,6 +115,7 @@ public class Parser {
 
     /**
      * Get token from _ListOfTokens {@link #_ListOfTokens}
+     * using {@link #removeFromTheTermUndefindSigns(String)}
      * remove punctuation
      * treat the index, and the _tokenCounter
      *
@@ -147,7 +155,9 @@ public class Parser {
      * the defined signs are only digit, letter or $ in the beginning,
      * or only digit, letter  or % in the end.
      * if find minus: _isMinus=true, so we
-     *
+     * using for {@link #getToken_RemovePunctuation()}
+     * {@link #addToTermList(Vector)}
+     * and {@link #yesUndefinedTerm_parseCLAndAddToTermList(String)}
      * @param termS - a term
      * @param termS - the term after removing.
      */
@@ -227,7 +237,7 @@ public class Parser {
     }
 
 
-    /** helpful functions for #yesDigit_isNumberPricePrecentTermOrNoOne */
+    /** Auxiliary functions for #yesDigit_isNumberPricePrecentDateDistanceBetweenOrNoOne */
 
     /**
      * ***Our Extra: we can also recognize m and bn as modifier for #Price, #Percentage and #Distance
@@ -305,7 +315,7 @@ public class Parser {
     }
 
 
-    /*helpful functions for ParseSentence**/
+    /*Auxiliary functions for ParseSentence**/
 
     /**
      * ***Our Extra: for the number-word number-number cases.
@@ -322,7 +332,7 @@ public class Parser {
     }
 
     /**
-     * use in {@link #yesDigit_isNumberPricePrecentTermOrNoOne()}
+     * use in {@link #yesDigit_isNumberPricePrecentDateDistanceBetweenOrNoOne()}
      * ***Our Extra: we recognize numbermodifier without space and fix it.
      * ex. 5m parse as Number Modifier normally even it's not needed in the instructions.
      * if end with bn or m so return it with space. either return "" (that's because it's for private use.)
@@ -343,14 +353,18 @@ public class Parser {
         } else return "";
     }
 
-    /**
-     * we find _token's first char is digit, so it can be:
+    /** used for {@link #Parse(String, boolean, String)}
+     *  using {@link #isBetweenModOrFracAndToken(String)}
+     * we find _token's first char is digit, now decide which of those:
      * 1. Number
      * 2. Price
      * 3. Percent
-     * 4. Term or no one.
+     * 4. Distance
+     * 5. Date
+     * 6. Between
+     * 4. no one.
      */
-    private void yesDigit_isNumberPricePrecentTermOrNoOne() {
+    private void yesDigit_isNumberPricePrecentDateDistanceBetweenOrNoOne() {
         if (Number.isNumeric(_token)) {
             String theNumber = _token;
             _token2 = getToken_RemovePunctuation();
@@ -430,8 +444,7 @@ public class Parser {
                 yesUndefinedTerm_parseCLAndAddToTermList(_token);
             }
         }//else\
-    }//yesDigit_isNumberPricePrecentTermOrNoOne\
-
+    }//yesDigit_isNumberPricePrecentDateDistanceBetweenOrNoOne\
 
     /**
      * ***Our Extra: if we get a term start with dollar and the continuance isn't numeric -
@@ -545,13 +558,15 @@ public class Parser {
     /*the parse functions:*/
 
     /**
+     * using by {@link #Parse(String, boolean, String)}
+     * the goal: its focus on sort the token to the next auxiliary classes' parse functions:
      * parsing a sentence:
      * 1. parse it to tokens and put it in {@link #_ListOfTokens}
      * 2. pop a {@link #_token} and reset all the fields. {@link #_token2} {@link #_token3} {@link #_token4} {@link #_token5} {@link #_token6} {@link #_isMinus}
      * 3. #_removeFromTheTermUndefindSigns from the {@link #_token}
      * 4. search hint and sort the tokens to different ways to parse:
      * Percentage{@link #Parse(String, boolean, String)}
-     * {@link #yesDigit_isNumberPricePrecentTermOrNoOne()}
+     * {@link #yesDigit_isNumberPricePrecentDateDistanceBetweenOrNoOne()}
      * {@link #yesDollarFC_isPrice_isWithModOrFrac()}
      * {@link #yesBetween_isNumberAndNumber_hasModOrFrac()}
      * {@link #yesMonth_isDate()}
@@ -587,7 +602,7 @@ public class Parser {
                     }
                     //else do anything because we didn't want words like  ssfdk2222%
                 } else if (Character.isDigit(FirstC)) {
-                    yesDigit_isNumberPricePrecentTermOrNoOne();
+                    yesDigit_isNumberPricePrecentDateDistanceBetweenOrNoOne();
                 } else if (FirstC == '$') {
                     _token = _token.substring(1);
                     yesDollarFC_isPrice_isWithModOrFrac();
@@ -611,6 +626,7 @@ public class Parser {
 
 
     /**
+     * using by {@link ThreadedIndex#run()} for every document
      * go over the sentences in the document and {@link #ParseSentence(String)}
      * Prepare to the {@link Indexer}  this fields:
      * {@link #_termList}
