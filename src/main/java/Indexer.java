@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Indexer {
 
-    private Map<String,Pair<Integer,Integer>> dictionary;
+    private Map<String,Vector<Integer>> dictionary;
 
     //docs
     private File documents;//docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)|-54 bytes
@@ -108,9 +108,7 @@ public class Indexer {
             mutexesList=new Mutex[27];
             postingLines = new ListOfByteArrays[27];
             for(int i=0; i<mutexesPosting.length;i++){
-                if(i==26){
-                    System.out.println("");
-                }
+
                 mutexesPosting[i]=new Mutex();
                 mutexesList[i]=new Mutex();
                 postingLines[i]=new ListOfByteArrays();
@@ -213,13 +211,46 @@ public class Indexer {
 
     }
 
+    public void UpdateDictionary(){
+        Thread[] threads = new ThreadedUpdate[27];
+        ExecutorService pool = Executors.newFixedThreadPool(8);
+
+        int i = 1;
+
+        threads[0] = new ThreadedUpdate(_path + "/" + '0' + _toStem + ".txt",
+                _path + "/" + '0' + _toStem +"Done"+ ".txt",
+                dictionary,dictionaryMutex);
+        pool.execute(threads[0]);
+        for (char c = 'a'; c <= 'z'; c++) {
+            threads[i] =new ThreadedUpdate(_path + "/" + c + _toStem + ".txt",
+                    _path + "/" + c + _toStem +"Done"+ ".txt",
+                    dictionary,dictionaryMutex);;
+            i++;
+        }
+        //the city
+        for(int j=1;j<=26;j++){
+                pool.execute(threads[j]);
+        }
+
+
+        pool.shutdown();
+
+        try {
+            boolean flag = false;
+            while (!flag)
+                flag = pool.awaitTermination(500, TimeUnit.MILLISECONDS);
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     /**
      * using for {@link Model}
      * @return dictionary- can be null if loaded to disk
      */
-    public Map<String, Pair<Integer, Integer>> getDictionary() {
+    public Map<String, Vector<Integer>> getDictionary() {
         return dictionary;
     }
 
@@ -250,8 +281,13 @@ public class Indexer {
                     if(pair.length==2){
                         String [] values=pair[1].split("&");
                         int df=Integer.parseInt(values[0].substring(1,values[0].length()));
-                        int tf=Integer.parseInt(values[1].substring(0,values[1].length()-1));
-                        dictionary.put(pair[0], new Pair<Integer, Integer>(df,tf));
+                        int tf=Integer.parseInt(values[1]);
+                        int ptr=Integer.parseInt(values[2].substring(0,values[2].length()-1));
+                        Vector<Integer> vector=new Vector<>();
+                        vector.add(df);
+                        vector.add(tf);
+                        vector.add(ptr);
+                        dictionary.put(pair[0], vector);
 
                     }
 
@@ -281,7 +317,8 @@ public class Indexer {
             writer = new BufferedWriter(new FileWriter(_path + "/" + _toStem + "Dictionary.txt"));
             while (iterator.hasNext()) {
                 String key = iterator.next();
-                stringBuilder.append(key + "--->{" + dictionary.get(key).getKey() + "&" + dictionary.get(key).getValue() + "}=");
+                stringBuilder.append(key + "--->{" + dictionary.get(key).elementAt(0) + "&" + dictionary.get(key).elementAt(1)
+                        + "&" + dictionary.get(key).elementAt(2) + "}=");
                 if (i % 5000 == 0){
                     writer.write(stringBuilder.toString());
                     stringBuilder.setLength(0);
@@ -345,35 +382,30 @@ public class Indexer {
      */
     public void loadCityDictionaryToFile(){
         StringBuilder stringBuilder=new StringBuilder();
-        Iterator<String> iterator=cityDictionary.keySet().iterator();
-        while (iterator.hasNext()){
-            String key=iterator.next();
-            if(cityDictionary.get(key)!=null) {
-                String value = cityDictionary.get(key).toString();
-                stringBuilder.append(key + "--->" + value + "=");
+        if(cityDictionary.size()>0) {
+            Iterator<String> iterator = cityDictionary.keySet().iterator();
+            while (iterator.hasNext()) {
+                String key = iterator.next();
+                if (cityDictionary.get(key) != null) {
+                    String value = cityDictionary.get(key).toString();
+                    stringBuilder.append(key + "--->" + value + "=");
+                } else {
+                }
             }
-            else{
-                System.out.println("");
+            BufferedWriter writer = null;
+            try {
+                writer = new BufferedWriter(new FileWriter(_path + "/" + "CityDictionary.txt"));
+                writer.write(stringBuilder.toString());
+                writer.flush();
+                writer.close();
+                cityDictionary.clear();
+                cityDictionary = null;
+
+
+            } catch (IOException e) {
             }
-        }
-        BufferedWriter writer = null;
-        try
-        {
-            writer = new BufferedWriter( new FileWriter( _path+"/"+"CityDictionary.txt"));
-            writer.write(stringBuilder.toString());
-            writer.flush();
-            writer.close();
-            cityDictionary.clear();
-            cityDictionary=null;
-
-
 
         }
-        catch ( IOException e)
-        {
-        }
-
-
     }
 
 
@@ -586,7 +618,7 @@ public class Indexer {
     private void writeToPostingList(int lineOfDoc, int tf, ListOfByteArrays postingLine, String term ) {
         StringBuilder toWrite=new StringBuilder();
         toWrite.append(term);
-        toWrite.append(" ");
+        toWrite.append("&");
         toWrite.append(lineOfDoc);
         toWrite.append("-");
         toWrite.append(tf);
@@ -717,11 +749,16 @@ public class Indexer {
      */
     private void ifExistUpdateTF(String term, int tf) {
         if(dictionary.containsKey(term)){//just add to df and return the line in posting
-            Pair<Integer,Integer> df_totTf= dictionary.get(term);
-            int df=df_totTf.getKey()+1;
-            int tottf=df_totTf.getValue()+tf;
+            Vector<Integer> termDetails= dictionary.get(term);
+            int df=termDetails.elementAt(0)+1;
+            int tottf=termDetails.elementAt(1)+tf;
+            int ptr=-1;
+            Vector v=new Vector();
+            v.add(df);
+            v.add(tf);
+            v.add(ptr);
             dictionary.remove(term);
-            dictionary.put(term,new Pair<Integer, Integer>(df,tottf));
+            dictionary.put(term,v);
         }
         //check if exist in the dictionary in diffrent way.
         else if(dictionary.containsKey(Reverse(term))){//the reversed term in dictionary need to put the uppercase one
@@ -733,14 +770,23 @@ public class Indexer {
                 newTerm=term;
             }
             //take the details of its if exist.
-            Pair<Integer,Integer> df_totTf= dictionary.get(Reverse(term));
-            int df=df_totTf.getKey()+1;
-            int tottf=df_totTf.getValue()+tf;
+            Vector<Integer> termDetails = dictionary.get(Reverse(term));
+            int df=termDetails.elementAt(0)+1;
+            int tottf=termDetails.elementAt(1)+tf;
+            int ptr=-1;
+            Vector v=new Vector();
+            v.add(df);
+            v.add(tf);
+            v.add(ptr);
             dictionary.remove(term);
-            dictionary.put(newTerm,new Pair<Integer, Integer>(df,tottf));
+            dictionary.put(newTerm,v);
         }
         else {//new term completely
-            dictionary.put(term,new Pair<Integer, Integer>(1,tf) );
+            Vector v=new Vector();
+            v.add(1);
+            v.add(tf);
+            v.add(-1);
+            dictionary.put(term,v);
 
         }
     }
@@ -750,7 +796,7 @@ public class Indexer {
      * @param term
      * @return term in lowercase if is uppercase and lower case otherwise
      */
-    private String Reverse(String term) {
+    public static String Reverse(String term) {
         int offset = 'a' - 'A';
         char c=term.charAt(0);
         if(c >= 'A' && c <= 'Z'){//turn to small
@@ -783,7 +829,7 @@ public class Indexer {
      * @param i-integer
      * @return integer in byte array of size 4
      */
-    private byte[] toBytes(int i)
+    public static byte[] toBytes(int i)
     {
         byte[] result = new byte[4];
 
@@ -836,7 +882,6 @@ public class Indexer {
      * calls {@link ThreadedSort} for each file- posting and citys
      */
     public void sort() {
-        long startTime = System.nanoTime();
 
         Thread[] threads = new ThreadedSort[28];
         ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -874,7 +919,7 @@ public class Indexer {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        long endTime = System.nanoTime();
+
     }
 
 
@@ -1171,4 +1216,76 @@ class ThreadedSort extends Thread{
 
 
 
+}
+
+
+/**
+ *
+ */
+class ThreadedUpdate extends Thread{
+    String fileName;
+    String newName;
+    Map<String,Vector<Integer>> dictionary;
+    Mutex dictionaryMutex;
+
+    public ThreadedUpdate(String fileName,String newName,Map<String,Vector<Integer>> dictionary,Mutex mutex) {
+        this.fileName=fileName;
+        this.newName=newName;
+        this.dictionary=dictionary;
+        this.dictionaryMutex=mutex;
+    }
+
+    /**
+     * this function updates pointer in dictionary to each word
+     */
+    public void run(){
+        try {
+            int lineNum=0;
+            String prevWord="#";
+            File newFile=new File(newName);
+            newFile.createNewFile();
+            RandomAccessFile writer=new RandomAccessFile(newFile,"rw");
+            BufferedReader reader=new BufferedReader(new FileReader(fileName));
+            String line=reader.readLine();
+            if(line.contains("-01-11"))
+                System.out.println("f");
+            while(line!=null){
+                String[] strings=line.split("&");
+                if(!prevWord.equalsIgnoreCase(strings[0])||!prevWord.equals(strings[0])){//the term wasn't touched
+                    if(dictionary.containsKey(strings[0])||dictionary.containsKey(Indexer.Reverse(strings[0]))) {//the term in dictionary and new
+                        prevWord = strings[0];
+                        String term;
+                        if(dictionary.containsKey(strings[0]))
+                            term=strings[0];
+                        else
+                            term=Indexer.Reverse(strings[0]);
+                        //update dictionary
+                        if(term.equals("-01-11"))
+                            System.out.println("g");
+                        dictionaryMutex.lock();
+                        Vector<Integer> details = dictionary.get(term);
+                        details.remove(2);//the ptr
+                        details.add(lineNum);
+                        dictionary.remove(term);
+                        dictionary.put(term, details);
+                        dictionaryMutex.unlock();
+                        //write to the new file in bytes
+                        String[] postDetails = strings[1].split("-");
+                        byte[] lineDoc = Indexer.toBytes(Integer.valueOf(postDetails[0]));
+                        byte[] tf = Indexer.toBytes(Integer.valueOf(postDetails[1]));
+                        writer.write(lineDoc);
+                        writer.write(tf);
+                    }
+                }
+                line=reader.readLine();
+                lineNum+=1;
+            }
+            reader.close();
+            writer.close();
+            File f=new File(fileName);
+            f.delete();//dont need old one
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
