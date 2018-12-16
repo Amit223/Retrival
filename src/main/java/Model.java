@@ -8,12 +8,14 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 
 public class Model {
+
 
 
     private Indexer indexer;
@@ -62,7 +64,7 @@ public class Model {
      * using {@link #getDictionary()}
      * @return dictionary
      */
-    public Map<String, Pair<Integer, Integer>> getDictionary() {
+    public Map<String, Vector<Integer>> getDictionary() {
         return indexer.getDictionary();
     }
 
@@ -113,6 +115,9 @@ public class Model {
         indexer.loadCityDictionaryToFile();
         StopWords.reset();
         indexer.sort();
+        indexer.loadDictionaryToMemory();
+        indexer.UpdateDictionary();
+        indexer.loadDictionaryToFile();
 
         //delets unwanted files:
         File f;
