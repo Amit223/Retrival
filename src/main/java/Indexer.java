@@ -878,8 +878,16 @@ public class Indexer {
     }
 
 
+    /**
+     *
+     * @param term - the docs that include  the term.
+     * @return doc_tf - list of "doc-tf"s for the above term
+     */
+    public Vector<Pair<Integer,Integer>> readTermDocs(String term) {
+        Vector<Pair<Integer,Integer>> doc_tf= new Vector<>();
 
-
+        return doc_tf;
+    }
 }
 
 /**
