@@ -1,6 +1,5 @@
 
 import ParseObjects.Number;
-import javafx.util.Pair;
 import sun.awt.Mutex;
 
 import java.io.*;
@@ -33,6 +32,8 @@ public class Indexer {
     private boolean _toStem;
     private ListOfByteArrays [] postingLines;
     private int numOfTerms=0;
+    private  AtomicInteger _wordCount;//the average length
+
     private AtomicInteger [] lineCounter;
 
     //citys
@@ -50,6 +51,9 @@ public class Indexer {
     private Mutex [] mutexesPosting; //mutexs of the posting files.
     private Mutex [] mutexesList; //mutexs of the posting files.
 
+    public double getAvgldl() {
+        return ((double)_wordCount.get())/_numOfFiles.get();
+    }
 
     public  int getNumberOfDocs() {
         return _numOfFiles.get();
@@ -266,6 +270,7 @@ public class Indexer {
 
     /**
      * using for {@link Model}
+     * copy from  {@link Searcher#loadDictionaryToMemory(boolean)}
      * this function load to dictionary ( if not loaded yet) the information from dictionary file.
      * return true if successful, false otherwise
      */
@@ -465,8 +470,6 @@ public class Indexer {
         }
     }
 
-
-
     /**
      * this function activated at the end of the index process, activates all the write functions - writeListToPosting(),
      * writeDocsToFile(),writeCityList() so data isn't lost.
@@ -645,6 +648,7 @@ public class Indexer {
 
      */
     private void writeToDocumentsList(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language) {
+        _wordCount.getAndAdd( numOfWords); //todo - future error-  not added .
         //docName(16 bytes)|city(16)|language(16)|maxtf(4)|num of terms(4)|words(4)-50 bytes
         byte[] name=stringToByteArray(nameOfDoc,16);
         byte[] city=stringToByteArray(cityOfDoc,16);
@@ -920,18 +924,6 @@ public class Indexer {
             e.printStackTrace();
         }
 
-    }
-
-
-    /**
-     *
-     * @param term - the docs that include  the term.
-     * @return doc_tf - list of "doc-tf"s for the above term
-     */
-    public Vector<Pair<Integer,Integer>> readTermDocs(String term) {
-        Vector<Pair<Integer,Integer>> doc_tf= new Vector<>();
-
-        return doc_tf;
     }
 }
 
