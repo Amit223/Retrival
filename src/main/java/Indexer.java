@@ -270,6 +270,7 @@ public class Indexer {
 
     /**
      * using for {@link Model}
+     * copy from  {@link Searcher#loadDictionaryToMemory(boolean)}
      * this function load to dictionary ( if not loaded yet) the information from dictionary file.
      * return true if successful, false otherwise
      */

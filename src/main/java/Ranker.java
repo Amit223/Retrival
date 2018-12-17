@@ -23,11 +23,12 @@ public class Ranker {
         _RankDocsMutex.lock();
         if (_RankedDocs.size() > 50) {
             Integer lowest = _RankedDocs.firstKey();
-            if (rank>(lowest) && rank!=0) {
+            if (rank>(lowest)) {
                 _RankedDocs.remove(lowest);
+                _RankedDocs.put(rank,doc);
             }
-        }
-        _RankedDocs.put(rank,doc);
+        }else _RankedDocs.put(rank,doc);
+
         _RankDocsMutex.unlock();
     }
 
@@ -41,12 +42,11 @@ public class Ranker {
      * @param avgldl
      * @return rankedDocs
      */
-    public Vector<String> Rank(ConcurrentHashMap<Integer, Vector<Pair<String, Integer>>> docsToRank,
-                               ConcurrentHashMap<Integer, Integer> doc_size,
-                               int numOfIndexedDocs,
-                               ConcurrentHashMap<String, Integer> term_docsNumber,
-                               double avgldl) {
-        Vector<String> rankedDocs = new Vector<>();
+    public Collection<Integer> Rank(ConcurrentHashMap<Integer, Vector<Pair<String, Integer>>> docsToRank,
+                                    ConcurrentHashMap<Integer, Integer> doc_size,
+                                    int numOfIndexedDocs,
+                                    ConcurrentHashMap<String, Integer> term_docsNumber,
+                                    double avgldl) {
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;
         Thread[] threads = new ThreadedRank[docsToRank.size()];
@@ -60,7 +60,7 @@ public class Ranker {
             _pool.execute(threads[i]);
             i++;
         }
-        return rankedDocs;
+        return _RankedDocs.values();
 
     }
 
