@@ -974,6 +974,7 @@ class ThreadedWrite extends Thread{
 
                 stringBuilder.append(list.get(i));
             }
+            String list_=stringBuilder.toString();
             BufferedWriter bufferedWriter=new BufferedWriter(new FileWriter(file.getAbsolutePath(),true));
             bufferedWriter.write(stringBuilder.toString());
             bufferedWriter.flush();
@@ -1027,7 +1028,7 @@ class ThreadedSort extends Thread{
             String write1=SortFileByPart(letter+"1",letter+"2",letter+"1"+"_"+letter+"2",reader,lineCount/4);
             String write2=SortFileByPart(letter+"3",letter+"4",letter+"3"+"_"+letter+"4",reader,lineCount/4);
             String write3=SortFileByPart(letter+"5",letter+"6",letter+"5"+"_"+letter+"6",reader,lineCount/4);
-            String write4=SortFileByPart(letter+"7",letter+"8",letter+"7"+"_"+letter+"8",reader,lineCount/4);
+            String write4=SortFileByPart(letter+"7",letter+"8",letter+"7"+"_"+letter+"8",reader,lineCount);
             reader.close();
 
             String s1=write1+"_"+write2;
@@ -1217,8 +1218,12 @@ class ThreadedSort extends Thread{
 
 
     private static String getField(String line) {
-        if(line.contains("-"))
-            return line.split("-")[0];//extract value you want to sort on
+        if(line.contains("-")) {
+            String[] values = line.split("&");//valuse[0]-term, values[1]docLine-tf
+            String[] line_tf = values[0].split("-");
+            String returnedValue = values[0] + "&" + line_tf[0];//term&line
+            return returnedValue;
+        }
         return line;
     }
 
@@ -1255,8 +1260,6 @@ class ThreadedUpdate extends Thread{
             RandomAccessFile writer=new RandomAccessFile(newFile,"rw");
             BufferedReader reader=new BufferedReader(new FileReader(fileName));
             String line=reader.readLine();
-            if(line.contains("-01-11"))
-                System.out.println("f");
             while(line!=null){
                 String[] strings=line.split("&");
                 if(!prevWord.equalsIgnoreCase(strings[0])||!prevWord.equals(strings[0])){//the term wasn't touched

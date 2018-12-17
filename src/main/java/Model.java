@@ -119,26 +119,7 @@ public class Model {
         indexer.UpdateDictionary();
         indexer.loadDictionaryToFile();
 
-        //delets unwanted files:
-        File f;
-        for (char c='a'; c<='z'; c++){
-            f=new File(c+c+"2");
-            f.delete();
-            f=new File(c+c+"4");
-            f.delete();
-            f=new File(c+c+"6");
-            f.delete();
-            f=new File(c+c+"8");
-            f.delete();
-        }
-        f=new File("002");
-        f.delete();
-        f=new File("004");
-        f.delete();
-        f=new File("006");
-        f.delete();
-        f=new File("008");
-        f.delete();
+
     }
 }
 
