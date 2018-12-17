@@ -46,9 +46,7 @@ public class Searcher {
             term = termsIt.next();
             addDocsTo_doc_terms(term);
         }
-        for (int i = 0; i < _doc_terms.size() ; i++) {
-            _ranker.Rank(_doc_terms.get(i)); //todo with threading.
-        }
+        ans=_ranker.Rank(_doc_terms); // return only 50 most relvante
         return ans;
     }
 

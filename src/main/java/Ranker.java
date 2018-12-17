@@ -1,14 +1,18 @@
 import javafx.util.Pair;
 
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Ranker {
 
     //todo priority queue documents grade of 50
     /**
      * this function give a grade to any doc and add it to priority queue of 50.
-     * @param term_tfVector - vector of term_tf
+     * @param docsToRank
+     * @return rankedDocs
      */
-    public void Rank(Vector<Pair<String, Integer>> term_tfVector) {
+    public Vector<String> Rank(ConcurrentHashMap<Integer, Vector<Pair<String, Integer>>> docsToRank) {
+        Vector<String>rankedDocs=new Vector<>();
+        return rankedDocs;
     }
 }
