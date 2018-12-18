@@ -24,7 +24,10 @@ public class Indexer {
     private ListOfByteArrays docsToWrite;
     private Set<String> languages;
     private AtomicInteger _AtomicNumlineDocs;
-
+    //entities
+    private String tempPathToEntities;
+    private AtomicInteger _AtomicNumlineEntities;
+    private ListOfByteArrays entitiesToWrite;
     //posting
     // lineNum(4 bytes)|tf(4 Bytes)|pte next(4 Bytes) ==12 bytes
     private AtomicInteger _numOfFiles;
@@ -44,6 +47,8 @@ public class Indexer {
     //postingMutex
     private Mutex docMutex;
     private Mutex docFileMutex;
+    private Mutex entities_mutex;
+    private Mutex entitiesFileMutex;
     private Mutex cityMutex;
     private Mutex cityFileMutex;
     private Mutex cityDictionaryMutex;
@@ -95,6 +100,10 @@ public class Indexer {
             _numOfFiles=new AtomicInteger(0);
             docsToWrite=new ListOfByteArrays();
             languages=new HashSet<>();
+            tempPathToEntities=path+"/EntitiesTemp"+toStem+".txt";
+            _AtomicNumlineEntities=new AtomicInteger(0);
+            _wordCount=new AtomicInteger(0);
+            entitiesToWrite=new ListOfByteArrays();
 
             //citys
             cityDictionary = new HashMap<>();
@@ -107,6 +116,8 @@ public class Indexer {
             cityDictionaryMutex=new Mutex();
             docMutex=new Mutex();
             docFileMutex=new Mutex();
+            entities_mutex=new Mutex();
+            entitiesFileMutex=new Mutex();
             dictionaryMutex=new Mutex();
             mutexesPosting =new Mutex[27];
             mutexesList=new Mutex[27];
@@ -126,6 +137,8 @@ public class Indexer {
                 file.createNewFile();
             }
             file=new File(_path+"/"+'0'+_toStem+".txt");
+            file.createNewFile();
+            file=new File(tempPathToEntities);
             file.createNewFile();
         }
         catch (IOException e){
@@ -169,16 +182,19 @@ public class Indexer {
         docMutex.lock();
         writeToDocumentsList(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
         docMutex.unlock();
+        int lineNumDocs=_AtomicNumlineDocs.get();
         _AtomicNumlineDocs.getAndAdd(1);
-        int lineNumDocs = _AtomicNumlineDocs.get()-1;
-        if(_numOfFiles.get()%5000==0){
-            writeDocsToFile();
-        }
+
 
         //posting
         Iterator<String>termsKeys=keys.iterator();
+        StringBuilder entities=new StringBuilder();
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
+            if(Character.isUpperCase(term.charAt(0))&&!term.contains("-")){
+                int tf=terms.get(term);
+                entities.append(term+"@"+tf+"#");//term&tf,term&tf,...,term&tf/n
+            }
             dictionaryMutex.lock();
             ifExistUpdateTF(term,terms.get(term)); //updates dictionary df/ add new term
             dictionaryMutex.unlock();
@@ -188,9 +204,24 @@ public class Indexer {
             writeToPostingList(lineNumDocs,terms.get(term),postingLines[index],term);
         }
         terms.clear();
-        if(_numOfFiles.get()%1000==0)
+        String line;
+        if(entities.length()>0){//there are entities
+            line=entities.substring(0,entities.length());
+            line=line+"\n";
+        }
+        else{
+            line="X\n";
+        }
+        //entities
+        writeEntitiesToList(line,lineNumDocs);
+
+        if(_numOfFiles.get()%1000==0) {
             writeListToPosting();
 
+        }
+        if(_numOfFiles.get()%5000==0){
+            writeDocsAndEntitiesToFile();
+        }
 
 
         //citys
@@ -212,6 +243,16 @@ public class Indexer {
         }
 
         _numOfFiles.getAndAdd(1);
+
+    }
+
+    private void writeEntitiesToList(String line,int lineNumDocs) {
+        while(_AtomicNumlineEntities.get()!=lineNumDocs);//cant write- wont write to the same line as the document.
+        //now equal can write
+        entities_mutex.lock();
+        entitiesToWrite.add(line);
+        _AtomicNumlineEntities.addAndGet(1);
+        entities_mutex.unlock();
 
     }
 
@@ -448,11 +489,14 @@ public class Indexer {
     /**
      * call {@link ThreadedWrite} to write the list of files to end of documents, erase the list.
      */
-    private void writeDocsToFile() {
+    private void writeDocsAndEntitiesToFile() {
         Thread t=new ThreadedWrite(documents,docsToWrite,docMutex,docFileMutex,new AtomicInteger(0));//dont care
+        Thread t2=new ThreadedWrite(new File(tempPathToEntities),entitiesToWrite,entities_mutex,entitiesFileMutex,new AtomicInteger(0));//dont care
         t.start();
+        t2.start();
         try {
             t.join();
+            t2.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -472,14 +516,79 @@ public class Indexer {
 
     /**
      * this function activated at the end of the index process, activates all the write functions - writeListToPosting(),
-     * writeDocsToFile(),writeCityList() so data isn't lost.
+     * writeDocsAndEntitiesToFile(),writeCityList() so data isn't lost.
      */
     public void push(){
         writeListToPosting();
         writeCityList();
-        writeDocsToFile();
+        writeDocsAndEntitiesToFile();
+        writeEntitiesToFinalFile();
+
+    }
+
+    /**
+     *
+     * @param Entities
+     * @return top5 entities from list
+     */
+    private Collection<String> getFinal5Entities(Map<String,Integer> Entities) {
+        SortedMap<Integer, String> RankedEntities = new TreeMap<>();
+        Iterator<String> iterator=Entities.keySet().iterator();
+        while (iterator.hasNext()) {
+            String entity = iterator.next();
+            if (dictionary.containsKey(entity)) { //is upper case in all the corpus.
+                int tf = Entities.get(entity); //means tf ,like in the #loadDictionaryToMemory
+                if (RankedEntities.size() >= 5) {
+                    Integer lowestTf = RankedEntities.firstKey();
+
+                    if (tf > (lowestTf)) {
+                        RankedEntities.remove(lowestTf);
+                        RankedEntities.put(tf, entity);
+                    } else { //don't add
+                    }
+                } else RankedEntities.put(tf, entity);
+            }
+        }
+        return RankedEntities.values();
+    }
+    private void writeEntitiesToFinalFile() {
+        File temp=new File(tempPathToEntities);
+        File end=new File(_path+"/Entities.txt");
+        try {
+            end.createNewFile();
+            BufferedReader reader=new BufferedReader(new FileReader(temp));
+            BufferedWriter writer=new BufferedWriter(new FileWriter(end));
+            String line=reader.readLine();
+            while(line!=null&&!line.equals("")){
+                String [] entities_String=line.split("#");
+                Map<String,Integer> entities=new HashMap<>();
+                for(int i=0;i<entities_String.length;i++){
+                    String [] entity_tf=entities_String[i].split("@");//term,tf
+                    entities.put(entity_tf[0],Integer.valueOf(entity_tf[1]));
+                }
+                Collection<String> final_5=getFinal5Entities(entities);
+                //todo - write in bytes and not string
+                Iterator<String> iterator=final_5.iterator();
+                String toWrite="";
+                while (iterator.hasNext()){
+                    toWrite=toWrite+iterator.next()+",";
+                }
+                toWrite=toWrite.substring(0,toWrite.length()-1);
+                toWrite=toWrite+"\n";
+                writer.write(toWrite);
 
 
+                line=reader.readLine();
+            }
+            reader.close();
+            writer.flush();
+            writer.close();
+            temp.delete();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+//todo
     }
 
 
@@ -503,11 +612,11 @@ public class Indexer {
             citysPosting.delete();
             //files
             for(char c='a';c<='z';c++){
-                File f=new File(_path + "/" + c + _toStem+".txt");
+                File f=new File(_path + "/" + c + _toStem+"Done.txt");
                 f.delete();
 
             }
-            File f=new File(_path + "/" + '0' + _toStem+".txt");
+            File f=new File(_path + "/" + '0' + _toStem+"Done.txt");
             f.delete();
             //the dictionarys
             f=new File(_path+"/"+_toStem+"Dictionary.txt");
@@ -814,19 +923,6 @@ public class Indexer {
     }
 
 
-    /**
-     *
-     * @param bytes
-     * @return take byte[4] and turn into int- will use next part of project
-     */
-    private int byteToInt(byte[] bytes) {
-        int val = 0;
-        for (int i = 0; i < 4; i++) {
-            val=val<<8;
-            val=val|(bytes[i] & 0xFF);
-        }
-        return val;
-    }
 
     /**
      *

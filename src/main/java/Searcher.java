@@ -1,9 +1,6 @@
 import javafx.util.Pair;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,7 +40,7 @@ public class Searcher {
     /**Auxiliary functions for Search**/
 
     /**
-     * build {@link #_doc_termPlusTfs} using {@link #addDocsTo_doc_termPlusTfs(String)}
+     * build {@link #_doc_termPlusTfs} using {@link #addDocsTo_doc_termPlusTfs(String,boolean)}
      *
      * @param query  - query to search
      * @param toStem if stem is needed
@@ -57,20 +54,20 @@ public class Searcher {
         String term = "";
         while (termsIt.hasNext()) {
             term = termsIt.next();
-            addDocsTo_doc_termPlusTfs(term);
+            addDocsTo_doc_termPlusTfs(term,toStem);
         }
     }
 
 
     /**
      * Auxiliary function for {@link #build_doc_termPlusTfs(String, boolean)}
-     * add docs that the term appear in them to our {@link #_doc_termPlusTfs} using {@link #readTermDocs(String)}
+     * add docs that the term appear in them to our {@link #_doc_termPlusTfs} using {@link #readTermDocs(String,boolean)}
      *
      * @param term - the term that adding the docs that include it.
      *             working in concurrency
      */
-    private void addDocsTo_doc_termPlusTfs(String term) {
-        Vector<Pair<Integer, Integer>> doc_tf = readTermDocs(term);
+    private void addDocsTo_doc_termPlusTfs(String term,boolean toStem) {
+        Vector<Pair<Integer, Integer>> doc_tf = readTermDocs(term,toStem);
         _term_docsCounter.put(term, doc_tf.size());
         for (int i = 0; i < doc_tf.size(); i++) {
             Integer docNum = doc_tf.get(i).getKey();
@@ -92,21 +89,56 @@ public class Searcher {
      * @param term - the docs that include  the term
      * @return doc_tf - list of "doc-tf"s for the above term
      */
-    private Vector<Pair<Integer, Integer>> readTermDocs(String term) {
+    private Vector<Pair<Integer, Integer>> readTermDocs(String term, boolean isStemmed) {
         Vector<Pair<Integer, Integer>> doc_tf = new Vector<>();
-        while ("there is more docs for this term in the postings.".contains("")) {  //todo amit
-            String city = "";  //todo get amit
-            int docNum = 0, //todo  get amit
-                    docSize = 0, //todo  get amit
-                    tf = 0; //todo  get amit
-
-            if (_chosenCities.size() == 0 || _chosenCities.contains(city)) {
-                doc_tf.add(new Pair<Integer, Integer>(docNum, tf));
-                if (!_doc_size.containsKey(docNum)) _doc_size.put(docNum, docSize);
-            } else {//do nothing}
-            }
+        char letter = term.charAt(0);
+        if (Character.isUpperCase(letter))
+            letter = Character.toLowerCase(letter);
+        else if (Character.isDigit(letter) || letter == '-')
+            letter = '0';
+        String fullPath = _path + '/'+letter + isStemmed + "Done.txt";
+        if (!dictionary.containsKey(term)) {//the term is not in the dictionary
+            return doc_tf;
         }
+        try {
+            RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
+            int lineNum = dictionary.get(term).elementAt(2);//the pointer;
+            int numOfDocs = dictionary.get(term).elementAt(0);//num of docs
+            for (int i = 0; i < numOfDocs; i++) {
+                raf.seek((lineNum + i) * 8);
+                byte[] docLine_bytes = new byte[4];
+                raf.read(docLine_bytes);
+                raf.seek((lineNum + i) * 8 + 4);
+                byte[] tf_bytes = new byte[4];
+                raf.read(tf_bytes);
+                int docLine = byteToInt(docLine_bytes);
+                int tf = byteToInt(tf_bytes);
+                Pair<Integer, Integer> pair = new Pair<>(docLine, tf);
+                if (!_doc_size.contains(docLine)) {
+                    _doc_size.put(docLine, -1);
+                }
+            }
+            raf.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         return doc_tf;
+    }
+
+    /**
+     * @param bytes
+     * @return take byte[4] and turn into int- will use next part of project
+     */
+    private int byteToInt(byte[] bytes) {
+        int val = 0;
+        for (int i = 0; i < 4; i++) {
+            val = val << 8;
+            val = val | (bytes[i] & 0xFF);
+        }
+        return val;
     }
 
 
@@ -151,31 +183,13 @@ public class Searcher {
      * @param Entities
      * @return _RankedEntities - the 5 most dominant Entities, filter the fake entities using {@link #dictionary}
      */
-    public Collection<String> getFinal5Entities(Vector<String> Entities) {
-        SortedMap<Integer, String> RankedEntities = new TreeMap<>();
-        for (int i = 0; i < Entities.size(); i++) {
-            String entity = Entities.get(i);
-            if (dictionary.containsKey(entity.toUpperCase())) { //is upper case in all the corpus.
-                int tf = dictionary.get(entity.toUpperCase()).get(1); //means tf ,like in the #loadDictionaryToMemory
-                if (RankedEntities.size() > 5) {
-                    Integer lowestTf = RankedEntities.firstKey();
 
-                    if (tf > (lowestTf)) {
-                        RankedEntities.remove(lowestTf);
-                        RankedEntities.put(tf, entity);
-                    } else { //don't add
-                    }
-                } else RankedEntities.put(tf, entity);
-            }
-        }
-        return RankedEntities.values();
-    }
 
 
     private void getEntities(Collection<Integer> ans) {
         for (Integer docNum : ans) {
             Vector<String> Entities = new Vector<>(); //todo amit - get from the postings.
-            if (!_doc_Entities.containsKey(docNum)) _doc_Entities.put(docNum, getFinal5Entities(Entities));
+            if (!_doc_Entities.containsKey(docNum)) _doc_Entities.put(docNum, Entities);
         }
     }
 
