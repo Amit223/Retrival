@@ -13,16 +13,16 @@ public class Ranker {
     ;
     private static double _avgldl;
     private static int _numOfIndexedDocs;
-    private static double _k = 0;
-    private static double _d = 0;
-    private SortedMap<Integer,Integer> _RankedDocs = new TreeMap<>(); // Rank-Doc
+    private static double _k =1.25;
+    private static double _b = 0.75;
+    private SortedMap<Double,Integer> _RankedDocs = new TreeMap<>(); // Rank-Doc
     private Mutex _RankDocsMutex = new Mutex();
 
-    public void addItem(Integer rank,Integer doc) {
+    public void addItem(double rank,Integer doc) {
         if(rank==0) return;
         _RankDocsMutex.lock();
         if (_RankedDocs.size() > 50) {
-            Integer lowest = _RankedDocs.firstKey();
+            Double lowest = _RankedDocs.firstKey();
             if (rank>(lowest)) {
                 _RankedDocs.remove(lowest);
                 _RankedDocs.put(rank,doc);
@@ -42,7 +42,7 @@ public class Ranker {
      * @param avgldl
      * @return rankedDocs
      */
-    public Collection<Integer> Rank(ConcurrentHashMap<Integer, Vector<Pair<String, Integer>>> docsToRank,
+    public Collection<Integer> Rank(HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank,
                                     ConcurrentHashMap<Integer, Integer> doc_size,
                                     int numOfIndexedDocs,
                                     ConcurrentHashMap<String, Integer> term_docsNumber,
@@ -56,7 +56,7 @@ public class Ranker {
         int i = 0;
         while (docsIt.hasNext()) {
             doc = docsIt.next();
-            threads[i] = new ThreadedRank(doc, docsToRank.get(doc), doc_size.get(doc), term_docsNumber.get(doc));
+            threads[i] = new ThreadedRank(doc, docsToRank.get(doc), doc_size.get(doc), term_docsNumber);
             _pool.execute(threads[i]);
             i++;
         }
@@ -77,7 +77,7 @@ public class Ranker {
         private final Integer _doc;
         private final Vector<Pair<String, Integer>> _termInDocAndTF;
         private final Integer _docSize;
-        private final int _docsNumberforTerm;
+        private final Map<String, Integer> _docsNumberforTerm;
         /** in the Ranker class
          * private double _avgldl;
          * private  int _numOfIndexedDocs;
@@ -92,7 +92,7 @@ public class Ranker {
          * @param docSize
          * @param docsNumberforTerm
          */
-        public ThreadedRank(Integer doc, Vector<Pair<String, Integer>> termInDocAndTF, Integer docSize, int docsNumberforTerm) {
+        public ThreadedRank(Integer doc, Vector<Pair<String, Integer>> termInDocAndTF, Integer docSize, Map<String, Integer> docsNumberforTerm) {
             _doc = doc;
             _termInDocAndTF = termInDocAndTF;
             _docSize = docSize;
@@ -104,12 +104,20 @@ public class Ranker {
          * in BM25
          * using this variables:
          * {@link #_doc} {@link #_termInDocAndTF} {@link #_docSize}
-         * {@link #_docsNumberforTerm} {@link #_avgldl} {@link #_numOfIndexedDocs} {@link #_k} {@link #_d}
-         * and put the document's Rank and document's number into {@link #addItem(Integer, Integer)} into {@link #_RankedDocs}
+         * {@link #_docsNumberforTerm} {@link #_avgldl} {@link #_numOfIndexedDocs} {@link #_k} {@link #_b}
+         * and put the document's Rank and document's number into {@link #addItem(double, Integer)} into {@link #_RankedDocs}
          */
         public void run() {
-            int rank=0;
-            //todo amit
+            double rank=0;
+            for(int i=0;i<_termInDocAndTF.size();i++){
+                String term=_termInDocAndTF.get(i).getKey();
+                int numOfDocsForTerm=_docsNumberforTerm.get(term);
+                double idf=Math.log(_numOfIndexedDocs/numOfDocsForTerm);
+                double tf=_termInDocAndTF.get(i).getValue()/_docSize;
+                double mone=idf*tf;
+                double mechane=tf+_k*(1-_b+_b*(_docSize/_avgldl));
+                rank=rank+mone/mechane;
+            }
             addItem(rank,_doc);
         }
     }
