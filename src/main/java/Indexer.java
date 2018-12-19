@@ -5,6 +5,7 @@ import sun.awt.Mutex;
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -85,7 +86,7 @@ public class Indexer {
                 lineCounter[i]=new AtomicInteger(0);
             }
             if(toStem) {
-                documents = new File(path+"/Documents.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+                documents = new File(path+"/DocumentsTemp.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
                 //citys
                 citysPosting = new File(path+"/CityPosting.txt");
             }
@@ -522,7 +523,7 @@ public class Indexer {
         writeListToPosting();
         writeCityList();
         writeDocsAndEntitiesToFile();
-        writeEntitiesToFinalFile();
+        writeFilesAndEntitiesToFinalFile();
 
     }
 
@@ -551,15 +552,23 @@ public class Indexer {
         }
         return RankedEntities.values();
     }
-    private void writeEntitiesToFinalFile() {
+    private void writeFilesAndEntitiesToFinalFile() {
         File temp=new File(tempPathToEntities);
         File end=new File(_path+"/Entities.txt");
+        File endDocs=new File(_path+"/Documents.txt");
         try {
             end.createNewFile();
+            endDocs.createNewFile();
             BufferedReader reader=new BufferedReader(new FileReader(temp));
-            BufferedWriter writer=new BufferedWriter(new FileWriter(end));
+            BufferedReader docReader=new BufferedReader(new FileReader(documents));
+            RandomAccessFile writer=new RandomAccessFile(end,"rw");
+            RandomAccessFile docwriter=new RandomAccessFile(endDocs,"rw");
+            writer.seek(0);
+            docwriter.seek(0);
             String line=reader.readLine();
+            String docLine=docReader.readLine();
             while(line!=null&&!line.equals("")){
+                //entities
                 String [] entities_String=line.split("#");
                 Map<String,Integer> entities=new HashMap<>();
                 for(int i=0;i<entities_String.length;i++){
@@ -567,28 +576,56 @@ public class Indexer {
                     entities.put(entity_tf[0],Integer.valueOf(entity_tf[1]));
                 }
                 Collection<String> final_5=getFinal5Entities(entities);
-                //todo - write in bytes and not string
                 Iterator<String> iterator=final_5.iterator();
-                String toWrite="";
-                while (iterator.hasNext()){
-                    toWrite=toWrite+iterator.next()+",";
+                int i=0;
+                while (i<5){
+                    byte[] term;
+                    if(iterator.hasNext()) {
+                        term = stringToByteArray(iterator.next(), 20);//20*5=100 bytes a row
+                    }
+                    else{
+                        term=stringToByteArray("",20);
+                    }
+                    writer.write(term);
+                    i++;
                 }
-                toWrite=toWrite.substring(0,toWrite.length()-1);
-                toWrite=toWrite+"\n";
-                writer.write(toWrite);
-
-
+                //documents
+                String [] details=docLine.split("@");
+                String nameOfDoc=details[0];
+                String cityOfDoc=details[1];
+                String language=details[2];
+                int maxtf=Integer.valueOf(details[3]);
+                int size=Integer.valueOf(details[3]);
+                int numOfWords=Integer.valueOf(details[3]);
+                byte[] name=stringToByteArray(nameOfDoc,16);
+                byte[] city=stringToByteArray(cityOfDoc,16);
+                byte [] lang_bytes=stringToByteArray(language,10);
+                if(language.length()>0){
+                    languages.add(language);
+                }
+                byte [] maxtf_bytes=toBytes(maxtf);
+                byte [] size_bytes=toBytes(size);
+                byte [] words_bytes=toBytes(numOfWords);
+                docwriter.write(name);
+                docwriter.write(city);
+                docwriter.write(lang_bytes);
+                docwriter.write(maxtf_bytes);
+                docwriter.write(size_bytes);
+                docwriter.write(words_bytes);
+                //read another line
                 line=reader.readLine();
+                docLine=docReader.readLine();
             }
             reader.close();
-            writer.flush();
+            docReader.close();
             writer.close();
+            docwriter.close();
             temp.delete();
+            documents.delete();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-//todo
     }
 
 
@@ -758,7 +795,7 @@ public class Indexer {
      */
     private void writeToDocumentsList(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language) {
         _wordCount.getAndAdd( numOfWords); //todo - future error-  not added .
-        //docName(16 bytes)|city(16)|language(16)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+        //docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)-54 bytes
         byte[] name=stringToByteArray(nameOfDoc,16);
         byte[] city=stringToByteArray(cityOfDoc,16);
         byte [] lang_bytes=stringToByteArray(language,10);
@@ -768,6 +805,10 @@ public class Indexer {
         byte [] maxtf_bytes=toBytes(maxtf);
         byte [] size_bytes=toBytes(size);
         byte [] words_bytes=toBytes(numOfWords);
+        //new!!
+        docsToWrite.add(nameOfDoc+"@"+cityOfDoc+"@"+language+"@"+maxtf+"@"
+        +size+"@"+numOfWords+"\n");
+        /**
         for (int i = 0; i < 16; i++) {
             docsToWrite.add(name[i]);
         }
@@ -789,7 +830,7 @@ public class Indexer {
             docsToWrite.add(words_bytes[i]);
         }
 
-
+**/
     }
 
     /**
@@ -931,14 +972,8 @@ public class Indexer {
      */
     public static byte[] toBytes(int i)
     {
-        byte[] result = new byte[4];
-
-        result[0] = (byte) (i >> 24);
-        result[1] = (byte) (i >> 16);
-        result[2] = (byte) (i >> 8);
-        result[3] = (byte) (i /*>> 0*/);
-
-        return result;
+        byte[] pom = ByteBuffer.allocate(4).putInt(i).array();
+        return pom;
     }
 
 
@@ -965,12 +1000,14 @@ public class Indexer {
      */
     private byte[] stringToByteArray(String term,int length){
         byte [] stringInByte=term.getBytes(StandardCharsets.UTF_8);
+        String c="#";
+        byte[] charInByte=c.getBytes(StandardCharsets.UTF_8);
         byte [] fullByteArray=new byte[length];
         for (int i = 0; i<length ; i++) {
             if(i<stringInByte.length)
                 fullByteArray[i]=stringInByte[i];
             else
-                fullByteArray[i]=35;//# in ascii
+                fullByteArray[i]=charInByte[0];
         }
         return fullByteArray;
 
