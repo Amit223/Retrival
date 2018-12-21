@@ -26,7 +26,7 @@ public class Searcher {
      */
     private HashMap<Integer, Vector<Pair<String, Integer>>> _doc_termPlusTfs;
     private static ConcurrentHashMap<Integer, Integer> _doc_size = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<Integer, Collection<String>> _doc_Entities = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, Map<String,Integer>> _doc_Entities = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, Integer> _term_docsCounter = new ConcurrentHashMap<>();
     private String _path = "";
 
@@ -186,14 +186,14 @@ public class Searcher {
 
 
 
-    public void getEntities(Collection<Integer> ans) {
+    public void getEntities(Collection<Integer> ans,boolean toStem) {
         try {
-            RandomAccessFile raf=new RandomAccessFile(_path+"/Entities.txt","r");
+            RandomAccessFile raf=new RandomAccessFile(_path+"/Entities"+toStem+".txt","r");
             for (Integer docNum : ans) {
                 byte[]line=new byte[100];
                 raf.seek(docNum);
                 raf.read(line);//20 bytes each term!
-                Vector<String> Entities = findEntities(line);
+                Map<String,Integer> Entities = findEntities(line);
                 if (!_doc_Entities.containsKey(docNum)) _doc_Entities.put(docNum, Entities);
             }
             raf.close();
@@ -210,18 +210,33 @@ public class Searcher {
      * @param line-byte[100] - 5 entities in it
      * @return vector of the 5 entities in the line
      */
-    private Vector<String> findEntities(byte[] line) {
+    private Map<String,Integer> findEntities(byte[] line) {
         byte [] e1=new byte[20];
         byte [] e2=new byte[20];
         byte [] e3=new byte[20];
         byte [] e4=new byte[20];
         byte [] e5=new byte[20];
-        for(int i=0;i<20;i++){
+        byte [] f1=new byte[4];
+        byte [] f2=new byte[4];
+        byte [] f3=new byte[4];
+        byte [] f4=new byte[4];
+        byte [] f5=new byte[4];
+        for(int i=0;i<24;i++){
+            //entity1
             e1[i]=line[i];
-            e2[i]=line[i+20];
-            e3[i]=line[i+40];
-            e4[i]=line[i+60];
-            e5[i]=line[i+80];
+            f1[i]=line[i+20];
+            //entity2
+            e2[i]=line[i+24];
+            f2[i]=line[i+44];
+            //entity3
+            e3[i]=line[i+48];
+            f3[i]=line[i+68];
+            //entity4
+            e4[i]=line[i+72];
+            f4[i]=line[i+92];
+            //entity5
+            e5[i]=line[i+96];
+            f5[i]=line[i+116];
         }
         String entity1=new String(e1);
         String entity2=new String(e2);
@@ -234,12 +249,19 @@ public class Searcher {
         entity3=entity3.substring(0,entity3.indexOf("#"));
         entity4=entity4.substring(0,entity4.indexOf("#"));
         entity5=entity5.substring(0,entity5.indexOf("#"));
-        Vector<String> entities=new Vector<>();
-        entities.add(entity1);
-        entities.add(entity2);
-        entities.add(entity3);
-        entities.add(entity4);
-        entities.add(entity5);
+        //tfs
+        int tf1=byteToInt(f1);
+        int tf2=byteToInt(f2);
+        int tf3=byteToInt(f3);
+        int tf4=byteToInt(f4);
+        int tf5=byteToInt(f5);
+
+        Map<String,Integer> entities=new HashMap<>();
+        entities.put(entity1,tf1);
+        entities.put(entity2,tf2);
+        entities.put(entity3,tf3);
+        entities.put(entity4,tf4);
+        entities.put(entity5,tf5);
         return entities;
     }
 
@@ -258,7 +280,7 @@ public class Searcher {
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
         ans = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl); // return only 50 most relvante
-        getEntities(ans);
+        getEntities(ans,toStem);
         return ans;
     }
 
