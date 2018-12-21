@@ -554,7 +554,7 @@ public class Indexer {
     }
     private void writeFilesAndEntitiesToFinalFile() {
         File temp=new File(tempPathToEntities);
-        File end=new File(_path+"/Entities.txt");
+        File end=new File(_path+"/Entities"+_toStem+".txt");
         File endDocs=new File(_path+"/Documents.txt");
         try {
             end.createNewFile();
@@ -580,13 +580,18 @@ public class Indexer {
                 int i=0;
                 while (i<5){
                     byte[] term;
+                    byte[] tf;
                     if(iterator.hasNext()) {
-                        term = stringToByteArray(iterator.next(), 20);//20*5=100 bytes a row
+                        String entity=iterator.next();
+                        term = stringToByteArray(entity, 20);//24*5=120 bytes a row
+                        tf=Indexer.toBytes(entities.get(entity));
                     }
                     else{
                         term=stringToByteArray("",20);
+                        tf=Indexer.toBytes(-1);
                     }
                     writer.write(term);
+                    writer.write(tf);
                     i++;
                 }
                 //documents
