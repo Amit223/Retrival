@@ -6,13 +6,15 @@
 <?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller_2">
+<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller_2">
    <children>
       <Label layoutX="173.0" layoutY="14.0" prefHeight="44.0" prefWidth="255.0" text="Information Retrieval Project">
          <font>
             <Font name="Guttman Yad-Light" size="18.0" />
          </font></Label>
-      <Button layoutX="23.0" layoutY="79.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="96.0" text="Choose Folder" />
-      <TextField disable="true" layoutX="141.0" layoutY="79.0" prefHeight="25.0" prefWidth="308.0" promptText="The folder of posting files.." />
+      <Button layoutX="23.0" layoutY="79.0" mnemonicParsing="false" onAction="#getDirChooser" prefHeight="25.0" prefWidth="96.0" text="Choose Folder" />
+      <TextField fx:id="path" disable="true" layoutX="141.0" layoutY="79.0" prefHeight="25.0" prefWidth="308.0" promptText="The folder of posting files.." />
+      <TextField fx:id="queriesFilepath" disable="true" layoutX="141.0" layoutY="124.0" prefHeight="25.0" prefWidth="308.0" promptText="the file of queries" />
+      <Button layoutX="23.0" layoutY="124.0" mnemonicParsing="false" onAction="#getFileCooser" prefHeight="25.0" prefWidth="96.0" text="Choose Folder" />
    </children>
 </AnchorPane>
