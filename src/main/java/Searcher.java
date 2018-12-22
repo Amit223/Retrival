@@ -1,6 +1,9 @@
 import javafx.util.Pair;
 
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -29,6 +32,7 @@ public class Searcher {
     private ConcurrentHashMap<Integer, Map<String,Integer>> _doc_Entities = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, Integer> _term_docsCounter = new ConcurrentHashMap<>();
     private String _path = "";
+    private boolean isSemantic; //todo what defualt ?
 
 
     public Searcher(double avgldl, int numOfIndexedDocs, String path, HashSet<String> chosenCities) {
@@ -49,6 +53,7 @@ public class Searcher {
      * @param toStem if stem is needed
      */
     private void build_doc_termPlusTfs(String query, boolean toStem) {
+        query= treatSemantic(query);
         Parser queryParser = new Parser();
         queryParser.Parse(query, toStem, "");
         HashMap<String, Integer> termList = queryParser.getTerms();
@@ -59,6 +64,60 @@ public class Searcher {
             term = termsIt.next();
             addDocsTo_doc_termPlusTfs(term,toStem);
         }
+    }
+
+    /**
+     * return the query with semantic similiar words appended.
+     * @param query
+     * @return
+     */
+    private String treatSemantic(String query) {
+        if(isSemantic){
+            String queryWithPluses=  queryWithPluses(query);
+            try{
+                String urlString = "https://api.datamuse.com/words?ml=" + queryWithPluses;
+                URL url = new URL(urlString);
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setRequestMethod("GET");
+                InputStreamReader iSR =new InputStreamReader((con.getInputStream()));
+                BufferedReader bufferedReader =new BufferedReader(iSR);
+                String inputLine;
+                StringBuffer similiarSemanticWords= new StringBuffer();
+                while((inputLine=bufferedReader.readLine())!=null){
+                    int index =0;
+                    String [] words = inputLine.substring(2).split("\\{");
+                    for(String word: words){
+                        if(index==15) break; //todo all ?????
+                        String [] wordStruct=  word.split(",")[0].split(":");
+                        similiarSemanticWords.append(wordStruct[1].substring(1).replace('"',' '));
+                        index++;
+                    }
+                }
+                bufferedReader.close();
+                iSR.close();
+                return query + " " + similiarSemanticWords.toString();
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+        else return query;
+        return query;
+    }
+
+    private String queryWithPluses(String query) {
+        String [] words=query.split(" ");
+        String queryWithPluses="";
+        for (int i = 0; i < words.length ; i++) {
+            if(i==0)
+                queryWithPluses=words[i];
+            else{
+                queryWithPluses+= ("+" + words[i]);
+            }
+        }
+        return query;
     }
 
 
@@ -179,12 +238,6 @@ public class Searcher {
         return true;
     }
 
-    /**
-     * @param ans-the doclines of top documents
-     * @return _RankedEntities - the 5 most dominant Entities, filter the fake entities using {@link #dictionary}
-     */
-
-
 
     public void getEntities(Collection<Integer> ans,boolean toStem) {
         try {
@@ -275,14 +328,15 @@ public class Searcher {
      * @return list of relevant docs.
      */
     public Collection<Integer> Search(String query, boolean toStem) {
-        Collection<Integer> ans = new Vector<>();
         loadDictionaryToMemory(toStem); //using for "Entities"
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
-        ans = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl); // return only 50 most relvante
+        Collection<Integer>  ans = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl); // return only 50 most relvante
         getEntities(ans,toStem);
         return ans;
     }
+
+
 
     private void FilterDocsByCitys() {
         try {

@@ -1,17 +1,80 @@
 
 import javafx.util.Pair;
 import org.omg.IOP.Encoding;
+import sun.awt.Mutex;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class Main {
+
+private static boolean  isSemantic = true;
+
+    private static String treatSemantic(String query) {
+        if(isSemantic){
+            String queryWithPluses=  queryWithPluses(query);
+            try{
+                String urlString = "https://api.datamuse.com/words?ml=" + queryWithPluses;
+                URL url = new URL(urlString);
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setRequestMethod("GET");
+                InputStreamReader iSR =new InputStreamReader((con.getInputStream()));
+                BufferedReader bufferedReader =new BufferedReader(iSR);
+                String inputLine;
+                StringBuffer similiarSemanticWords= new StringBuffer();
+                while((inputLine=bufferedReader.readLine())!=null){
+                    int index =0;
+                    String [] words = inputLine.substring(2).split("\\{");
+                    for(String word: words){
+                        if(index==15) break;
+                        String [] wordStruct=  word.split(",")[0].split(":");
+                        similiarSemanticWords.append(wordStruct[1].substring(1).replace('"',' '));
+                        index++;
+                    }
+                }
+                bufferedReader.close();
+                iSR.close();
+                return similiarSemanticWords.toString();
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        }
+        else return query;
+        return query;
+    }
+
+
+    private static String queryWithPluses(String query) {
+        String [] words=query.split(" ");
+        String queryWithPluses="";
+        for (int i = 0; i < words.length ; i++) {
+            if(i==0)
+                queryWithPluses=words[i];
+            else{
+                queryWithPluses+= ("+" + words[i]);
+            }
+        }
+        return query;
+    }
+
     public static void main(String[] args) {
-       byte[] num=toBytes(999999);
-        System.out.println(convertByteToInt(num));
-        FilterDocsByCitys();
+        treatSemantic("hello");
+
+
+        //      byte[] num=toBytes(999999);
+   //     System.out.println(convertByteToInt(num));
+   //     FilterDocsByCitys();
     }
     public static int convertByteToInt(byte[] b)
     {
