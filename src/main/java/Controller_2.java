@@ -45,6 +45,8 @@ public class Controller_2 {
     private TextArea query;
 
 
+    @FXML CheckBox toStem;
+
 
     /**
      *sets model
@@ -204,6 +206,7 @@ public class Controller_2 {
         stage.setTitle("Results");
         stage.setScene(scene);
         stage.show();
+
     }
 
 

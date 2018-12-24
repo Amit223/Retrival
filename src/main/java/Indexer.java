@@ -57,8 +57,9 @@ public class Indexer {
     private Mutex [] mutexesPosting; //mutexs of the posting files.
     private Mutex [] mutexesList; //mutexs of the posting files.
 
-    public double getAvgldl() {
-        return ((double)_wordCount.get())/_numOfFiles.get();
+    private double getAvgldl() {
+        double avgldl=(double)_wordCount.get()/(double)_numOfFiles.get();
+        return avgldl;
     }
 
     public  int getNumberOfDocs() {
@@ -175,27 +176,45 @@ public class Indexer {
     public void Index(Map<String,Integer> terms,Vector<Integer> locations,String nameOfDoc,String cityOfDoc,
                       int numOfWords,String language){
 
-        //docs
+        //docs+entities- find everything it neede to the writing part
         Set<String> keys=terms.keySet();
         int maxtf=0;
         if(terms.values()!=null&&terms.values().size()>0)
             maxtf=getMaxTf(terms.values());
-        docMutex.lock();
-        writeToDocumentsList(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language); //
-        docMutex.unlock();
         int lineNumDocs=_AtomicNumlineDocs.get();
-        _AtomicNumlineDocs.getAndAdd(1);
-
-
-        //posting
+        String line;
         Iterator<String>termsKeys=keys.iterator();
         StringBuilder entities=new StringBuilder();
+        //for entities
         while (termsKeys.hasNext()) {
             String term = termsKeys.next();
-            if(Character.isUpperCase(term.charAt(0))&&!term.contains("-")){
-                int tf=terms.get(term);
-                entities.append(term+"@"+tf+"#");//term&tf,term&tf,...,term&tf/n
+            if (Character.isUpperCase(term.charAt(0)) && !term.contains("-")) {
+                int tf = terms.get(term);
+                entities.append(term + "@" + tf + "#");//term&tf,term&tf,...,term&tf/n
             }
+        }
+        if(entities.length()>0){//there are entities
+            line=entities.substring(0,entities.length());
+            line=line+"\n";
+        }
+        else{
+            line="X\n";
+        }
+        //entities+docs:writing part
+        docMutex.lock();
+        writeToDocumentsAndEntitiesList(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language,line); //
+        docMutex.unlock();
+        _AtomicNumlineDocs.getAndAdd(1);
+        _AtomicNumlineEntities.addAndGet(1);
+
+        if(_numOfFiles.get()%5000==0){
+            writeDocsAndEntitiesToFile();
+        }
+
+        //posting
+        termsKeys=keys.iterator();
+        while (termsKeys.hasNext()) {
+            String term = termsKeys.next();
             dictionaryMutex.lock();
             ifExistUpdateTF(term,terms.get(term)); //updates dictionary df/ add new term
             dictionaryMutex.unlock();
@@ -205,23 +224,12 @@ public class Indexer {
             writeToPostingList(lineNumDocs,terms.get(term),postingLines[index],term);
         }
         terms.clear();
-        String line;
-        if(entities.length()>0){//there are entities
-            line=entities.substring(0,entities.length());
-            line=line+"\n";
-        }
-        else{
-            line="X\n";
-        }
-        //entities
-        writeEntitiesToList(line,lineNumDocs);
+
+
 
         if(_numOfFiles.get()%1000==0) {
             writeListToPosting();
 
-        }
-        if(_numOfFiles.get()%5000==0){
-            writeDocsAndEntitiesToFile();
         }
 
 
@@ -247,15 +255,7 @@ public class Indexer {
 
     }
 
-    private void writeEntitiesToList(String line,int lineNumDocs) {
-        while(_AtomicNumlineEntities.get()!=lineNumDocs);//cant write- wont write to the same line as the document.
-        //now equal can write
-        entities_mutex.lock();
-        entitiesToWrite.add(line);
-        _AtomicNumlineEntities.addAndGet(1);
-        entities_mutex.unlock();
 
-    }
 
     public void UpdateDictionary(){
         Thread[] threads = new ThreadedUpdate[27];
@@ -524,6 +524,26 @@ public class Indexer {
         writeCityList();
         writeDocsAndEntitiesToFile();
         writeFilesAndEntitiesToFinalFile();
+        writeNeededDetails();
+
+    }
+
+    /**
+     * this function writes avgdl, numofdocs that was indexed into details file
+     */
+    private void writeNeededDetails() {
+        File file=new File(_path+"/Details"+_toStem+".txt");
+        try {
+            file.createNewFile();
+            BufferedWriter writer=new BufferedWriter(new FileWriter(file));
+            writer.write(Double.toString(getAvgldl())+"\n");
+            writer.newLine();
+            writer.write(getNumberOfDocs()+"\n");
+            writer.newLine();
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
     }
 
@@ -665,6 +685,16 @@ public class Indexer {
             f.delete();
             f=new File(_path+"/CityDictionary.txt");
             f.delete();
+            //documents
+            f=new File(_path + "/" +"Documents.txt");
+            f.delete();
+            //entities
+            f=new File(_path + "/Entities"  + _toStem+".txt");
+            f.delete();
+            //details
+            f=new File(_path + "/Details"  + _toStem+".txt");
+            f.delete();
+
 
             if(dictionary!=null) {
                 dictionary.clear();
@@ -798,7 +828,7 @@ public class Indexer {
      * docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
 
      */
-    private void writeToDocumentsList(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language) {
+    private void writeToDocumentsAndEntitiesList(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language,String entitiesLine) {
         _wordCount.getAndAdd( numOfWords); //todo - future error-  not added .
         //docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)-54 bytes
         byte[] name=stringToByteArray(nameOfDoc,16);
@@ -813,29 +843,9 @@ public class Indexer {
         //new!!
         docsToWrite.add(nameOfDoc+"@"+cityOfDoc+"@"+language+"@"+maxtf+"@"
         +size+"@"+numOfWords+"\n");
-        /**
-        for (int i = 0; i < 16; i++) {
-            docsToWrite.add(name[i]);
-        }
-        for (int i = 0; i <16 ; i++) {
-            docsToWrite.add(city[i]);
-        }
-        for (int i = 0; i <10 ; i++) {
-            docsToWrite.add(lang_bytes[i]);
-        }
+        //write entities
+        entitiesToWrite.add(entitiesLine);
 
-        for (int i = 0; i < 4; i++) {
-            docsToWrite.add(maxtf_bytes[i]);
-        }
-        for (int i = 0; i <4 ; i++) {
-            docsToWrite.add(size_bytes[i]);
-        }
-
-        for (int i = 0; i < 4; i++) {
-            docsToWrite.add(words_bytes[i]);
-        }
-
-**/
     }
 
     /**
