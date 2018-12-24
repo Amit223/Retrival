@@ -34,6 +34,8 @@ public class Controller_2 {
     @FXML
     TitledPane filterbycity;
 
+    @FXML CheckBox toStem;
+
 
     /**
      *sets model
@@ -170,7 +172,7 @@ public class Controller_2 {
 
     public void Run(ActionEvent actionEvent){
        Vector<String> cities = new Vector<>( listView2.getItems());
-       model.Start(path.getText(),cities);
+       model.Start(path.getText(),cities,toStem.isSelected());
     }
 
 
