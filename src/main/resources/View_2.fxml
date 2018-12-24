@@ -48,12 +48,12 @@
             <TextField fx:id="queriesFilepath" disable="true" layoutX="68.0" prefHeight="25.0" prefWidth="161.0" promptText="The file of queries" />
          </children>
       </Pane>
-      <Button fx:id="runButton" layoutX="253.0" layoutY="521.0" mnemonicParsing="false" prefHeight="57.0" prefWidth="115.0" text="Run">
+      <Button fx:id="runButton" layoutX="253.0" layoutY="521.0" mnemonicParsing="false" onAction="#Run" prefHeight="57.0" prefWidth="115.0" text="Run">
          <font>
             <Font name="System Bold" size="25.0" />
          </font>
       </Button>
-      <TextArea fx:id="queryArea" layoutX="32.0" layoutY="140.0" prefHeight="110.0" prefWidth="227.0" promptText="Write your query here" />
+      <TextArea fx:id="query" layoutX="32.0" layoutY="140.0" prefHeight="110.0" prefWidth="227.0" promptText="Write your query here" />
       <Label layoutX="290.0" layoutY="208.0" text="Or" textAlignment="JUSTIFY">
          <font>
             <Font name="System Bold" size="35.0" />
@@ -61,6 +61,6 @@
       </Label>
       <RadioButton fx:id="browseButton" layoutX="338.0" layoutY="140.0" mnemonicParsing="false" onAction="#selectBrowse" />
       <RadioButton fx:id="writeQuery" layoutX="12.0" layoutY="140.0" mnemonicParsing="false" onAction="#selectWrite" />
-      <CheckBox layoutX="14.0" layoutY="268.0" mnemonicParsing="false" selected="true" text="Treat semantic" />
+      <CheckBox fx:id="toTreatSemantic" layoutX="14.0" layoutY="268.0" mnemonicParsing="false" selected="true" text="Treat semantic" />
    </children>
 </AnchorPane>
