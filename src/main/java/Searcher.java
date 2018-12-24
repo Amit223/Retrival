@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * this class get query (string with spaces), parse it to final terms dictionary @link {@link Parser#_termList}.
  * for this dictionary<term,tf> this class return list of 50 most relevant documents using {@link Ranker}
- * the main function in this class is {@link #Search(String, boolean)}
+ * the main function in this class is {@link #Search(String, boolean, boolean)}
  */
 public class Searcher {
 
@@ -202,7 +202,7 @@ public class Searcher {
 
 
     /**
-     * using for {@link #Search(String, boolean)}
+     * using for {@link #Search(String, boolean, boolean)}
      * copy from {@link Indexer#loadDictionaryToMemory()}
      * this function load to dictionary ( if not loaded yet) the information from dictionary file.
      * return true if successful, false otherwise
@@ -325,9 +325,11 @@ public class Searcher {
      *
      * @param query  - to retrieve
      * @param toStem - if true stem, else not.
+     * @param toTreatSemantic
      * @return list of relevant docs.
      */
-    public Collection<Integer> Search(String query, boolean toStem) {
+    public Collection<Integer> Search(String query, boolean toStem, boolean toTreatSemantic) {
+        isSemantic=toTreatSemantic;
         loadDictionaryToMemory(toStem); //using for "Entities"
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();

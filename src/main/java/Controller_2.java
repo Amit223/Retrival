@@ -1,9 +1,13 @@
+import com.sun.org.apache.xml.internal.utils.StringComparable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -33,6 +37,13 @@ public class Controller_2 {
     String unselectedItem;
     @FXML
     TitledPane filterbycity;
+    @FXML
+    private CheckBox toTreatSemantic;
+    @FXML
+    private CheckBox toStem;
+    @FXML
+    private TextArea query;
+
 
 
     /**
@@ -51,6 +62,9 @@ public class Controller_2 {
                     selectedItem =  listView.getSelectionModel().getSelectedItem().toString();
                     listView2.getItems().add(selectedItem);
                     listView.getItems().remove(selectedItem);
+                    listView.getItems().sort(Comparator.naturalOrder());
+                    listView2.getItems().sort(Comparator.naturalOrder());
+
                 }
 
             }
@@ -63,6 +77,9 @@ public class Controller_2 {
                    unselectedItem = listView2.getSelectionModel().getSelectedItem().toString();
                    listView.getItems().add(unselectedItem);
                    listView2.getItems().remove(unselectedItem);
+                   listView.getItems().sort(Comparator.naturalOrder());
+                   listView2.getItems().sort(Comparator.naturalOrder());
+
                }
             }
         });
@@ -145,6 +162,8 @@ public class Controller_2 {
                 list.add(city);
             }
             listView.setItems(list);
+            listView.getItems().sort(Comparator.naturalOrder());
+
         }
     }
 
@@ -168,9 +187,23 @@ public class Controller_2 {
 
     }
 
+    @FXML
     public void Run(ActionEvent actionEvent){
        Vector<String> cities = new Vector<>( listView2.getItems());
-       model.Start(path.getText(),cities);
+        FXMLLoader fxmlLoader=new FXMLLoader();
+        Parent root = null;
+        try {
+            root = fxmlLoader.load(getClass().getResource("/ResultsView.fxml").openStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        ResultsController controller =fxmlLoader.getController();
+        controller.setModel((model.Start(path.getText(),cities, query.getText(),toStem.isSelected(),toTreatSemantic.isSelected())));
+        Scene scene = new Scene(root);
+        Stage stage= new Stage();
+        stage.setTitle("Results");
+        stage.setScene(scene);
+        stage.show();
     }
 
 

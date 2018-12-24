@@ -24,7 +24,7 @@
             </Label>
             <Button layoutX="4.0" layoutY="75.0" mnemonicParsing="false" onAction="#getDirChooser" prefHeight="25.0" prefWidth="96.0" text="Choose Folder" />
             <TextField fx:id="path" disable="true" layoutX="109.0" layoutY="75.0" prefHeight="25.0" prefWidth="466.0" promptText="The folder of posting files.." />
-            <CheckBox layoutX="4.0" layoutY="107.0" mnemonicParsing="false" text="with stemming" />
+            <CheckBox fx:id="toStem" layoutX="4.0" layoutY="107.0" mnemonicParsing="false" text="with stemming" />
             <Accordion layoutX="158.0" layoutY="146.0" />
             <Accordion layoutX="41.0" layoutY="146.0" />
           <TitledPane fx:id="filterbycity" animated="false" disable="true" expanded="false" layoutX="7.0" layoutY="298.0" prefHeight="209.0" prefWidth="576.0" text="Filter by cities">
@@ -48,12 +48,12 @@
             <TextField fx:id="queriesFilepath" disable="true" layoutX="68.0" prefHeight="25.0" prefWidth="161.0" promptText="The file of queries" />
          </children>
       </Pane>
-      <Button fx:id="runButton" layoutX="253.0" layoutY="521.0" mnemonicParsing="false" prefHeight="57.0" prefWidth="115.0" text="Run">
+      <Button fx:id="runButton" layoutX="253.0" layoutY="521.0" mnemonicParsing="false" onAction="#Run" prefHeight="57.0" prefWidth="115.0" text="Run">
          <font>
             <Font name="System Bold" size="25.0" />
          </font>
       </Button>
-      <TextArea fx:id="queryArea" layoutX="32.0" layoutY="140.0" prefHeight="110.0" prefWidth="227.0" promptText="Write your query here" />
+      <TextArea fx:id="query" layoutX="32.0" layoutY="140.0" prefHeight="110.0" prefWidth="227.0" promptText="Write your query here" />
       <Label layoutX="290.0" layoutY="208.0" text="Or" textAlignment="JUSTIFY">
          <font>
             <Font name="System Bold" size="35.0" />
@@ -61,6 +61,6 @@
       </Label>
       <RadioButton fx:id="browseButton" layoutX="338.0" layoutY="140.0" mnemonicParsing="false" onAction="#selectBrowse" />
       <RadioButton fx:id="writeQuery" layoutX="12.0" layoutY="140.0" mnemonicParsing="false" onAction="#selectWrite" />
-      <CheckBox layoutX="14.0" layoutY="268.0" mnemonicParsing="false" selected="true" text="Treat semantic" />
+      <CheckBox fx:id="toTreatSemantic" layoutX="14.0" layoutY="268.0" mnemonicParsing="false" selected="true" text="Treat semantic" />
    </children>
 </AnchorPane>
