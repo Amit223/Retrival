@@ -1,8 +1,11 @@
 import javafx.application.Application;
+import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.RadioButton;
 import javafx.stage.Stage;
+
 public class GUI_2 extends Application {
     public static void main(String[] args) {
         launch(args);
@@ -16,9 +19,9 @@ public class GUI_2 extends Application {
         Parent root = fxmlLoader.load(getClass().getResource("/View_2.fxml").openStream());
         Controller_2 controller =fxmlLoader.getController();
         controller.setModel();
-        Scene scene = new Scene(root, 500, 350);
+        Scene scene = new Scene(root);
+
         primaryStage.setTitle("Retrival Project");
         primaryStage.setScene(scene);
         primaryStage.show();
-    }
-}
+    }}
