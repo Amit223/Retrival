@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * this class index all documents in corpus to 28 files: 'a'-'z' , '0' (to digit and signs) and to city posting the city details.
@@ -37,7 +38,7 @@ public class Indexer {
     private boolean _toStem;
     private ListOfByteArrays [] postingLines;
     private int numOfTerms=0;
-    private  AtomicInteger _wordCount;//the average length
+    private AtomicLong _wordCount;//the average length
 
     private AtomicInteger [] lineCounter;
 
@@ -105,7 +106,7 @@ public class Indexer {
             languages=new HashSet<>();
             tempPathToEntities=path+"/EntitiesTemp"+toStem+".txt";
             _AtomicNumlineEntities=new AtomicInteger(0);
-            _wordCount=new AtomicInteger(0);
+            _wordCount=new AtomicLong(0);
             entitiesToWrite=new ListOfByteArrays();
 
             //citys
