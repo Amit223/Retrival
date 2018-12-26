@@ -19,8 +19,8 @@ public class Model_2 {
         StopWords.setStopwords(ReadFile.readStopWords("d:\\documents\\users\\liadber\\Downloads\\corpus")); //todo fix
         readIndexerInfo(path,toStem);
 
-        searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash);
-        return searcher.Search(query, toStem, toTreatSemantic);
+        searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem);
+        return searcher.Search(query, toTreatSemantic);
     }
 
     private void readIndexerInfo(String path,boolean toStem) {

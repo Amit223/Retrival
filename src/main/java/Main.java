@@ -69,12 +69,10 @@ private static boolean  isSemantic = true;
     }
 
     public static void main(String[] args) {
-        treatSemantic("hello");
-
-
-        //      byte[] num=toBytes(999999);
-   //     System.out.println(convertByteToInt(num));
-   //     FilterDocsByCitys();
+       Searcher searcher=new Searcher(20,472525
+               ,"d:\\documents\\users\\ammo\\Downloads\\posting files",new HashSet<>(),true);
+       searcher.Search("it by an economic crisis compounded by the 50 per \n" +
+               "cent devaluation of the CFA",false);
     }
     public static int convertByteToInt(byte[] b)
     {
