@@ -1,5 +1,6 @@
 
 import ParseObjects.Number;
+import javafx.util.Pair;
 import sun.awt.Mutex;
 
 import java.io.*;
@@ -190,7 +191,7 @@ public class Indexer {
             String term = termsKeys.next();
             if (Character.isUpperCase(term.charAt(0)) && !term.contains("-")) {
                 int tf = terms.get(term);
-                entities.append(term + ">" + tf + "~~");//term@~@tf#~#term@~@tf#~#...,term&tf/n
+                entities.append(term + "^" + tf + "~~");//term@~@tf#~#term@~@tf#~#...,term&tf/n
             }
         }
         if(entities.length()>0){//there are entities
@@ -552,7 +553,39 @@ public class Indexer {
      * @param Entities
      * @return top5 entities from list
      */
+    private PriorityQueue<Pair<String, Integer>> _RankedEntities = new PriorityQueue(new Comparator<Pair<Integer, Double>>() {
+        @Override
+        public int compare(Pair<Integer, Double> o1, Pair<Integer, Double> o2) {
+            if (o1.getValue() <= o2.getValue()) {
+                return -1;
+            } else //if(o1.getValue()<o2.getValue())
+                return 1;
+            //else return 0;
+
+        }
+    }); // tf-entity
     private Collection<String> getFinal5Entities(Map<String,Integer> Entities) {
+
+        Iterator<String> iterator=Entities.keySet().iterator();
+        while (iterator.hasNext()) {
+            String entity=iterator.next();
+            if (_RankedEntities.size() > 4) {
+                Integer lowest = _RankedEntities.peek().getValue();
+                if (Entities.get(entity) > (lowest)) {
+                    _RankedEntities.poll();
+                    _RankedEntities.add(new Pair<String, Integer>(entity, Entities.get(entity)));
+                }
+            } else _RankedEntities.add(new Pair<String, Integer>(entity, Entities.get(entity)));
+
+        }
+        Vector<String> final5entities=new Vector<>();
+        while(_RankedEntities.size()>0){
+            Pair<String,Integer> entity=_RankedEntities.poll();
+            final5entities.add(entity.getKey());
+        }
+        return final5entities;
+
+        /**
         SortedMap<Integer, String> RankedEntities = new TreeMap<>();
         Iterator<String> iterator=Entities.keySet().iterator();
         while (iterator.hasNext()) {
@@ -571,6 +604,7 @@ public class Indexer {
             }
         }
         return RankedEntities.values();
+         **/
     }
     private void writeFilesAndEntitiesToFinalFile() {
         File temp=new File(tempPathToEntities);
@@ -591,28 +625,45 @@ public class Indexer {
                 //entities
                 String [] entities_String=line.split("~~");
                 Map<String,Integer> entities=new HashMap<>();
+                boolean empty=false;
                 for(int i=0;i<entities_String.length;i++){
-                    String [] entity_tf=entities_String[i].split(">");//term,tf
-                    entities.put(entity_tf[0],Integer.valueOf(entity_tf[1]));
+                    String [] entity_tf=entities_String[i].split("\\^");//term,tf
+                    if(entity_tf.length==1&&entity_tf[0].equals("X")){//no entities in line
+                        empty=true;//no entities in doc
+                    }
+                    else {
+                        entities.put(entity_tf[0], Integer.valueOf(entity_tf[1]));
+                    }
                 }
-                Collection<String> final_5=getFinal5Entities(entities);
-                Iterator<String> iterator=final_5.iterator();
-                int i=0;
-                while (i<5){
-                    byte[] term;
-                    byte[] tf;
-                    if(iterator.hasNext()) {
-                        String entity=iterator.next();
-                        term = stringToByteArray(entity, 20);//24*5=120 bytes a row
-                        tf=Indexer.toBytes(entities.get(entity));
+                Collection<String> final_5;
+                if(!empty) {
+                    final_5 = getFinal5Entities(entities);
+                    Iterator<String> iterator = final_5.iterator();
+                    int i = 0;
+                    while (i < 5) {
+                        byte[] term;
+                        byte[] tf;
+                        if (iterator.hasNext()) {
+                            String entity = iterator.next();
+                            term = stringToByteArray(entity, 20);//24*5=120 bytes a row
+                            tf = Indexer.toBytes(entities.get(entity));
+                        } else {
+                            term = stringToByteArray("", 20);
+                            tf = Indexer.toBytes(-1);
+                        }
+                        writer.write(term);
+                        writer.write(tf);
+                        i++;
                     }
-                    else{
-                        term=stringToByteArray("",20);
-                        tf=Indexer.toBytes(-1);
+                }
+                else{//no term in line:
+                    for(int i=0;i<5;i++) {
+                        byte[] term = stringToByteArray("X", 20);//24*5=120 bytes a row
+                        byte[] tf = Indexer.toBytes(0);
+                        writer.write(term);
+                        writer.write(tf);
                     }
-                    writer.write(term);
-                    writer.write(tf);
-                    i++;
+
                 }
                 //documents
                 String [] details=docLine.split("@");
@@ -802,9 +853,9 @@ public class Indexer {
     private void writeToPostingList(int lineOfDoc, int tf, ListOfByteArrays postingLine, String term ) {
         StringBuilder toWrite=new StringBuilder();
         toWrite.append(term);
-        toWrite.append("&");
+        toWrite.append("~");
         toWrite.append(lineOfDoc);
-        toWrite.append("-");
+        toWrite.append("^");
         toWrite.append(tf);
         toWrite.append("\n");
         int index = Character.toLowerCase(term.charAt(0)) - 'a' + 1;
@@ -1311,7 +1362,7 @@ class ThreadedSort extends Thread{
             return firsthalf+"_"+lasthalf;
         }
         catch (Exception e){
-        System.out.println("thats why");
+        e.printStackTrace();
 
     }
     return "";
@@ -1358,10 +1409,10 @@ class ThreadedSort extends Thread{
 
 
     private static String getField(String line) {
-        if(line.contains("-")) {
-            String[] values = line.split("&");//valuse[0]-term, values[1]docLine-tf
-            String[] line_tf = values[0].split("-");
-            String returnedValue = values[0] + "&" + line_tf[0];//term&line
+        if(line.contains("\\^")) {
+            String[] values = line.split("~");//valuse[0]-term, values[1]docLine-tf
+            String[] line_tf = values[0].split("\\^");
+            String returnedValue = values[0] + "~" + line_tf[0];//term&line
             return returnedValue;
         }
         return line;
@@ -1401,7 +1452,7 @@ class ThreadedUpdate extends Thread{
             BufferedReader reader=new BufferedReader(new FileReader(fileName));
             String line=reader.readLine();
             while(line!=null){
-                String[] strings=line.split("&");
+                String[] strings=line.split("~");
                 if(!prevWord.equalsIgnoreCase(strings[0])||!prevWord.equals(strings[0])){//the term wasn't touched
                     if(dictionary.containsKey(strings[0])||dictionary.containsKey(Indexer.Reverse(strings[0]))) {//the term in dictionary and new
                         prevWord = strings[0];
@@ -1411,8 +1462,6 @@ class ThreadedUpdate extends Thread{
                         else
                             term=Indexer.Reverse(strings[0]);
                         //update dictionary
-                        if(term.equals("-01-11"))
-                            System.out.println("g");
                         dictionaryMutex.lock();
                         Vector<Integer> details = dictionary.get(term);
                         details.remove(2);//the ptr
@@ -1421,8 +1470,12 @@ class ThreadedUpdate extends Thread{
                         dictionary.put(term, details);
                         dictionaryMutex.unlock();
                         //write to the new file in bytes
-                        String[] postDetails = strings[1].split("-");
+                        String[] postDetails = strings[1].split("\\^");
+                        if(postDetails[0].equals("D")||postDetails[0].equals("P")){
+                            System.out.println("d");
+                        }
                         byte[] lineDoc = Indexer.toBytes(Integer.valueOf(postDetails[0]));
+
                         byte[] tf = Indexer.toBytes(Integer.valueOf(postDetails[1]));
                         writer.write(lineDoc);
                         writer.write(tf);
