@@ -1,4 +1,6 @@
 import com.sun.org.apache.xml.internal.utils.StringComparable;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -15,6 +17,8 @@ import javafx.stage.Stage;
 
 
 import java.io.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class Controller_2 {
@@ -52,9 +56,6 @@ public class Controller_2 {
      */
     public void setModel() {
         model = new Model_2();
-        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-
-
         listView.setOnMouseClicked(new EventHandler<Event>() {
 
             @Override
@@ -82,6 +83,12 @@ public class Controller_2 {
                    listView2.getItems().sort(Comparator.naturalOrder());
 
                }
+            }
+        });
+        query.textProperty().addListener(new ChangeListener<String>() {
+            @Override
+            public void changed(final ObservableValue<? extends String> observable, final String oldValue, final String newValue) {
+                selectWrite(new ActionEvent());
             }
         });
     }
@@ -138,6 +145,7 @@ public class Controller_2 {
      * do a directory chooser of path of corpus and stop words
      */
     public void getFileCooser(ActionEvent actionEvent) {
+        selectBrowse(actionEvent);
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Select file of queries");
         File file = chooser.showOpenDialog(new Stage());
@@ -176,36 +184,66 @@ public class Controller_2 {
         browseButton.setSelected(true);
         writeQuery.setSelected(false);
     }
+
+
     @FXML
     /**
      * flip the radio button
      */
-
     public void selectWrite(ActionEvent actionEvent) {
         writeQuery.setSelected(true);
         browseButton.setSelected(false);
-
-
     }
 
     @FXML
     public void Run(ActionEvent actionEvent){
-       Vector<String> cities = new Vector<>( listView2.getItems());
-        FXMLLoader fxmlLoader=new FXMLLoader();
-        Parent root = null;
-        try {
-            root = fxmlLoader.load(getClass().getResource("/ResultsView.fxml").openStream());
-        } catch (IOException e) {
-            e.printStackTrace();
+        //check input:
+        if(writeQuery.isSelected() && ( query.getText()==null || query.getText().length()==0)){
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setContentText("You select to write query so please write one in the query area.");
+            alert.show();
+            return;
         }
-        ResultsController controller =fxmlLoader.getController();
-        controller.setModel((model.Start(path.getText(),cities, query.getText(),toStem.isSelected(),toTreatSemantic.isSelected())));
+        if(browseButton.isSelected() && (queriesFilepath.getText()==null ||  query.getText().length()==0)){
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setContentText("You select to browse file of queries, so please browse a path of queries' file.");
+            alert.show();
+            return;
+        }
+
+        Vector<String> cities = new Vector<>( listView2.getItems());
+        Parent root=null;
+        FXMLLoader fxmlLoader=new FXMLLoader();
+        if(writeQuery.isSelected()) {
+
+            try {
+                root = fxmlLoader.load(getClass().getResource("/ResultsView.fxml").openStream());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            ResultsController controller =fxmlLoader.getController();
+            controller.setModel((model.Start(path.getText(), cities, query.getText(), toStem.isSelected(), toTreatSemantic.isSelected())));
+
+        }
+        else { //if browseButton.isSelected()
+            try {
+                try {
+                    root = fxmlLoader.load(getClass().getResource("/queriesList.fxml").openStream());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                QueriesListController controller =fxmlLoader.getController();
+                controller.setModel((model.Start(path.getText(), cities, Paths.get(queriesFilepath.getText()), toStem.isSelected(), toTreatSemantic.isSelected())));
+            } catch (IOException e) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("You select to browse file of queries, and there is a problem with the file or with the file path.");
+                alert.show();            }
+        }
         Scene scene = new Scene(root);
         Stage stage= new Stage();
         stage.setTitle("Results");
         stage.setScene(scene);
         stage.show();
-
     }
 
 

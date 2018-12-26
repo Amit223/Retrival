@@ -31,7 +31,7 @@ public class Ranker {
     public void addItem(double rank, Integer doc) {
         if (rank == 0) return;
         _RankDocsMutex.lock();
-        if (_RankedDocs.size() > 2) {
+        if (_RankedDocs.size() > 49) {
             Double lowest = _RankedDocs.peek().getValue();
             if (rank > (lowest)) {
                 _RankedDocs.poll();
