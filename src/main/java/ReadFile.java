@@ -1,14 +1,16 @@
+import javafx.util.Pair;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import sun.awt.Mutex;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Scanner;
+import java.util.Vector;
 
 /**
  * this class read file, (include the stopwords in the first time)
@@ -19,6 +21,20 @@ public class ReadFile {
 
     private static Elements docs;
 
+     public static Vector<Pair<String,String>> readQueriesFile(Path filePath) throws IOException {
+        Document document = null;
+        document = Jsoup.parse(new String(Files.readAllBytes(filePath)));
+        Elements queries = document.getElementsByTag("top");
+         Vector<Pair<String,String>> queriesTitels = new Vector<>();
+        for(Element query: queries){
+            String id = query.getElementsByTag("num").get(0).childNode(0).toString().trim().split(":")[1];
+            String title = query.getElementsByTag("title").get(0).text();
+            String desc = query.getElementsByTag("desc").get(0).childNode(0).toString().trim().split(":")[1];
+            String narr = query.getElementsByTag("narr").get(0).text();
+            queriesTitels.add(new Pair<String,String>(id,title));
+        }
+        return queriesTitels;
+    }
     /**
      * separate the file to documents using {@link #readAndSeperateFile(String)}
      * keep the documents in the file in {@link #docs}

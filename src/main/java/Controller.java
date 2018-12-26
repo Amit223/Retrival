@@ -33,6 +33,7 @@ public class Controller {
 
 
 
+
     private String pathS;
     Model model;
 
@@ -43,6 +44,7 @@ public class Controller {
         reset.setDisable(true);
         showDictionary.setDisable(true);
         loadDictionaryToMemory.setDisable(true);
+
     }
 
     /**
@@ -126,6 +128,8 @@ public class Controller {
             reset.setDisable(true);
         }
     }
+
+
 
     /**
      *

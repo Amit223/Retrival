@@ -67,9 +67,40 @@ private static boolean  isSemantic = true;
         }
         return query;
     }
+    private static PriorityQueue<Pair<Integer, Double>> _RankedDocs = new PriorityQueue(new Comparator<Pair<Integer, Double>>() {
+        @Override
+        public int compare(Pair<Integer, Double> o1, Pair<Integer, Double> o2) {
+            if (o1.getValue() <= o2.getValue()) {
+                return -1;
+            } else //if(o1.getValue()<o2.getValue())
+                return 1;
+            //else return 0;
+
+        }
+    }); // Rank-Doc
+
+     public static void addItem(double rank, Integer doc) {
+        if (rank == 0) return;
+        if (_RankedDocs.size() > 49) {
+            Double lowest = _RankedDocs.peek().getValue();
+            if (rank > (lowest)) {
+                _RankedDocs.poll();
+                _RankedDocs.add(new Pair<Integer, Double>(doc, rank));
+            }
+        } else _RankedDocs.add(new Pair<Integer, Double>(doc, rank));
+    }
 
     public static void main(String[] args) {
-        treatSemantic("hello");
+        for (int i = 0; i <70 ; i++) {
+            addItem(i,i*2);
+        }
+        System.out.println(_RankedDocs.toString());
+        for (int i = 0; i < 50 ; i++) {
+            if(_RankedDocs.poll().getValue()<20)
+                System.out.println("help");
+
+        }
+        System.out.println(_RankedDocs.size());
 
 
         //      byte[] num=toBytes(999999);
