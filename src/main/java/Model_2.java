@@ -1,5 +1,4 @@
 import java.util.Collection;
-=======
 import javax.xml.stream.events.StartDocument;
 import java.io.*;
 

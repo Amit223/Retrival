@@ -45,7 +45,6 @@ public class Controller_2 {
     private TextArea query;
 
 
-    @FXML CheckBox toStem;
 
 
     /**

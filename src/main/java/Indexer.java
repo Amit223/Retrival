@@ -190,11 +190,11 @@ public class Indexer {
             String term = termsKeys.next();
             if (Character.isUpperCase(term.charAt(0)) && !term.contains("-")) {
                 int tf = terms.get(term);
-                entities.append(term + "@" + tf + "#");//term&tf,term&tf,...,term&tf/n
+                entities.append(term + ">" + tf + "~~");//term@~@tf#~#term@~@tf#~#...,term&tf/n
             }
         }
         if(entities.length()>0){//there are entities
-            line=entities.substring(0,entities.length());
+            line=entities.substring(0,entities.length()-2);
             line=line+"\n";
         }
         else{
@@ -589,10 +589,10 @@ public class Indexer {
             String docLine=docReader.readLine();
             while(line!=null&&!line.equals("")){
                 //entities
-                String [] entities_String=line.split("#");
+                String [] entities_String=line.split("~~");
                 Map<String,Integer> entities=new HashMap<>();
                 for(int i=0;i<entities_String.length;i++){
-                    String [] entity_tf=entities_String[i].split("@");//term,tf
+                    String [] entity_tf=entities_String[i].split(">");//term,tf
                     entities.put(entity_tf[0],Integer.valueOf(entity_tf[1]));
                 }
                 Collection<String> final_5=getFinal5Entities(entities);
