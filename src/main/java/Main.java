@@ -91,21 +91,11 @@ private static boolean  isSemantic = true;
     }
 
     public static void main(String[] args) {
-        for (int i = 0; i <70 ; i++) {
-            addItem(i,i*2);
-        }
-        System.out.println(_RankedDocs.toString());
-        for (int i = 0; i < 50 ; i++) {
-            if(_RankedDocs.poll().getValue()<20)
-                System.out.println("help");
 
-        }
-        System.out.println(_RankedDocs.size());
-
-
-        //      byte[] num=toBytes(999999);
-   //     System.out.println(convertByteToInt(num));
-   //     FilterDocsByCitys();
+       Searcher searcher=new Searcher(20,472525
+               ,"d:\\documents\\users\\ammo\\Downloads\\posting files",new HashSet<>(),true);
+       searcher.Search("it by an economic crisis compounded by the 50 per \n" +
+               "cent devaluation of the CFA",false);
     }
     public static int convertByteToInt(byte[] b)
     {

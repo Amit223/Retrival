@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * this class get query (string with spaces), parse it to final terms dictionary @link {@link Parser#_termList}.
  * for this dictionary<term,tf> this class return list of 50 most relevant documents using {@link Ranker}
- * the main function in this class is {@link #Search(String, boolean, boolean)}
+ * the main function in this class is {@link #Search(String, boolean)}
  */
 public class Searcher {
 
@@ -21,6 +21,7 @@ public class Searcher {
     private double _avgldl = 0; //average document length
     private HashSet<String> _chosenCities; //if (_chosenCities.size()==0|| _chosenCities.contains(city)) add it. else- not
     private Map<String, Vector<Integer>> dictionary;
+    private boolean toStem;
 
 
     /**
@@ -35,25 +36,29 @@ public class Searcher {
     private boolean isSemantic; //todo what defualt ?
 
 
-    public Searcher(double avgldl, int numOfIndexedDocs, String path, HashSet<String> chosenCities) {
+    public Searcher(double avgldl, int numOfIndexedDocs, String path, HashSet<String> chosenCities,boolean toStem) {
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;//_indexer.getAvgldl();no!
         _doc_termPlusTfs = new HashMap<>();
         _doc_size = new ConcurrentHashMap<>();
         _chosenCities = chosenCities;
         _path=path;
+        this.toStem=toStem;
+        loadDictionaryToMemory(toStem); //using for "Entities"
     }
 
     /**Auxiliary functions for Search**/
 
     /**
-     * build {@link #_doc_termPlusTfs} using {@link #addDocsTo_doc_termPlusTfs(String,boolean)}
+     * build {@link #_doc_termPlusTfs} using {@link #addDocsTo_doc_termPlusTfs(String)}
      *
      * @param query  - query to search
      * @param toStem if stem is needed
      */
     private void build_doc_termPlusTfs(String query, boolean toStem) {
-        query= treatSemantic(query);
+        if(isSemantic)
+            query= treatSemantic(query);
+        StopWords.setStopwords("");
         Parser queryParser = new Parser();
         queryParser.Parse(query, toStem, "");
         HashMap<String, Integer> termList = queryParser.getTerms();
@@ -62,7 +67,7 @@ public class Searcher {
         String term = "";
         while (termsIt.hasNext()) {
             term = termsIt.next();
-            addDocsTo_doc_termPlusTfs(term,toStem);
+            addDocsTo_doc_termPlusTfs(term);
         }
     }
 
@@ -128,7 +133,7 @@ public class Searcher {
      * @param term - the term that adding the docs that include it.
      *             working in concurrency
      */
-    private void addDocsTo_doc_termPlusTfs(String term,boolean toStem) {
+    private void addDocsTo_doc_termPlusTfs(String term) {
         Vector<Pair<Integer, Integer>> doc_tf = readTermDocs(term,toStem);
         _term_docsCounter.put(term, doc_tf.size());
         for (int i = 0; i < doc_tf.size(); i++) {
@@ -164,6 +169,7 @@ public class Searcher {
         }
         try {
             RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
+            //todo not working-wont read docline and tf!
             int lineNum = dictionary.get(term).elementAt(2);//the pointer;
             int numOfDocs = dictionary.get(term).elementAt(0);//num of docs
             for (int i = 0; i < numOfDocs; i++) {
@@ -176,6 +182,7 @@ public class Searcher {
                 int docLine = byteToInt(docLine_bytes);
                 int tf = byteToInt(tf_bytes);
                 Pair<Integer, Integer> pair = new Pair<>(docLine, tf);
+                doc_tf.add(pair);
             }
             raf.close();
         } catch (FileNotFoundException e) {
@@ -202,7 +209,7 @@ public class Searcher {
 
 
     /**
-     * using for {@link #Search(String, boolean, boolean)}
+     * using for {@link #Search(String, boolean)}
      * copy from {@link Indexer#loadDictionaryToMemory()}
      * this function load to dictionary ( if not loaded yet) the information from dictionary file.
      * return true if successful, false otherwise
@@ -247,7 +254,14 @@ public class Searcher {
                 raf.seek(docNum);
                 raf.read(line);//20 bytes each term!
                 Map<String,Integer> Entities = findEntities(line);
-                if (!_doc_Entities.containsKey(docNum)) _doc_Entities.put(docNum, Entities);
+                if(Entities.size()==1&&Entities.containsKey("X")){
+                    if (!_doc_Entities.containsKey(docNum))
+                        _doc_Entities.put(docNum, new HashMap<>());//no entities for doc
+                }
+                else {
+                    if (!_doc_Entities.containsKey(docNum))
+                        _doc_Entities.put(docNum, Entities);
+                }
             }
             raf.close();
         } catch (FileNotFoundException e) {
@@ -310,11 +324,16 @@ public class Searcher {
         int tf5=byteToInt(f5);
 
         Map<String,Integer> entities=new HashMap<>();
-        entities.put(entity1,tf1);
-        entities.put(entity2,tf2);
-        entities.put(entity3,tf3);
-        entities.put(entity4,tf4);
-        entities.put(entity5,tf5);
+        if(!entity1.equals(""))
+            entities.put(entity1,tf1);
+        if(!entity2.equals(""))
+            entities.put(entity2,tf2);
+        if(!entity3.equals(""))
+            entities.put(entity3,tf3);
+        if(!entity4.equals(""))
+            entities.put(entity4,tf4);
+        if(!entity5.equals(""))
+            entities.put(entity5,tf5);
         return entities;
     }
 
@@ -324,13 +343,11 @@ public class Searcher {
      * for this dictionary<term,tf> this class return list of 50 most relevant documents using {@link Ranker}
      *
      * @param query  - to retrieve
-     * @param toStem - if true stem, else not.
      * @param toTreatSemantic
      * @return list of relevant docs.
      */
-    public Collection<Integer> Search(String query, boolean toStem, boolean toTreatSemantic) {
+    public Collection<Integer> Search(String query, boolean toTreatSemantic) {
         isSemantic=toTreatSemantic;
-        loadDictionaryToMemory(toStem); //using for "Entities"
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
         Collection<Integer>  ans = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl); // return only 50 most relvante
