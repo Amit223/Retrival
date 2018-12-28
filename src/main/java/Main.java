@@ -93,7 +93,7 @@ private static boolean  isSemantic = true;
     public static void main(String[] args) {
 
        Searcher searcher=new Searcher(20,472525
-               ,"d:\\documents\\users\\ammo\\Downloads\\posting files",new HashSet<>(),true);
+               ,"C:\\Users\\AMIT MOSHE\\Desktop\\אוניברסיטה\\סמסטר ה\\אחזור\\tosave",new HashSet<>(),true);
        searcher.Search("it by an economic crisis compounded by the 50 per \n" +
                "cent devaluation of the CFA",false);
     }

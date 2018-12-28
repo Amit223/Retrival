@@ -554,9 +554,9 @@ public class Indexer {
      * @param Entities
      * @return top5 entities from list
      */
-    private PriorityQueue<Pair<String, Integer>> _RankedEntities = new PriorityQueue(new Comparator<Pair<Integer, Double>>() {
+    private PriorityQueue<Pair<String, Integer>> _RankedEntities = new PriorityQueue(new Comparator<Pair<String, Integer>>() {
         @Override
-        public int compare(Pair<Integer, Double> o1, Pair<Integer, Double> o2) {
+        public int compare(Pair<String, Integer> o1, Pair<String, Integer> o2) {
             if (o1.getValue() <= o2.getValue()) {
                 return -1;
             } else //if(o1.getValue()<o2.getValue())
@@ -1470,18 +1470,16 @@ class ThreadedUpdate extends Thread{
                         dictionary.remove(term);
                         dictionary.put(term, details);
                         dictionaryMutex.unlock();
-                        //write to the new file in bytes
-                        String[] postDetails = strings[1].split("\\^");
-                        if(postDetails[0].equals("D")||postDetails[0].equals("P")){
-                            System.out.println("d");
-                        }
-                        byte[] lineDoc = Indexer.toBytes(Integer.valueOf(postDetails[0]));
 
-                        byte[] tf = Indexer.toBytes(Integer.valueOf(postDetails[1]));
-                        writer.write(lineDoc);
-                        writer.write(tf);
                     }
                 }
+                //write to the new file in bytes
+                String[] postDetails = strings[1].split("\\^");
+                byte[] lineDoc = Indexer.toBytes(Integer.valueOf(postDetails[0]));
+
+                byte[] tf = Indexer.toBytes(Integer.valueOf(postDetails[1]));
+                writer.write(lineDoc);
+                writer.write(tf);
                 line=reader.readLine();
                 lineNum+=1;
             }

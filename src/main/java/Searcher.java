@@ -5,6 +5,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,6 +68,8 @@ public class Searcher {
         String term = "";
         while (termsIt.hasNext()) {
             term = termsIt.next();
+            if(term.equals("econom"))
+                System.out.println("C");
             addDocsTo_doc_termPlusTfs(term);
         }
     }
@@ -128,17 +131,18 @@ public class Searcher {
 
     /**
      * Auxiliary function for {@link #build_doc_termPlusTfs(String, boolean)}
-     * add docs that the term appear in them to our {@link #_doc_termPlusTfs} using {@link #readTermDocs(String,boolean)}
+     * add docs that the term appear in them to our {@link #_doc_termPlusTfs} using {@link #readTermDocs(String)}
      *
      * @param term - the term that adding the docs that include it.
      *             working in concurrency
      */
     private void addDocsTo_doc_termPlusTfs(String term) {
-        Vector<Pair<Integer, Integer>> doc_tf = readTermDocs(term,toStem);
+        Map<Integer, Integer> doc_tf = readTermDocs(term);
         _term_docsCounter.put(term, doc_tf.size());
-        for (int i = 0; i < doc_tf.size(); i++) {
-            Integer docNum = doc_tf.get(i).getKey();
-            Integer termTfInDoc = doc_tf.get(i).getValue();
+        Iterator<Integer>docs=doc_tf.keySet().iterator();
+        while (docs.hasNext()) {
+            Integer docNum = docs.next();
+            Integer termTfInDoc = doc_tf.get(docNum);
             if (_doc_termPlusTfs.containsKey(docNum)) {
                 _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc)); //todo - future error - if not update, do put after getting copy.
             } else {
@@ -156,14 +160,14 @@ public class Searcher {
      * @param term - the docs that include  the term
      * @return doc_tf - list of "doc-tf"s for the above term
      */
-    private Vector<Pair<Integer, Integer>> readTermDocs(String term, boolean isStemmed) {
-        Vector<Pair<Integer, Integer>> doc_tf = new Vector<>();
+    private Map<Integer, Integer> readTermDocs(String term) {
+        Map<Integer, Integer> doc_tf = new HashMap<>();
         char letter = term.charAt(0);
         if (Character.isUpperCase(letter))
             letter = Character.toLowerCase(letter);
         else if (Character.isDigit(letter) || letter == '-')
             letter = '0';
-        String fullPath = _path + '/'+letter + isStemmed + "Done.txt";
+        String fullPath = _path + '/'+letter + toStem + "Done.txt";
         if (!dictionary.containsKey(term)) {//the term is not in the dictionary
             return doc_tf;
         }
@@ -173,16 +177,23 @@ public class Searcher {
             int lineNum = dictionary.get(term).elementAt(2);//the pointer;
             int numOfDocs = dictionary.get(term).elementAt(0);//num of docs
             for (int i = 0; i < numOfDocs; i++) {
+                byte[] fullLine=new byte[8];
                 raf.seek((lineNum + i) * 8);
+                raf.read(fullLine);
                 byte[] docLine_bytes = new byte[4];
-                raf.read(docLine_bytes);
-                raf.seek((lineNum + i) * 8 + 4);
+                docLine_bytes[0]=fullLine[0];
+                docLine_bytes[1]=fullLine[1];
+                docLine_bytes[2]=fullLine[2];
+                docLine_bytes[3]=fullLine[3];
                 byte[] tf_bytes = new byte[4];
-                raf.read(tf_bytes);
+                tf_bytes[0]=fullLine[4];
+                tf_bytes[1]=fullLine[5];
+                tf_bytes[2]=fullLine[6];
+                tf_bytes[3]=fullLine[7];
                 int docLine = byteToInt(docLine_bytes);
                 int tf = byteToInt(tf_bytes);
-                Pair<Integer, Integer> pair = new Pair<>(docLine, tf);
-                doc_tf.add(pair);
+                if(!doc_tf.keySet().contains(docLine))
+                    doc_tf.put(docLine,tf);
             }
             raf.close();
         } catch (FileNotFoundException e) {
@@ -350,11 +361,43 @@ public class Searcher {
         isSemantic=toTreatSemantic;
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
-        Collection<Integer>  ans = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl); // return only 50 most relvante
+        Collection<Integer>  ans = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl,_path); // return only 50 most relvante
         getEntities(ans,toStem);
         return ans;
+        //return docNumToNames(ans);
     }
 
+    private Collection<String> docNumToNames(Collection<Integer> ans) {
+        //get doc names!
+        Set<String> documentsToReturn=new HashSet<>();
+        try {
+            RandomAccessFile raf=new RandomAccessFile(new File(_path+"Documents.txt"),"r");
+            Iterator<Integer> docsIterator=ans.iterator();
+            while(docsIterator.hasNext()){
+                int lineNum=docsIterator.next();
+                raf.seek(lineNum*54);
+                byte [] nameInBytes=new byte[16];
+                raf.read(nameInBytes);
+                String name=convertByteToString(nameInBytes);
+                documentsToReturn.add(name);
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return documentsToReturn;
+    }
+    private String convertByteToString(byte[] name) {
+        String s=new String(name, Charset.forName("UTF-8"));
+        String out="";
+        boolean flag=true;
+        for (int i = 0; i < s.length()&&flag; i++) {
+            if(s.charAt(i)!='#')
+                out=out+s.charAt(i);
+            else flag=false;
+        }
+        return out;
+    }
 
 
     private void FilterDocsByCitys() {
