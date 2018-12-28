@@ -1,10 +1,6 @@
 import javafx.util.Pair;
 import sun.awt.Mutex;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.RandomAccessFile;
-import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -73,7 +69,40 @@ public class Ranker {
     }
 
 
+    private Collection<Integer> test(HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank, ConcurrentHashMap<Integer, Integer> doc_size,
+                                     ConcurrentHashMap<String, Integer> term_docsNumber){
+        Set<Integer> docs = docsToRank.keySet();
+        Iterator<Integer> docsIt = docs.iterator();
+        int i = 0;
+        int doc;
+        while (docsIt.hasNext()) {
+            doc = docsIt.next();
+            rankDoc(doc,docsToRank,doc_size,term_docsNumber);
+        }
+        return get50BestDocs();
 
+    }
+    private void rankDoc(int doc,HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank,
+                           ConcurrentHashMap<Integer, Integer> doc_size,
+                           ConcurrentHashMap<String, Integer> term_docsNumber){
+        double _k = 1.25;
+        double _b = 0.75;
+        double rank = 0;
+        Vector<Pair<String, Integer>> _termInDocAndTF=docsToRank.get(doc);
+        Integer _docSize=doc_size.get(doc);
+        Map<String, Integer> _docsNumberforTerm=term_docsNumber;
+        for (int i = 0; i < _termInDocAndTF.size(); i++) {
+            String term = _termInDocAndTF.get(i).getKey();
+            int numOfDocsForTerm = _docsNumberforTerm.get(term);
+            double idf = Math.log(_numOfIndexedDocs / numOfDocsForTerm);
+            double moneOfTf=_termInDocAndTF.get(i).getValue();
+            double tf = moneOfTf / _docSize;
+            double mone = idf * tf;
+            double mechane = tf + _k * (1 - _b + _b * (_docSize / _avgldl));
+            rank = rank +( mone / mechane);
+        }
+        docsAndRanks.put(doc,rank);
+    }
     private void addItem(double rank, Integer doc) {
         if (rank > 0) {
             if (queueSize.get() > 49) {
@@ -120,6 +149,8 @@ public class Ranker {
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;
         _path=path;
+        return test(docsToRank,doc_size,term_docsNumber);
+        /**
         Thread[] threads = new ThreadedRank[docsToRank.size()];
         Set<Integer> docs = docsToRank.keySet();
         Iterator<Integer> docsIt = docs.iterator();
@@ -144,8 +175,10 @@ public class Ranker {
         }
         return get50BestDocs();
         //return PQToCollection(_RankedDocs);
-
+         **/
     }
+
+
 
 }
 /**

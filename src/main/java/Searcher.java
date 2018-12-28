@@ -261,9 +261,9 @@ public class Searcher {
         try {
             RandomAccessFile raf=new RandomAccessFile(_path+"/Entities"+toStem+".txt","r");
             for (Integer docNum : ans) {
-                byte[]line=new byte[100];
-                raf.seek(docNum);
-                raf.read(line);//20 bytes each term!
+                byte[]line=new byte[120];
+                raf.seek(docNum*120);
+                raf.read(line);//120 bytes each term!
                 Map<String,Integer> Entities = findEntities(line);
                 if(Entities.size()==1&&Entities.containsKey("X")){
                     if (!_doc_Entities.containsKey(docNum))
@@ -299,22 +299,25 @@ public class Searcher {
         byte [] f3=new byte[4];
         byte [] f4=new byte[4];
         byte [] f5=new byte[4];
-        for(int i=0;i<24;i++){
+        for(int i=0;i<20;i++){
             //entity1
             e1[i]=line[i];
-            f1[i]=line[i+20];
             //entity2
             e2[i]=line[i+24];
-            f2[i]=line[i+44];
             //entity3
             e3[i]=line[i+48];
-            f3[i]=line[i+68];
             //entity4
             e4[i]=line[i+72];
-            f4[i]=line[i+92];
             //entity5
             e5[i]=line[i+96];
+        }
+        for(int i=0;i<4;i++){
+            f1[i]=line[i+20];
+            f2[i]=line[i+44];
+            f3[i]=line[i+68];
+            f4[i]=line[i+92];
             f5[i]=line[i+116];
+
         }
         String entity1=new String(e1);
         String entity2=new String(e2);
