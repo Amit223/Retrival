@@ -20,13 +20,13 @@ public class Model_2 {
         HashSet<String> citieshash = new HashSet<>(cities);
         readIndexerInfo(path,toStem);
         Vector<Pair<String, String>> queries = ReadFile.readQueriesFile(queriesPath);
-        searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash);
+        searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem);
 
         for (int i = 0; i <queries.size() ; i++) {
             Pair <String,String>id_query= queries.get(i);
             String id = id_query.getKey();
             String query = id_query.getValue();
-            Collection<Integer> queryDocs=  searcher.Search(query, toStem, toTreatSemantic);
+            Collection<Integer> queryDocs=  searcher.Search(query, toTreatSemantic);
             id_docsCollection.add(new Pair<String,Collection<Integer>>(id,queryDocs));
         }
         return id_docsCollection;
