@@ -67,6 +67,9 @@ public class Ranker {
         }
         return collection;
     }
+    public Map<Integer,Double> getDocsRanking(){
+        return docsAndRanks;
+    }
 
 
     /**
