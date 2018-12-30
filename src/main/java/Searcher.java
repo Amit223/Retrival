@@ -68,8 +68,6 @@ public class Searcher {
         String term = "";
         while (termsIt.hasNext()) {
             term = termsIt.next();
-            if(term.equals("econom"))
-                System.out.println("C");
             addDocsTo_doc_termPlusTfs(term);
         }
     }
@@ -173,7 +171,6 @@ public class Searcher {
         }
         try {
             RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
-            //todo not working-wont read docline and tf!
             int lineNum = dictionary.get(term).elementAt(2);//the pointer;
             int numOfDocs = dictionary.get(term).elementAt(0);//num of docs
             for (int i = 0; i < numOfDocs; i++) {
@@ -257,7 +254,12 @@ public class Searcher {
     }
 
 
-    public void getEntities(Collection<Integer> ans,boolean toStem) {
+    /**
+     *
+     * @param ans
+     * put all entities from Entities+toStem+.txt to _doc_Entities
+     */
+    public void getEntities(Collection<Integer> ans) {
         try {
             RandomAccessFile raf=new RandomAccessFile(_path+"/Entities"+toStem+".txt","r");
             for (Integer docNum : ans) {
@@ -366,7 +368,7 @@ public class Searcher {
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
         Collection<Integer>  docNums = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl,_path); // return only 50 most relvante
-        getEntities(docNums,toStem);
+        getEntities(docNums);
         Collection<String> docNames = docNumToNames(docNums);
         Iterator<Integer> docNumIt= docNums.iterator();
         Iterator<String> docNameIt= docNames.iterator();
@@ -377,14 +379,20 @@ public class Searcher {
                entities = _doc_Entities.get(docNum);
             }
             else  entities = new ConcurrentHashMap<>();
-          //  docs.add(new Document(docNum,docNameIt.next(),entities)); todo free the comments.
+            docs.add(new Document(docNum,docNameIt.next(),entities));
         }
         return docs;
     }
 
+    /**
+     *
+     * @param ans- doclines
+     * @return name of documents
+     */
     private Collection<String> docNumToNames(Collection<Integer> ans) {
         //get doc names!
         Set<String> documentsToReturn=new HashSet<>();
+        Map<String,Integer> docs_rank=new HashMap<>();
         try {
             RandomAccessFile raf=new RandomAccessFile(new File(_path+"/Documents.txt"),"r");
             Iterator<Integer> docsIterator=ans.iterator();
@@ -395,7 +403,7 @@ public class Searcher {
                 raf.read(nameInBytes);
                 String name=convertByteToString(nameInBytes);
                 documentsToReturn.add(name);
-
+                //docs_rank.put(name,d)
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -94,6 +94,21 @@ public class Controller_2 {
     }
 
 
+    private Vector<String> getLanguages(String path){
+        Vector<String> langs=new Vector<>();
+        try {
+            BufferedReader reader=new BufferedReader(new FileReader(new File(path+"/Languages.txt")));
+            String lang=reader.readLine();
+            while (lang!=null&&!lang.equals("")){
+                langs.add(lang);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return langs;
+    }
     /**
      *
      * @param path_from_user

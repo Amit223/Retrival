@@ -69,6 +69,13 @@ public class Ranker {
     }
 
 
+    /**
+     *
+     * @param docsToRank
+     * @param doc_size
+     * @param term_docsNumber
+     * @return
+     */
     private Collection<Integer> test(HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank, ConcurrentHashMap<Integer, Integer> doc_size,
                                      ConcurrentHashMap<String, Integer> term_docsNumber){
         Set<Integer> docs = docsToRank.keySet();
