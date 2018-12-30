@@ -394,7 +394,8 @@ public class Searcher {
     private Collection<String> docNumToNames(Collection<Integer> ans) {
         //get doc names!
         Set<String> documentsToReturn=new HashSet<>();
-        Map<String,Integer> docs_rank=new HashMap<>();
+        Map<Integer,Double> docLine_rank=_ranker.getDocsRanking();
+        Map<String,Double> docs_rank=new HashMap<>();
         try {
             RandomAccessFile raf=new RandomAccessFile(new File(_path+"/Documents.txt"),"r");
             Iterator<Integer> docsIterator=ans.iterator();
@@ -405,13 +406,19 @@ public class Searcher {
                 raf.read(nameInBytes);
                 String name=convertByteToString(nameInBytes);
                 documentsToReturn.add(name);
-                //docs_rank.put(name,d)
+                docs_rank.put(name,docLine_rank.get(lineNum));
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+        WriteToQueryFile(docs_rank);
         return documentsToReturn;
     }
+
+    private void WriteToQueryFile(Map<String, Double> docs_rank) {
+        File file=new File("query.txt");
+    }
+
     private String convertByteToString(byte[] name) {
         String s=new String(name, Charset.forName("UTF-8"));
         String out="";
