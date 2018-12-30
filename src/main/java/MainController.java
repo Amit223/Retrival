@@ -14,6 +14,11 @@ public class MainController {
     private AnchorPane ap;
 
 
+    /**
+     *
+     * @param actionEvent
+     * open part a of project
+     */
     public void partAactivate(ActionEvent actionEvent) {
         FXMLLoader fxmlLoader=new FXMLLoader();
         Parent root = null;
@@ -32,6 +37,11 @@ public class MainController {
 
     }
 
+    /**
+     *
+     * @param actionEvent
+     * open part B of project
+     */
     public void partBactivate(ActionEvent actionEvent) {
         FXMLLoader fxmlLoader=new FXMLLoader();
         Parent root = null;
