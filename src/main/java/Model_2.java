@@ -44,7 +44,7 @@ public class Model_2 {
 
     private void readIndexerInfo(String path,boolean toStem) {
         try {
-            BufferedReader bufferedReader=new BufferedReader(new FileReader(new File(path+"Details"+toStem+".txt")));
+            BufferedReader bufferedReader=new BufferedReader(new FileReader(new File(path+"/Details"+toStem+".txt")));
             String avg=bufferedReader.readLine();
             String numOfFiles=bufferedReader.readLine();
             bufferedReader.close();

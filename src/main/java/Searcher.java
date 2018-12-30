@@ -374,7 +374,7 @@ public class Searcher {
         //get doc names!
         Set<String> documentsToReturn=new HashSet<>();
         try {
-            RandomAccessFile raf=new RandomAccessFile(new File(_path+"Documents.txt"),"r");
+            RandomAccessFile raf=new RandomAccessFile(new File(_path+"/Documents.txt"),"r");
             Iterator<Integer> docsIterator=ans.iterator();
             while(docsIterator.hasNext()){
                 int lineNum=docsIterator.next();
