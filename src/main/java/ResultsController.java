@@ -64,8 +64,6 @@ public class ResultsController {
 
     }
     public void setModel(Collection<Document> data) {
-        data= new Vector<>();
-        data.add(new Document(13, "hello", null));
         ObservableList<Document> DocList = FXCollections.observableArrayList();
  //       ObservableList<Integer> ranked =  FXCollections.observableArrayList();
  //     for (int i = 0; i < data.size() ; i++) {

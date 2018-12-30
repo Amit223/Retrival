@@ -52,7 +52,6 @@ public class Parser {
     //The final product for the indexer:
     private HashMap<String, Integer> _termList = new HashMap<String, Integer>(); //Map of terms-TF.
     private Vector<Integer> _cityLocations = new Vector<>(); //vector of the city's locations in the document.
-    private int _wordCounter = 0; // count the word in the document.
 
     /*Auxiliary functions for the whole program*/
 
@@ -120,7 +119,7 @@ public class Parser {
      * treat the index, and the _tokenCounter
      *
      * @return theToken or "" if the sentence is ended.
-     * @see #_wordCounter
+     * @see #_tokenCounter
      **/
     private String getToken_RemovePunctuation() {
         try {
@@ -631,7 +630,7 @@ public class Parser {
      * Prepare to the {@link Indexer}  this fields:
      * {@link #_termList}
      * {@link #_cityLocations}
-     * {@link #_wordCounter}
+     * {@link #_tokenCounter}
      * @param doc    - the document to pars
      * @param toStem - to stem the words? if true - stemming.
      * @param city   - the city that we want to return her locations, appear in the <F P =104></F>
@@ -667,10 +666,10 @@ public class Parser {
     }
 
     /**
-     * @return the {@link #_wordCounter} in the text.
+     * @return the {@link #_tokenCounter} in the text.
      */
     public int getWordCount() {
-        return _wordCounter;
+        return _tokenCounter;
     }
 
     /**
