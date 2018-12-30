@@ -116,7 +116,7 @@ public class Searcher {
     }
 
     private String queryWithPluses(String query) {
-        String [] words=query.split(" ");
+        String [] words=query.split("\\s+");
         String queryWithPluses="";
         for (int i = 0; i < words.length ; i++) {
             if(i==0)

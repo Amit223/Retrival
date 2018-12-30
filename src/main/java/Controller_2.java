@@ -167,12 +167,18 @@ public class Controller_2 {
             path.setText(file.getAbsolutePath());
             ObservableList<String> list = FXCollections.observableArrayList();
             Vector<String> cities= getCitys(path.getText());
-            for(String city: cities) {
-                list.add(city);
+            if(cities.size()!=0) {
+                for (String city : cities) {
+                    list.add(city);
+                }
+                listView.setItems(list);
+                listView.getItems().sort(Comparator.naturalOrder());
             }
-            listView.setItems(list);
-            listView.getItems().sort(Comparator.naturalOrder());
-
+            else{
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("there is no \"CityDictionary.txt\".");
+                alert.show();
+            }
         }
     }
 
