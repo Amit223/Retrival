@@ -624,6 +624,12 @@ public class Indexer {
         return RankedEntities.values();
          **/
     }
+
+    /**
+     * this function write the documents and the entities into final file:
+     * documents- in bytes
+     * entities- find best 5 and then in bytes.
+     */
     private void writeFilesAndEntitiesToFinalFile() {
         File temp=new File(tempPathToEntities);
         File end=new File(_path+"/Entities"+_toStem+".txt");
@@ -996,7 +1002,7 @@ public class Indexer {
             int ptr=-1;
             Vector v=new Vector();
             v.add(df);
-            v.add(tf);
+            v.add(tottf);
             v.add(ptr);
             dictionary.remove(term);
             dictionary.put(term,v);
@@ -1017,7 +1023,7 @@ public class Indexer {
             int ptr=-1;
             Vector v=new Vector();
             v.add(df);
-            v.add(tf);
+            v.add(tottf);
             v.add(ptr);
             dictionary.remove(term);
             dictionary.put(newTerm,v);
@@ -1431,6 +1437,11 @@ class ThreadedSort extends Thread{
     }
 
 
+    /**
+     *
+     * @param line
+     * @return get the field which we sort by
+     */
     private static String getField(String line) {
         if(line.contains("\\^")) {
             String[] values = line.split("~");//valuse[0]-term, values[1]docLine-tf
