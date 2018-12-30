@@ -19,12 +19,14 @@ public class Model_2 {
         readIndexerInfo(path,toStem);
         Vector<Pair<String, String>> queries = ReadFile.readQueriesFile(queriesPath);
         searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem);
+        boolean flag=true;
 
         for (int i = 0; i <queries.size() ; i++) {
             Pair <String,String>id_query= queries.get(i);
             String id = id_query.getKey();
             String query = id_query.getValue();
-            Collection<Document> queryDocs=  searcher.Search(id, query, toTreatSemantic);
+            Collection<Document> queryDocs=  searcher.Search(id, query, toTreatSemantic,flag);
+            flag=false;//not first quey anymore!
             id_docsCollection.add(new Pair<String,Collection<Document>>(id,queryDocs));
         }
         return id_docsCollection;
@@ -37,20 +39,20 @@ public class Model_2 {
         readIndexerInfo(path,toStem);
 
         searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem);
-        Collection<Document> docs = searcher.Search(id, query, toTreatSemantic);
+        Collection<Document> docs = searcher.Search("1", query, toTreatSemantic,true);
 
         return docs;
     }
 
     private void readIndexerInfo(String path,boolean toStem) {
         try {
-            BufferedReader bufferedReader=new BufferedReader(new FileReader(new File(path+"/Details"+toStem+".txt")));
-
-            String avg=bufferedReader.readLine();
-            String numOfFiles=bufferedReader.readLine();
+            File file=new File(path+"/Details"+toStem+".txt");
+            BufferedReader bufferedReader=new BufferedReader(new FileReader(file));
+            String line=bufferedReader.readLine();
+            String[] details=line.split("%");
             bufferedReader.close();
-            avgldl=Double.parseDouble(avg);
-            numOfIndexedDocs=Integer.parseInt(numOfFiles);
+            avgldl=Double.parseDouble(details[0]);
+            numOfIndexedDocs=Integer.parseInt(details[1]);
         } catch (Exception e) {
             e.printStackTrace();
         }

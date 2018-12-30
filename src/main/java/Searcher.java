@@ -364,14 +364,14 @@ public class Searcher {
      * @param toTreatSemantic
      * @return list of relevant docs.
      */
-    public Collection<Document> Search(String id, String query, boolean toTreatSemantic) {
+    public Collection<Document> Search(String id, String query, boolean toTreatSemantic, boolean firstQuery) {
         Collection<Document> docs= new Vector<>();
         isSemantic=toTreatSemantic;
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
         Collection<Integer>  docNums = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl,_path); // return only 50 most relvante
         getEntities(docNums);
-        Collection<String> docNames = docNumToNames(docNums);
+        Collection<String> docNames = docNumToNames(docNums,id,firstQuery);
         Iterator<Integer> docNumIt= docNums.iterator();
         Iterator<String> docNameIt= docNames.iterator();
         while (docNumIt.hasNext()) {
@@ -391,7 +391,7 @@ public class Searcher {
      * @param ans- doclines
      * @return name of documents
      */
-    private Collection<String> docNumToNames(Collection<Integer> ans) {
+    private Collection<String> docNumToNames(Collection<Integer> ans,String id,boolean flag) {
         //get doc names!
         Set<String> documentsToReturn=new HashSet<>();
         Map<Integer,Double> docLine_rank=_ranker.getDocsRanking();
@@ -411,12 +411,29 @@ public class Searcher {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        WriteToQueryFile(docs_rank);
+        WriteToQueryFile(docs_rank,id,flag);
         return documentsToReturn;
     }
 
-    private void WriteToQueryFile(Map<String, Double> docs_rank) {
-        File file=new File("query.txt");
+    private void WriteToQueryFile(Map<String, Double> docs_rank,String id,boolean createNew) {
+        File file=new File("results.txt");
+        try {
+            if(createNew)
+                file.createNewFile();
+            BufferedWriter writer=new BufferedWriter(new FileWriter(file));
+            Iterator<String> docs=docs_rank.keySet().iterator();
+            while(docs.hasNext()){
+                String document=docs.next();
+                String line=id+"   "+0+"   "+document+"   "+docs_rank.get(document)+"42.38   mt";
+                writer.write(line);
+                writer.newLine();
+            }
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
     }
 
     private String convertByteToString(byte[] name) {

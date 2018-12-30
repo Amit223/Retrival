@@ -38,7 +38,8 @@ public class DictionaryController {
                     String []strings=lines[i].split("--->");
                     if(strings.length==2){
                         String [] values=strings[1].split("&");
-                        int tf=Integer.parseInt(values[1].substring(0,values[1].length()-1));
+                        String tf_string=values[1].substring(0,values[1].length());
+                        int tf=Integer.parseInt(tf_string);
                         map.put(strings[0],tf);
 
                     }
@@ -57,8 +58,8 @@ public class DictionaryController {
             Iterator<String> iterator=dictionary.keySet().iterator();
             while (iterator.hasNext()){
                 String key=iterator.next();
-                Pair<Integer, Integer> pair= (Pair<Integer, Integer>) dictionary.get(key);
-                map.put(key, pair.getValue());
+                Vector<Integer> details= (Vector<Integer>) dictionary.get(key);
+                map.put(key, details.get(1));
             }
 
 
