@@ -185,7 +185,8 @@ class ThreadedIndex extends Thread{
                 Parser parser = new Parser();
                 parser.Parse(text, toStem, city);//return termlist
                 termList = parser.getTerms();
-                indexer.Index(termList, parser.getLocations(), name, city, parser.getWordCount(), language);
+                int numOfWords=parser.getWordCount();
+                indexer.Index(termList, parser.getLocations(), name, city, numOfWords, language);
             }
         }
     }

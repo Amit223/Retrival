@@ -527,7 +527,29 @@ public class Indexer {
         writeDocsAndEntitiesToFile();
         writeFilesAndEntitiesToFinalFile();
         writeNeededDetails();
+        writeLanguagesToFile();
 
+    }
+
+    /**
+     * write languages to file
+     */
+    private void writeLanguagesToFile() {
+        File f=new File(_path+"/Languages.txt");
+        try {
+            f.createNewFile();
+            BufferedWriter writer=new BufferedWriter(new FileWriter(f));
+            Iterator<String> iterator=languages.iterator();
+            while(iterator.hasNext()){
+                String lang=iterator.next();
+                writer.write(lang);
+                writer.newLine();
+            }
+            writer.flush();
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -881,7 +903,7 @@ public class Indexer {
 
      */
     private void writeToDocumentsAndEntitiesList(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language,String entitiesLine) {
-        _wordCount.getAndAdd( numOfWords); //todo - future error-  not added .
+        _wordCount.addAndGet(numOfWords);
         //docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)-54 bytes
         byte[] name=stringToByteArray(nameOfDoc,16);
         byte[] city=stringToByteArray(cityOfDoc,16);
