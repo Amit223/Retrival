@@ -249,7 +249,7 @@ public class Indexer {
             }
         }
         locations.clear();
-        if(_numOfFiles.get()%5000==0){
+        if(_numOfFiles.get()%6000==0){
             writeCityList();
         }
 
@@ -1179,14 +1179,16 @@ class ThreadedWrite extends Thread{
             listMutex.lock();
             postingMutex.lock();
 
-            StringBuilder stringBuilder=new StringBuilder();
-            for(int i=0;i<list.size();i++){
-
-                stringBuilder.append(list.get(i));
-            }
-            String list_=stringBuilder.toString();
+            //StringBuilder stringBuilder=new StringBuilder();
             BufferedWriter bufferedWriter=new BufferedWriter(new FileWriter(file.getAbsolutePath(),true));
-            bufferedWriter.write(stringBuilder.toString());
+
+            for(int i=0;i<list.size();i++){
+                Object obj=list.get(i);
+                bufferedWriter.write((String)obj);
+                //stringBuilder.append(list.get(i));
+            }
+            //String list_=stringBuilder.toString();
+            //bufferedWriter.write(stringBuilder.toString());
             bufferedWriter.flush();
             bufferedWriter.close();
             counter.addAndGet(list.size());
