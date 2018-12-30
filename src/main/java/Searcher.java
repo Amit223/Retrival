@@ -360,14 +360,26 @@ public class Searcher {
      * @param toTreatSemantic
      * @return list of relevant docs.
      */
-    public Collection<Integer> Search(String query, boolean toTreatSemantic) {
+    public Collection<Document> Search(String query, boolean toTreatSemantic) {
+        Collection<Document> docs= new Vector<>();
         isSemantic=toTreatSemantic;
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
-        Collection<Integer>  ans = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl,_path); // return only 50 most relvante
-        getEntities(ans,toStem);
-        return ans;
-        //return docNumToNames(ans);
+        Collection<Integer>  docNums = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl,_path); // return only 50 most relvante
+        getEntities(docNums,toStem);
+        Collection<String> docNames = docNumToNames(docNums);
+        Iterator<Integer> docNumIt= docNums.iterator();
+        Iterator<String> docNameIt= docNames.iterator();
+        while (docNumIt.hasNext()) {
+            Integer docNum= docNumIt.next();
+            Map<String, Integer> entities;
+            if(_doc_Entities.contains(docNum)){
+               entities = _doc_Entities.get(docNum);
+            }
+            else  entities = new ConcurrentHashMap<>();
+          //  docs.add(new Document(docNum,docNameIt.next(),entities)); todo free the comments.
+        }
+        return docs;
     }
 
     private Collection<String> docNumToNames(Collection<Integer> ans) {
