@@ -1,30 +1,29 @@
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.util.Callback;
-import javafx.util.Pair;
 
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.Vector;
 
 public class ResultsController {
     @FXML
-    private  TableView<Integer> tableView;
+    private  TableView<Document> resultsTable;
     @FXML
-    private TableColumn NameCol;
+    private TableColumn<Document,String> NameCol;
     @FXML
     private TableColumn rankedCol;
 
     @FXML
     public void initialize() {
 
+        NameCol.setCellValueFactory(new PropertyValueFactory<Document,String>("_name"));
+        //.setCellValueFactory(new PropertyValueFactory<Document,String>("__docNum"));
+
         TableColumn actionCol = new TableColumn("Entities");
         actionCol.setCellValueFactory(new PropertyValueFactory<>("DUMMY"));
-
         Callback<TableColumn<String, String>, TableCell<String, String>> cellFactory
                 = //
                 new Callback<TableColumn<String, String>, TableCell<String, String>>() {
@@ -53,29 +52,33 @@ public class ResultsController {
                         return cell;
                     }
                 };
+
         actionCol.setCellFactory(cellFactory);
+        resultsTable.getColumns().addAll(actionCol);
 
-        ObservableList<Integer> docsList = FXCollections.observableArrayList();
+        ObservableList<Document> docsList = FXCollections.observableArrayList();
+        resultsTable.setItems(docsList);
 
-        tableView.setItems(docsList);
-        tableView.getColumns().addAll(actionCol);
+
 
 
     }
-    public void setModel(Collection<Integer> data) {
-        ObservableList<Integer> DocList = FXCollections.observableArrayList();
-        ObservableList<Integer> ranked =  FXCollections.observableArrayList();
-        for (int i = 0; i < data.size() ; i++) {
-            ranked.add(i);
+    public void setModel(Collection<Document> data) {
+        data= new Vector<>();
+        data.add(new Document(13, "hello", null));
+        ObservableList<Document> DocList = FXCollections.observableArrayList();
+ //       ObservableList<Integer> ranked =  FXCollections.observableArrayList();
+ //     for (int i = 0; i < data.size() ; i++) {
+   //        ranked.add(i);
+   //     }
+        for (Document doc: data) {
+            DocList.add(doc);
         }
-        DocList.addAll(data);
+        resultsTable.setItems(DocList);
         {
 
-            NameCol.setCellValueFactory(new PropertyValueFactory<>("Document name"));
-            tableView.setItems(DocList);
-
-            rankedCol.setCellValueFactory(new PropertyValueFactory<>("Ranked"));
-            tableView.setItems(ranked);
+        //    rankedCol.setCellValueFactory(new PropertyValueFactory<>("Ranked"));
+          //  resultsTable.setItems(ranked);
 
         }
     }
