@@ -319,7 +319,7 @@ public class Indexer {
      * return true if successful, false otherwise
      */
     public boolean loadDictionaryToMemory() {
-        if(dictionary==null) {
+        if (dictionary == null) {
             try {
                 dictionary = new TreeMap<>();
                 BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + _toStem + "Dictionary.txt"));
@@ -327,19 +327,17 @@ public class Indexer {
                 String[] lines = line.split("=");
                 for (int i = 0; i < lines.length; i++) {
                     String[] pair = lines[i].split("--->");
-                    if(pair.length==2){
-                        String [] values=pair[1].split("&");
-                        int df=Integer.parseInt(values[0].substring(1,values[0].length()));
-                        int tf=Integer.parseInt(values[1]);
-                        int ptr=Integer.parseInt(values[2].substring(0,values[2].length()-1));
-                        Vector<Integer> vector=new Vector<>();
+                    if (pair.length == 2) {
+                        String[] values = pair[1].split("&");
+                        int df = Integer.parseInt(values[0].substring(1, values[0].length()));
+                        int tf = Integer.parseInt(values[1]);
+                        int ptr = Integer.parseInt(values[2].substring(0, values[2].length() - 1));
+                        Vector<Integer> vector = new Vector<>();
                         vector.add(df);
                         vector.add(tf);
                         vector.add(ptr);
                         dictionary.put(pair[0], vector);
-
                     }
-
                 }
                 bufferedReader.close();
             } catch (FileNotFoundException e) {
@@ -560,10 +558,7 @@ public class Indexer {
         try {
             file.createNewFile();
             BufferedWriter writer=new BufferedWriter(new FileWriter(file));
-            writer.write(Double.toString(getAvgldl())+"\n");
-            writer.newLine();
-            writer.write(getNumberOfDocs()+"\n");
-            writer.newLine();
+            writer.write(Double.toString(getAvgldl())+'%'+getNumberOfDocs());
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -767,8 +762,9 @@ public class Indexer {
             f.delete();
             //details
             f=new File(_path + "/Details"  + _toStem+".txt");
+            f.delete();//languages
+            f=new File(_path + "/Languages"  +".txt");
             f.delete();
-
 
             if(dictionary!=null) {
                 dictionary.clear();
