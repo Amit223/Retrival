@@ -31,13 +31,24 @@ public class Searcher {
      */
     private HashMap<Integer, Vector<Pair<String, Integer>>> _doc_termPlusTfs;
     private static ConcurrentHashMap<Integer, Integer> _doc_size = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<Integer, Map<String,Integer>> _doc_Entities = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, Vector<Pair<String,Integer>>> _doc_Entities = new ConcurrentHashMap<>();
     private static ConcurrentHashMap<String, Integer> _term_docsCounter = new ConcurrentHashMap<>();
     private String _path = "";
     private boolean isSemantic; //todo what defualt ?
+    private String _toSave="";
 
 
-    public Searcher(double avgldl, int numOfIndexedDocs, String path, HashSet<String> chosenCities,boolean toStem) {
+    /**
+     *
+     * @param avgldl
+     * @param numOfIndexedDocs
+     * @param path
+     * @param chosenCities
+     * @param toStem
+     * @param pathToSave
+     * constructor
+     */
+    public Searcher(double avgldl, int numOfIndexedDocs, String path, HashSet<String> chosenCities,boolean toStem,String pathToSave) {
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;//_indexer.getAvgldl();no!
         _doc_termPlusTfs = new HashMap<>();
@@ -46,6 +57,7 @@ public class Searcher {
         _path=path;
         this.toStem=toStem;
         loadDictionaryToMemory(toStem); //using for "Entities"
+        _toSave=pathToSave;
     }
 
     /**Auxiliary functions for Search**/
@@ -113,6 +125,11 @@ public class Searcher {
         return query;
     }
 
+    /**
+     *
+     * @param query
+     * @return query with "+" between
+     */
     private String queryWithPluses(String query) {
         String [] words=query.split("\\s+");
         String queryWithPluses="";
@@ -266,10 +283,10 @@ public class Searcher {
                 byte[]line=new byte[120];
                 raf.seek(docNum*120);
                 raf.read(line);//120 bytes each term!
-                Map<String,Integer> Entities = findEntities(line);
-                if(Entities.size()==1&&Entities.containsKey("X")){
+                Vector<Pair<String,Integer>> Entities = findEntities(line);
+                if(Entities.size()==1&&(Entities.get(0).getKey().equals("X"))){
                     if (!_doc_Entities.containsKey(docNum))
-                        _doc_Entities.put(docNum, new HashMap<>());//no entities for doc
+                        _doc_Entities.put(docNum, new Vector<>());//no entities for doc
                 }
                 else {
                     if (!_doc_Entities.containsKey(docNum))
@@ -290,7 +307,7 @@ public class Searcher {
      * @param line-byte[100] - 5 entities in it
      * @return vector of the 5 entities in the line
      */
-    private Map<String,Integer> findEntities(byte[] line) {
+    private Vector<Pair<String,Integer>> findEntities(byte[] line) {
         byte [] e1=new byte[20];
         byte [] e2=new byte[20];
         byte [] e3=new byte[20];
@@ -339,17 +356,17 @@ public class Searcher {
         int tf4=byteToInt(f4);
         int tf5=byteToInt(f5);
 
-        Map<String,Integer> entities=new HashMap<>();
+        Vector<Pair<String,Integer>> entities=new Vector();
         if(!entity1.equals(""))
-            entities.put(entity1,tf1);
+            entities.add(new Pair(entity1,tf1));
         if(!entity2.equals(""))
-            entities.put(entity2,tf2);
+            entities.add(new Pair(entity2,tf2));
         if(!entity3.equals(""))
-            entities.put(entity3,tf3);
+            entities.add(new Pair(entity3,tf3));
         if(!entity4.equals(""))
-            entities.put(entity4,tf4);
+            entities.add(new Pair(entity4,tf4));
         if(!entity5.equals(""))
-            entities.put(entity5,tf5);
+            entities.add(new Pair(entity5,tf5));
         return entities;
     }
 
@@ -364,23 +381,23 @@ public class Searcher {
      * @param toTreatSemantic
      * @return list of relevant docs.
      */
-    public Collection<Document> Search(String id, String query, boolean toTreatSemantic, boolean firstQuery) {
+    public Collection<Document> Search(String id, String query, boolean toTreatSemantic) {
         Collection<Document> docs= new Vector<>();
         isSemantic=toTreatSemantic;
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
         Collection<Integer>  docNums = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl,_path); // return only 50 most relvante
         getEntities(docNums);
-        Collection<String> docNames = docNumToNames(docNums,id,firstQuery);
+        Collection<String> docNames = docNumToNames(docNums,id);
         Iterator<Integer> docNumIt= docNums.iterator();
         Iterator<String> docNameIt= docNames.iterator();
         while (docNumIt.hasNext()) {
             Integer docNum= docNumIt.next();
-            Map<String, Integer> entities;
+            Vector<Pair<String, Integer>> entities;
             if(_doc_Entities.contains(docNum)){
                entities = _doc_Entities.get(docNum);
             }
-            else  entities = new ConcurrentHashMap<>();
+            else  entities = new Vector();
             docs.add(new Document(docNum,docNameIt.next(),entities));
         }
         return docs;
@@ -391,7 +408,7 @@ public class Searcher {
      * @param ans- doclines
      * @return name of documents
      */
-    private Collection<String> docNumToNames(Collection<Integer> ans,String id,boolean flag) {
+    private Collection<String> docNumToNames(Collection<Integer> ans,String id) {
         //get doc names!
         Set<String> documentsToReturn=new HashSet<>();
         Map<Integer,Double> docLine_rank=_ranker.getDocsRanking();
@@ -411,14 +428,20 @@ public class Searcher {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        WriteToQueryFile(docs_rank,id,flag);
+        WriteToQueryFile(docs_rank,id);
         return documentsToReturn;
     }
 
-    private void WriteToQueryFile(Map<String, Double> docs_rank,String id,boolean createNew) {
+    /**
+     *
+     * @param docs_rank- the docs and thier ranks
+     * @param id of query
+     *  writes to the results file the result for the query
+     */
+    private void WriteToQueryFile(Map<String, Double> docs_rank,String id) {
         File file=new File("results.txt");
         try {
-            if(createNew)
+            if(!file.exists())
                 file.createNewFile();
             BufferedWriter writer=new BufferedWriter(new FileWriter(file));
             Iterator<String> docs=docs_rank.keySet().iterator();

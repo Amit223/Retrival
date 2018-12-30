@@ -1,13 +1,15 @@
 
+import javafx.util.Pair;
+
 import java.util.Map;
 import java.util.Vector;
 
 public class Document {
     private int _docNum;
     private String _name;
-    private Map<String, Integer> _entities;
+    private Vector<Pair<String, Integer>> _entities;
 
-    public Document(int docNum, String name, Map<String, Integer> entities) {
+    public Document(int docNum, String name, Vector<Pair<String, Integer>> entities) {
         this._docNum = docNum;
         this._name = name;
         this._entities= entities;
@@ -29,7 +31,7 @@ public class Document {
         this._name = _name;
     }
 
-    public Map<String, Integer> get_entities() {
+    public Vector<Pair<String, Integer>> get_entities() {
         return _entities;
     }
 

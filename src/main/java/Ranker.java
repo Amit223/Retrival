@@ -92,6 +92,15 @@ public class Ranker {
         return get50BestDocs();
 
     }
+
+    /**
+     *
+     * @param doc-the line of doc
+     * @param docsToRank-the list of docs and thier info
+     * @param doc_size - the size of doc
+     * @param term_docsNumber-the info of term- how many docs
+     * ranks the doc and puts in the docs and ranks table
+     */
     private void rankDoc(int doc,HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank,
                            ConcurrentHashMap<Integer, Integer> doc_size,
                            ConcurrentHashMap<String, Integer> term_docsNumber){
@@ -113,33 +122,6 @@ public class Ranker {
         }
         docsAndRanks.put(doc,rank);
     }
-    private void addItem(double rank, Integer doc) {
-        if (rank > 0) {
-            if (queueSize.get() > 49) {
-                _RankDocsMutex.lock();
-                Double lowest = _RankedDocs.peek().getValue();
-                if (rank > (lowest)) {
-                    _RankedDocs.poll();
-                    _RankedDocs.add(new Pair<Integer, Double>(doc, rank));
-                    minQueue.set(_RankedDocs.peek().getValue());
-
-                    //}
-                    _RankDocsMutex.unlock();
-                } else {
-                    _RankDocsMutex.lock();
-                    _RankedDocs.add(new Pair<Integer, Double>(doc, rank));
-                    _RankDocsMutex.unlock();
-                    queueSize.getAndAdd(1);
-                    if (rank < minQueue.get() || queueSize.get() == 0) {
-                        minQueue.set(rank);
-                    }
-
-                }
-
-            }
-        }
-    }
-
 
     /**
      * this function give a grade to any doc and add it to priority queue of 50.
