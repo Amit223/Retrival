@@ -916,6 +916,8 @@ public class Indexer {
         //write entities
         entitiesToWrite.add(entitiesLine);
 
+
+
     }
 
     /**
