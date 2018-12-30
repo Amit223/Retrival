@@ -394,10 +394,7 @@ public class Searcher {
         while (docNumIt.hasNext()) {
             Integer docNum= docNumIt.next();
             Vector<Pair<String, Integer>> entities;
-            if(_doc_Entities.contains(docNum)){
-               entities = _doc_Entities.get(docNum);
-            }
-            else  entities = new Vector();
+            entities = _doc_Entities.get(docNum);
             docs.add(new Document(docNum,docNameIt.next(),entities));
         }
         return docs;

@@ -11,12 +11,6 @@ public class Main {
 
 
     public static void main(String[] args) {
-        Path path= Paths.get("D:\\documents\\users\\ammo\\queries.txt");
-        try {
-            Vector<Pair<String,String>> answer=ReadFile.readQueriesFile(path);
-            System.out.println("d");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
     }
 }
