@@ -24,7 +24,7 @@ public class Model_2 {
             Pair <String,String>id_query= queries.get(i);
             String id = id_query.getKey();
             String query = id_query.getValue();
-            Collection<Document> queryDocs=  searcher.Search(query, toTreatSemantic);
+            Collection<Document> queryDocs=  searcher.Search(id, query, toTreatSemantic);
             id_docsCollection.add(new Pair<String,Collection<Document>>(id,queryDocs));
         }
         return id_docsCollection;
@@ -37,7 +37,7 @@ public class Model_2 {
         readIndexerInfo(path,toStem);
 
         searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem);
-        Collection<Document> docs = searcher.Search(query, toTreatSemantic);
+        Collection<Document> docs = searcher.Search(id, query, toTreatSemantic);
 
         return docs;
     }
