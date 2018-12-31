@@ -94,9 +94,9 @@ public class Indexer {
                 citysPosting = new File(path+"/CityPosting.txt");
             }
             else{//not to stem
-                documents = new File(path+"/NotStemDocuments.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
+                documents = new File(path+"/DocumentsTemp.txt");//docName(20 bytes)|city(18)|maxtf(4)|num of terms(4)|words(4)-50 bytes
                 //citys
-                citysPosting = new File(path+"/NotStemCityPosting.txt");
+                citysPosting = new File(path+"/CityPosting.txt");
             }
             documents.createNewFile();
             dictionary = new HashMap<>();
@@ -206,10 +206,11 @@ public class Indexer {
         docMutex.lock();
         writeToDocumentsAndEntitiesList(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language,line); //
         docMutex.unlock();
+        entities=new StringBuilder();//to memory
         _AtomicNumlineDocs.getAndAdd(1);
         _AtomicNumlineEntities.addAndGet(1);
 
-        if(_numOfFiles.get()%5000==0){
+        if(_numOfFiles.get()%10000==0){
             writeDocsAndEntitiesToFile();
         }
 
@@ -229,7 +230,7 @@ public class Indexer {
 
 
 
-        if(_numOfFiles.get()%1000==0) {
+        if(_numOfFiles.get()%2000==0) {
             writeListToPosting();
 
         }
@@ -249,7 +250,7 @@ public class Indexer {
             }
         }
         locations.clear();
-        if(_numOfFiles.get()%6000==0){
+        if(_numOfFiles.get()%8000==0){
             writeCityList();
         }
 
@@ -321,7 +322,7 @@ public class Indexer {
     public boolean loadDictionaryToMemory() {
         if (dictionary == null) {
             try {
-                dictionary = new TreeMap<>();
+                dictionary = new HashMap<>();
                 BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + _toStem + "Dictionary.txt"));
                 String line = bufferedReader.readLine();
                 String[] lines = line.split("=");
@@ -337,6 +338,7 @@ public class Indexer {
                         vector.add(tf);
                         vector.add(ptr);
                         dictionary.put(pair[0], vector);
+                        lines[i]="";
                     }
                 }
                 bufferedReader.close();
@@ -364,8 +366,12 @@ public class Indexer {
             writer = new BufferedWriter(new FileWriter(_path + "/" + _toStem + "Dictionary.txt"));
             while (iterator.hasNext()) {
                 String key = iterator.next();
+                int pointer=-1;
+                if(dictionary.get(key).size()==3){
+                    pointer=dictionary.get(key).elementAt(2);
+                }
                 stringBuilder.append(key + "--->{" + dictionary.get(key).elementAt(0) + "&" + dictionary.get(key).elementAt(1)
-                        + "&" + dictionary.get(key).elementAt(2) + "}=");
+                        + "&" + pointer + "}=");
                 if (i % 5000 == 0){
                     writer.write(stringBuilder.toString());
                     stringBuilder.setLength(0);
@@ -689,7 +695,12 @@ public class Indexer {
                     }
 
                 }
+
+
                 //documents
+                if(docLine==null){
+                    System.out.println("wat");
+                }
                 String [] details=docLine.split("@");
                 String nameOfDoc=details[0];
                 String cityOfDoc=details[1];
@@ -1003,7 +1014,7 @@ public class Indexer {
             Vector v=new Vector();
             v.add(df);
             v.add(tottf);
-            v.add(ptr);
+            //v.add(ptr);//todo***
             dictionary.remove(term);
             dictionary.put(term,v);
         }
@@ -1024,7 +1035,7 @@ public class Indexer {
             Vector v=new Vector();
             v.add(df);
             v.add(tottf);
-            v.add(ptr);
+            //v.add(ptr);todo ***
             dictionary.remove(term);
             dictionary.put(newTerm,v);
         }
@@ -1032,7 +1043,7 @@ public class Indexer {
             Vector v=new Vector();
             v.add(1);
             v.add(tf);
-            v.add(-1);
+            //v.add(-1);todo ***
             dictionary.put(term,v);
 
         }

@@ -83,7 +83,7 @@ public class Model {
         indexer=new Indexer(toStem,toSave);
         String s=ReadFile.readStopWords(path);
         StopWords.setStopwords(s);
-        ExecutorService pool= Executors.newFixedThreadPool(8);
+        ExecutorService pool= Executors.newFixedThreadPool(2);
         File folder = new File(path);
         File[] listOfFiles = folder.listFiles();
 
@@ -111,13 +111,17 @@ public class Model {
             }
         }
         indexer.push();
+        System.out.println("done part a");
         indexer.loadDictionaryToFile();
         indexer.loadCityDictionaryToFile();
         StopWords.reset();
         indexer.sort();
+        System.out.println("done part b-sort");
         indexer.loadDictionaryToMemory();
         indexer.UpdateDictionary();
         indexer.loadDictionaryToFile();
+        System.out.println("done part c- dictionary updated");
+
 
 
     }

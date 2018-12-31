@@ -3,9 +3,6 @@ import sun.awt.Mutex;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -31,7 +28,11 @@ public class Ranker {
 
         }
     }); // Rank-Doc
-    private Mutex _RankDocsMutex = new Mutex();
+
+    /**
+     *
+     * @return the top 50 docs
+     */
     public Collection<Integer> get50BestDocs() {
         Iterator<Integer> docs = docsAndRanks.keySet().iterator();
         int count = 0;
@@ -67,6 +68,11 @@ public class Ranker {
         }
         return collection;
     }
+
+    /**
+     *
+     * @return table of docs and their rank
+     */
     public Map<Integer,Double> getDocsRanking(){
         return docsAndRanks;
     }
@@ -79,8 +85,8 @@ public class Ranker {
      * @param term_docsNumber
      * @return
      */
-    private Collection<Integer> test(HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank, ConcurrentHashMap<Integer, Integer> doc_size,
-                                     ConcurrentHashMap<String, Integer> term_docsNumber){
+    private Collection<Integer> RankAllDocuments(HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank, ConcurrentHashMap<Integer, Integer> doc_size,
+                                                 ConcurrentHashMap<String, Integer> term_docsNumber){
         Set<Integer> docs = docsToRank.keySet();
         Iterator<Integer> docsIt = docs.iterator();
         int i = 0;
@@ -141,7 +147,7 @@ public class Ranker {
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;
         _path=path;
-        return test(docsToRank,doc_size,term_docsNumber);
+        return RankAllDocuments(docsToRank,doc_size,term_docsNumber);
         /**
         Thread[] threads = new ThreadedRank[docsToRank.size()];
         Set<Integer> docs = docsToRank.keySet();
