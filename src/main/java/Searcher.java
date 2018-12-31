@@ -456,6 +456,11 @@ public class Searcher {
 
     }
 
+    /**
+     *
+     * @param name- in bytes
+     * @return name in string
+     */
     private String convertByteToString(byte[] name) {
         String s=new String(name, Charset.forName("UTF-8"));
         String out="";
@@ -469,6 +474,9 @@ public class Searcher {
     }
 
 
+    /**
+     * remove from list of documents the documents that not in the list of citys from user
+     */
     private void FilterDocsByCitys() {
         try {
             RandomAccessFile raf=new RandomAccessFile(_path+"/Documents.txt","r");
@@ -501,20 +509,15 @@ public class Searcher {
                 raf.seek(docLine * 54 + 50);//to get to the size
                 byte[] length_bytes=new byte[4];
                 raf.read(length_bytes);
-                int size=convertByteToInt(length_bytes);
+                int size=byteToInt(length_bytes);
                 _doc_size.put(docLine,size);
             }
+            raf.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-    private int convertByteToInt(byte[] b)
-    {
 
-        int pomAsInt = ByteBuffer.wrap(b).getInt();
-        return pomAsInt;
-
-    }
 }
 
 
