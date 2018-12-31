@@ -10,7 +10,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * this class get query (string with spaces), parse it to final terms dictionary @link {@link Parser#_termList}.
@@ -32,9 +31,9 @@ public class Searcher {
      * docline in {@link Indexer#documents} to Vector of Pairs of term-tf.
      */
     private HashMap<Integer, Vector<Pair<String, Integer>>> _doc_termPlusTfs;
-    private static ConcurrentHashMap<Integer, Integer> _doc_size = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<Integer, Vector<Pair<String,Integer>>> _doc_Entities = new ConcurrentHashMap<>();
-    private static ConcurrentHashMap<String, Integer> _term_docsCounter = new ConcurrentHashMap<>();
+    private static HashMap<Integer, Integer> _doc_size = new HashMap<>();
+    private HashMap<Integer, Vector<Pair<String,Integer>>> _doc_Entities = new HashMap<>();
+    private static HashMap<String, Integer> _term_docsCounter = new HashMap<>();
     private String _path = "";
     private boolean isSemantic; //todo what defualt ?
     private String _toSave="";
@@ -54,7 +53,7 @@ public class Searcher {
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;//_indexer.getAvgldl();no!
         _doc_termPlusTfs = new HashMap<>();
-        _doc_size = new ConcurrentHashMap<>();
+        _doc_size = new HashMap<>();
         _chosenCities = chosenCities;
         _path=path;
         this.toStem=toStem;
@@ -243,9 +242,8 @@ public class Searcher {
                 dictionary = new TreeMap<>();
                 BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + toStem + "Dictionary.txt"));
                 String line = bufferedReader.readLine();
-                String[] lines = line.split("=");
-                for (int i = 0; i < lines.length; i++) {
-                    String[] pair = lines[i].split("--->");
+                while(line!=null&&!line.equals("")) {
+                    String[] pair = line.split("--->");
                     if (pair.length == 2) {
                         String[] values = pair[1].split("&");
                         int df = Integer.parseInt(values[0].substring(1, values[0].length()));
@@ -257,6 +255,7 @@ public class Searcher {
                         vector.add(ptr);
                         dictionary.put(pair[0], vector);
                     }
+                    line=bufferedReader.readLine();
                 }
                 bufferedReader.close();
             } catch (FileNotFoundException e) {
