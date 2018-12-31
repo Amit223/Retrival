@@ -2,7 +2,6 @@ import javafx.util.Pair;
 import sun.awt.Mutex;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -11,10 +10,6 @@ public class Ranker {
 
     private double _avgldl;
     private int _numOfIndexedDocs;
-    private String _path;
-    private Mutex mutex=new Mutex();
-    private AtomicReference<Double> minQueue=new AtomicReference<Double>(0.0);
-    private AtomicInteger queueSize=new AtomicInteger(0);
     private HashMap<Integer,Double> docsAndRanks=new HashMap<>();
 
     private PriorityQueue<Pair<Integer, Double>> _RankedDocs = new PriorityQueue(new Comparator<Pair<Integer, Double>>() {
@@ -85,15 +80,15 @@ public class Ranker {
      * @param term_docsNumber
      * @return
      */
-    private Collection<Integer> RankAllDocuments(HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank, ConcurrentHashMap<Integer, Integer> doc_size,
-                                                 ConcurrentHashMap<String, Integer> term_docsNumber){
+    private Collection<Integer> RankAllDocuments(HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank, HashMap<Integer, Integer> doc_size,
+                                                HashMap<String, Integer> term_docsNumber){
         Set<Integer> docs = docsToRank.keySet();
         Iterator<Integer> docsIt = docs.iterator();
         int i = 0;
         int doc;
         while (docsIt.hasNext()) {
             doc = docsIt.next();
-            rankDoc(doc,docsToRank,doc_size,term_docsNumber);
+            rankDoc(doc,docsToRank.get(doc),doc_size.get(doc),term_docsNumber);
         }
         return get50BestDocs();
 
@@ -107,18 +102,16 @@ public class Ranker {
      * @param term_docsNumber-the info of term- how many docs
      * ranks the doc and puts in the docs and ranks table
      */
-    private void rankDoc(int doc,HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank,
-                           ConcurrentHashMap<Integer, Integer> doc_size,
-                           ConcurrentHashMap<String, Integer> term_docsNumber){
+    private void rankDoc(int doc,Vector<Pair<String, Integer>> _termInDocAndTF, //docsToRank.get(doc)
+                         Integer _docSize,
+                           HashMap<String, Integer> term_docsNumber){
         double _k = 1.25;
         double _b = 0.75;
         double rank = 0;
-        Vector<Pair<String, Integer>> _termInDocAndTF=docsToRank.get(doc);
-        Integer _docSize=doc_size.get(doc);
-        Map<String, Integer> _docsNumberforTerm=term_docsNumber;
+
         for (int i = 0; i < _termInDocAndTF.size(); i++) {
             String term = _termInDocAndTF.get(i).getKey();
-            int numOfDocsForTerm = _docsNumberforTerm.get(term);
+            int numOfDocsForTerm = term_docsNumber.get(term);
             double idf = Math.log(_numOfIndexedDocs / numOfDocsForTerm);
             double moneOfTf=_termInDocAndTF.get(i).getValue();
             double tf = moneOfTf / _docSize;
@@ -126,6 +119,9 @@ public class Ranker {
             double mechane = tf + _k * (1 - _b + _b * (_docSize / _avgldl));
             rank = rank +( mone / mechane);
         }
+      //  if(doc==93570)
+    //    System.out.println(doc);
+    //    System.out.println(doc);
         docsAndRanks.put(doc,rank);
     }
 
@@ -140,13 +136,12 @@ public class Ranker {
      * @return rankedDocs
      */
     public Collection<Integer> Rank(HashMap<Integer, Vector<Pair<String, Integer>>> docsToRank,
-                                                     ConcurrentHashMap<Integer, Integer> doc_size,
+                                                    HashMap<Integer, Integer> doc_size,
                                                      int numOfIndexedDocs,
-                                                     ConcurrentHashMap<String, Integer> term_docsNumber,
+                                                     HashMap<String, Integer> term_docsNumber,
                                                      double avgldl,String path) {
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;
-        _path=path;
         return RankAllDocuments(docsToRank,doc_size,term_docsNumber);
         /**
         Thread[] threads = new ThreadedRank[docsToRank.size()];
