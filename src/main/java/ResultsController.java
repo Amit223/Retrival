@@ -48,18 +48,18 @@ public class ResultsController {
                                                 Document doc = getTableView().getItems().get(getIndex()); //Vacation vacation = getTableView().getItems().get(getIndex());
                                                 Vector<Pair<String, Integer>> entities = doc.get_entities();
                                                 Alert success = new Alert(Alert.AlertType.INFORMATION);
-                                                success.setHeaderText("Entities");
-                                                String entitiesString="";
+                                                success.setHeaderText("The most dominant entities in "+doc.get_name()+":");
+                                                String entitiesString = "";
                                                 boolean thereIsEntity = false;
-                                                for (int i = 0; i < entities.size(); i++) {
-                                                    if(!entities.get(i).getKey().equals("X")) {
-                                                        entitiesString += "Entity: " + entities.get(i).getKey() + ", Rank: " + entities.get(i).getValue()+".\n";
+                                                for (int i = entities.size() - 1; i >= 0; i--) {
+                                                    if (!entities.get(i).getKey().equals("X")) {
+                                                        entitiesString += "Entity: " + entities.get(i).getKey() + "\n\tRank: " + entities.get(i).getValue() + "\n\n";
                                                         thereIsEntity = true;
                                                     }
-                                                    }
-                                                    if(!thereIsEntity || entities.size()==0 ||entitiesString.equals("") ){
-                                                        entitiesString="Sorry, there is not entities in that document.";
-                                                    }
+                                                }
+                                                if (!thereIsEntity || entities.size() == 0 || entitiesString.equals("")) {
+                                                    entitiesString = "Sorry, there is not entities in that document.";
+                                                }
                                                 success.setContentText(entitiesString);
                                                 success.show();
                                             }
@@ -74,6 +74,7 @@ public class ResultsController {
                 };
         actionCol.setCellFactory(cellFactory);
         resultsTable.getColumns().addAll(actionCol);
+        resultsTable.setPlaceholder(new Label("No relevant documents to the given query."));
         ObservableList<Document> docsList = FXCollections.observableArrayList();
         resultsTable.setItems(docsList);
     }
@@ -82,7 +83,6 @@ public class ResultsController {
         ObservableList<Document> DocList = FXCollections.observableArrayList();
         for (Document doc : data) {
             DocList.add(doc);
-
         }
         resultsTable.setItems(DocList);
     }

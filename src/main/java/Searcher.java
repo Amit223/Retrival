@@ -1,4 +1,6 @@
 import javafx.util.Pair;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -96,30 +98,25 @@ public class Searcher {
                 String urlString = "https://api.datamuse.com/words?ml=" + queryWithPluses;
                 URL url = new URL(urlString);
                 HttpURLConnection con = (HttpURLConnection) url.openConnection();
-                con.setRequestMethod("GET");
                 InputStreamReader iSR =new InputStreamReader((con.getInputStream()));
                 BufferedReader bufferedReader =new BufferedReader(iSR);
-                String inputLine;
+                String result = bufferedReader.readLine();
+                JSONArray words = new JSONArray(result);
+                int minLength = 15;
                 StringBuffer similiarSemanticWords= new StringBuffer();
-                while((inputLine=bufferedReader.readLine())!=null){
-                    int index =0;
-                    String [] words = inputLine.substring(2).split("\\{");
-                    for(String word: words){
-                        if(index==15) break; //todo all ?????
-                        String [] wordStruct=  word.split(",")[0].split(":");
-                        similiarSemanticWords.append(wordStruct[1].substring(1).replace('"',' '));
-                        index++;
+                for (int i = 0; i<words.length() && i < minLength  ; i++) {
+                    JSONObject wordRecord = (JSONObject) words.get(i);
+                    String wordString = (String) wordRecord.get("word");
+                    similiarSemanticWords.append(" "+wordString);
                     }
-                }
                 bufferedReader.close();
                 iSR.close();
-                return query + " " + similiarSemanticWords.toString();
+                return query + similiarSemanticWords.toString();
             } catch (MalformedURLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
         else return query;
         return query;
@@ -131,7 +128,8 @@ public class Searcher {
      * @return query with "+" between
      */
     private String queryWithPluses(String query) {
-        String [] words=query.split("\\s+");
+
+        String [] words=query.trim().split("\\s+");
         String queryWithPluses="";
         for (int i = 0; i < words.length ; i++) {
             if(i==0)
@@ -140,7 +138,7 @@ public class Searcher {
                 queryWithPluses+= ("+" + words[i]);
             }
         }
-        return query;
+        return queryWithPluses;
     }
 
 

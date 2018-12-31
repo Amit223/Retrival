@@ -4,6 +4,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.RadioButton;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 public class GUI_2 extends Application {
@@ -20,7 +21,6 @@ public class GUI_2 extends Application {
         Controller_2 controller =fxmlLoader.getController();
         controller.setModel();
         Scene scene = new Scene(root);
-
         primaryStage.setTitle("Retrival Project");
         primaryStage.setScene(scene);
         primaryStage.show();

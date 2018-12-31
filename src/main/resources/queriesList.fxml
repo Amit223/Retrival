@@ -6,9 +6,9 @@
 
 <AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="QueriesListController">
    <children>
-      <TableView fx:id="tableView" layoutX="14.0" layoutY="14.0" prefHeight="373.0" prefWidth="574.0">
+      <TableView fx:id="resultsTable" layoutX="14.0" layoutY="14.0" prefHeight="373.0" prefWidth="574.0">
         <columns>
-          <TableColumn fx:id="rankedCol" prefWidth="75.0" text="queryId" />
+          <TableColumn fx:id="queryId" prefWidth="75.0" text="queryId" />
         </columns>
       </TableView>
    </children>
