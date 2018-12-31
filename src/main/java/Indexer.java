@@ -183,7 +183,6 @@ public class Indexer {
         int maxtf=0;
         if(terms.values()!=null&&terms.values().size()>0)
             maxtf=getMaxTf(terms.values());
-        int lineNumDocs=_AtomicNumlineDocs.get();
         String line;
         Iterator<String>termsKeys=keys.iterator();
         StringBuilder entities=new StringBuilder();
@@ -203,14 +202,17 @@ public class Indexer {
             line="X\n";
         }
         //entities+docs:writing part
+        int lineNumDocs;
         docMutex.lock();
         writeToDocumentsAndEntitiesList(nameOfDoc,cityOfDoc,maxtf,terms.size(),numOfWords,language,line); //
+        lineNumDocs=_AtomicNumlineDocs.get();
         docMutex.unlock();
+
         entities=new StringBuilder();//to memory
         _AtomicNumlineDocs.getAndAdd(1);
         _AtomicNumlineEntities.addAndGet(1);
 
-        if(_numOfFiles.get()%10000==0){
+        if(_numOfFiles.get()%5000==0){
             writeDocsAndEntitiesToFile();
         }
 
@@ -325,9 +327,8 @@ public class Indexer {
                 dictionary = new HashMap<>();
                 BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + _toStem + "Dictionary.txt"));
                 String line = bufferedReader.readLine();
-                String[] lines = line.split("=");
-                for (int i = 0; i < lines.length; i++) {
-                    String[] pair = lines[i].split("--->");
+                while (line!=null&&!line.equals("")) {
+                    String[] pair = line.split("--->");
                     if (pair.length == 2) {
                         String[] values = pair[1].split("&");
                         int df = Integer.parseInt(values[0].substring(1, values[0].length()));
@@ -338,8 +339,8 @@ public class Indexer {
                         vector.add(tf);
                         vector.add(ptr);
                         dictionary.put(pair[0], vector);
-                        lines[i]="";
                     }
+                    line=bufferedReader.readLine();
                 }
                 bufferedReader.close();
             } catch (FileNotFoundException e) {
@@ -370,13 +371,10 @@ public class Indexer {
                 if(dictionary.get(key).size()==3){
                     pointer=dictionary.get(key).elementAt(2);
                 }
-                stringBuilder.append(key + "--->{" + dictionary.get(key).elementAt(0) + "&" + dictionary.get(key).elementAt(1)
-                        + "&" + pointer + "}=");
-                if (i % 5000 == 0){
-                    writer.write(stringBuilder.toString());
-                    stringBuilder.setLength(0);
-
-                }
+                String line=(key + "--->{" + dictionary.get(key).elementAt(0) + "&" + dictionary.get(key).elementAt(1)
+                        + "&" + pointer + "}");
+                writer.write(line);
+                writer.newLine();
                 i++;
             }
             writer.write(stringBuilder.toString());
