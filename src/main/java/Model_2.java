@@ -14,12 +14,12 @@ public class Model_2 {
     private int numOfIndexedDocs;
 
 
-    public Vector<Pair<String,Collection<Document>>> Start(String path, Vector<String> cities, Path queriesPath, boolean toStem, boolean toTreatSemantic) throws IOException {
+    public Vector<Pair<String,Collection<Document>>> Start(String path, Vector<String> cities, Path queriesPath, boolean toStem, boolean toTreatSemantic, String savePath) throws IOException {
         Vector<Pair<String,Collection<Document>>> id_docsCollection= new Vector<>();
         HashSet<String> citieshash = new HashSet<>(cities);
         readIndexerInfo(path,toStem);
         Vector<Pair<String, String>> queries = ReadFile.readQueriesFile(queriesPath);
-        searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem,"");//todo !!!!!
+        searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem,savePath);//todo !!!!!
 
         for (int i = 0; i <queries.size() ; i++) {
             Pair <String,String>id_query= queries.get(i);
@@ -33,11 +33,11 @@ public class Model_2 {
     /**
      * This function is the main function of the program.
      */
-    public Collection<Document> Start(String path, Vector<String> cities, String query, boolean toStem, boolean toTreatSemantic){
+    public Collection<Document> Start(String path, Vector<String> cities, String query, boolean toStem, boolean toTreatSemantic, String savePath){
         HashSet<String> citieshash = new HashSet<>(cities);
         readIndexerInfo(path,toStem);
 
-        searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem,"");//todo !!!!!!!!!!!!
+        searcher=new Searcher(avgldl,numOfIndexedDocs,path,citieshash,toStem,savePath);//todo !!!!!!!!!!!!
         Collection<Document> docs = searcher.Search("1", query, toTreatSemantic);
 
         return docs;

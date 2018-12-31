@@ -4,6 +4,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.AnchorPane;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -28,7 +29,8 @@ public class MainController {
             controller.setModel();
             Scene scene = new Scene(root, 500, 350);
             Stage primaryStage = new Stage();
-            primaryStage.setTitle("Retrieval Project-Part A");
+            primaryStage.initModality(Modality.APPLICATION_MODAL);
+            primaryStage.setTitle("Retrieval Project - Part A");
             primaryStage.setScene(scene);
             primaryStage.show();
         } catch (IOException e) {
@@ -51,7 +53,8 @@ public class MainController {
             controller.setModel();
             Scene scene = new Scene(root);
             Stage primaryStage = new Stage();
-            primaryStage.setTitle("Retrieval Project-Part B");
+            primaryStage.initModality(Modality.APPLICATION_MODAL);
+            primaryStage.setTitle("Retrieval Project - Part B");
             primaryStage.setScene(scene);
             primaryStage.show();
         } catch (IOException e) {

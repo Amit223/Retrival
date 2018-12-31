@@ -13,6 +13,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 
@@ -47,12 +48,12 @@ public class Controller_2 {
     private CheckBox toStem;
     @FXML
     private TextArea query;
-
-
+    @FXML
+    private TextField pathSave;
 
 
     /**
-     *sets model
+     * sets model
      */
     public void setModel() {
         model = new Model_2();
@@ -60,8 +61,8 @@ public class Controller_2 {
 
             @Override
             public void handle(Event event) {
-                if(listView.getSelectionModel().getSelectedItem()!=null){
-                    selectedItem =  listView.getSelectionModel().getSelectedItem().toString();
+                if (listView.getSelectionModel().getSelectedItem() != null) {
+                    selectedItem = listView.getSelectionModel().getSelectedItem().toString();
                     listView2.getItems().add(selectedItem);
                     listView.getItems().remove(selectedItem);
                     listView.getItems().sort(Comparator.naturalOrder());
@@ -75,16 +76,17 @@ public class Controller_2 {
 
             @Override
             public void handle(Event event) {
-               if(listView2.getSelectionModel().getSelectedItem()!=null) {
-                   unselectedItem = listView2.getSelectionModel().getSelectedItem().toString();
-                   listView.getItems().add(unselectedItem);
-                   listView2.getItems().remove(unselectedItem);
-                   listView.getItems().sort(Comparator.naturalOrder());
-                   listView2.getItems().sort(Comparator.naturalOrder());
+                if (listView2.getSelectionModel().getSelectedItem() != null) {
+                    unselectedItem = listView2.getSelectionModel().getSelectedItem().toString();
+                    listView.getItems().add(unselectedItem);
+                    listView2.getItems().remove(unselectedItem);
+                    listView.getItems().sort(Comparator.naturalOrder());
+                    listView2.getItems().sort(Comparator.naturalOrder());
 
-               }
+                }
             }
         });
+        listView2.setPlaceholder(new Label("If empty, not filter."));
         query.textProperty().addListener(new ChangeListener<String>() {
             @Override
             public void changed(final ObservableValue<? extends String> observable, final String oldValue, final String newValue) {
@@ -94,12 +96,12 @@ public class Controller_2 {
     }
 
 
-    private Vector<String> getLanguages(String path){
-        Vector<String> langs=new Vector<>();
+    private Vector<String> getLanguages(String path) {
+        Vector<String> langs = new Vector<>();
         try {
-            BufferedReader reader=new BufferedReader(new FileReader(new File(path+"/Languages.txt")));
-            String lang=reader.readLine();
-            while (lang!=null&&!lang.equals("")){
+            BufferedReader reader = new BufferedReader(new FileReader(new File(path + "/Languages.txt")));
+            String lang = reader.readLine();
+            while (lang != null && !lang.equals("")) {
                 langs.add(lang);
             }
         } catch (FileNotFoundException e) {
@@ -109,41 +111,45 @@ public class Controller_2 {
         }
         return langs;
     }
+
     /**
-     *
      * @param path_from_user
      * @return the languages from corpus
      */
-    private Vector<String> getCitys(String path_from_user){
-       loadCityDictionaryToMemory(path_from_user);
-       Iterator<String> iterator=cityDictionary.keySet().iterator();
-       Vector<String> citys=new Vector<>();
-       while(iterator.hasNext()){
-           citys.add(iterator.next());
-       }
-       cityDictionary.clear();//to not have memory issues
-       return citys;
+    private Vector<String> getCitys(String path_from_user) {
+        loadCityDictionaryToMemory(path_from_user);
+        Iterator<String> iterator = cityDictionary.keySet().iterator();
+        Vector<String> citys = new Vector<>();
+        while (iterator.hasNext()) {
+            citys.add(iterator.next());
+        }
+        cityDictionary.clear();//to not have memory issues
+        return citys;
     }
+
     /**
-     *
-     * @param path
-     * load the dictionary from disk to memory
+     * @param path load the dictionary from disk to memory
      */
-    private void loadCityDictionaryToMemory(String path){
+    private void loadCityDictionaryToMemory(String path) {
         try {
             cityDictionary = new HashMap<>();
-            BufferedReader bufferedReader = new BufferedReader(new FileReader(path + "/" + "CityDictionary.txt"));
+            BufferedReader bufferedReader;
+            try {
+                bufferedReader = new BufferedReader(new FileReader(path + "/" + "CityDictionary.txt"));
+            } catch (Exception e) {
+                return;
+            }
             String line = bufferedReader.readLine();
             String[] lines = line.split("=");
             for (int i = 0; i < lines.length; i++) {
                 String[] pair = lines[i].split("--->");
-                if(pair.length==2){
-                    String[] values=pair[1].split(",");
-                    Vector<String> vector=new Vector();
-                    vector.add(values[0].substring(1,values[0].length()));//the country
+                if (pair.length == 2) {
+                    String[] values = pair[1].split(",");
+                    Vector<String> vector = new Vector();
+                    vector.add(values[0].substring(1, values[0].length()));//the country
                     vector.add(values[1]);//the coin
-                    vector.add(values[2].substring(0,values[2].length()-1));//population
-                    cityDictionary.put(pair[0],vector);
+                    vector.add(values[2].substring(0, values[2].length() - 1));//population
+                    cityDictionary.put(pair[0], vector);
                 }
 
             }
@@ -170,30 +176,68 @@ public class Controller_2 {
     }
 
     @FXML
+    public void includeAllCities(ActionEvent ae) {
+        listView2.getItems().addAll(listView.getItems());
+        listView.getItems().removeAll(listView.getItems());
+        listView.getItems().sort(Comparator.naturalOrder());
+        listView2.getItems().sort(Comparator.naturalOrder());
+    }
+
+    @FXML
+    public void ExcludeAllCities(ActionEvent ae) {
+        listView.getItems().addAll(listView2.getItems());
+        listView2.getItems().removeAll(listView2.getItems());
+        listView.getItems().sort(Comparator.naturalOrder());
+        listView2.getItems().sort(Comparator.naturalOrder());
+    }
+
+    @FXML
     /**
      * do a directory chooser of path of corpus and stop words
      */
     public void getDirChooser(ActionEvent actionEvent) {
         DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("Select Directory Of Stop-Words & Corpus");
+        chooser.setTitle("Select directory of posting files");
         File file = chooser.showDialog(new Stage());
         if (file != null) {
-            filterbycity.setDisable(false);
             path.setText(file.getAbsolutePath());
             ObservableList<String> list = FXCollections.observableArrayList();
-            Vector<String> cities= getCitys(path.getText());
-            if(cities.size()!=0) {
+            Vector<String> cities = getCitys(path.getText());
+            File cityDic = new File(path.getText() + "/" + "CityDictionary.txt");
+
+            if (cityDic.exists()) {
+                filterbycity.setDisable(false);
                 for (String city : cities) {
                     list.add(city);
                 }
                 listView.setItems(list);
                 listView.getItems().sort(Comparator.naturalOrder());
-            }
-            else{
+            } else {
+                path.setText("");
                 Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setContentText("there is no \"CityDictionary.txt\".");
+                alert.setContentText("There is no \"CityDictionary.txt\".");
                 alert.show();
             }
+        } else {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setContentText("You will not be able to Run before choosing a posting files' folder.");
+            alert.show();
+        }
+
+    }
+
+
+
+    @FXML
+    /**
+     * do a directory chooser of path of corpus and stop words
+     */
+    public void getDirSaveChooser(ActionEvent actionEvent) {
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Select directory to save search results");
+        File file = chooser.showDialog(new Stage());
+        if (file != null) {
+            pathSave.setText(file.getAbsolutePath());
         }
     }
 
@@ -217,58 +261,86 @@ public class Controller_2 {
     }
 
     @FXML
-    public void Run(ActionEvent actionEvent){
-        //check input:
-        if(writeQuery.isSelected() && ( query.getText()==null || query.getText().length()==0)){
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setContentText("You select to write query so please write one in the query area.");
-            alert.show();
-            return;
-        }
-        if(browseButton.isSelected() && (queriesFilepath.getText()==null ||  query.getText().length()==0)){
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setContentText("You select to browse file of queries, so please browse a path of queries' file.");
-            alert.show();
-            return;
-        }
-
-        Vector<String> cities = new Vector<>( listView2.getItems());
-        Parent root=null;
-        FXMLLoader fxmlLoader=new FXMLLoader();
-        if(writeQuery.isSelected()) {
-
-            try {
-                root = fxmlLoader.load(getClass().getResource("/ResultsView.fxml").openStream());
-            } catch (IOException e) {
-                e.printStackTrace();
+    public void Run(ActionEvent actionEvent) {
+        try {
+            //check input:
+            if (path.getText() == null || path.getText().length() == 0) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("Please select a path of posting files."); //todo
+                alert.show();
+                return;
             }
-            ResultsController controller =fxmlLoader.getController();
-            controller.setModel((model.Start(path.getText(), cities, query.getText(), toStem.isSelected(), toTreatSemantic.isSelected())));
+            if (writeQuery.isSelected() && (query.getText() == null || query.getText().length() == 0)) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("You select to write query so please write one in the query area.");
+                alert.show();
+                return;
+            }
+            if (browseButton.isSelected() && (queriesFilepath.getText() == null || queriesFilepath.getText().length() == 0)) {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setContentText("You select to browse file of queries, so please browse a path of queries' file.");
+                alert.show();
+                return;
+            }
 
-        }
-        else { //if browseButton.isSelected()
-            try {
+            Vector<String> cities = new Vector<>(listView2.getItems());
+            Parent root = null;
+            FXMLLoader fxmlLoader = new FXMLLoader();
+            if (writeQuery.isSelected()) {
+
                 try {
-                    root = fxmlLoader.load(getClass().getResource("/queriesList.fxml").openStream());
+                    root = fxmlLoader.load(getClass().getResource("/ResultsView.fxml").openStream());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                QueriesListController controller =fxmlLoader.getController();
-                controller.setModel((model.Start(path.getText(), cities, Paths.get(queriesFilepath.getText()), toStem.isSelected(), toTreatSemantic.isSelected())));
-            } catch (IOException e) {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setContentText("You select to browse file of queries, and there is a problem with the file or with the file path.");
-                alert.show();            }
+                ResultsController controller = fxmlLoader.getController();
+                controller.setModel((model.Start(path.getText(), cities, query.getText(),
+                        toStem.isSelected(), toTreatSemantic.isSelected(), (pathSave.getText() != null ? pathSave.getText() : ""))));
+                Scene scene = new Scene(root);
+                Stage stage = new Stage();
+                String queryName = "";
+                {
+                    String[] queryTemp = query.getText().trim().split("\\s+");
+                    queryName = "";
+                    for (int i = 0; i < queryTemp.length && i < 10; i++) {
+                        if (i == 0) {
+                            queryName += "\"" + queryTemp[i];
+                        } else queryName += " " + queryTemp[i];
+                        if (i == 9 && i < queryTemp.length) queryName += "...";
+                        if (i == 9 || i == queryTemp.length - 1) queryName += "\"";
+                    }
+                }
+                stage.setTitle("Search - " + queryName);
+                stage.initModality(Modality.APPLICATION_MODAL);
+                stage.setScene(scene);
+                stage.show();
+            } else { //if browseButton.isSelected()
+                try {
+                    try {
+                        root = fxmlLoader.load(getClass().getResource("/queriesList.fxml").openStream());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    QueriesListController controller = fxmlLoader.getController();
+                    controller.setModel((model.Start(path.getText(), cities, Paths.get(queriesFilepath.getText()),
+                            toStem.isSelected(), toTreatSemantic.isSelected(), (pathSave.getText() != null ? pathSave.getText() : ""))));
+                } catch (IOException e) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setContentText("You select to browse file of queries, and there is a problem with the file or with the file path.");
+                    alert.show();
+                }
+                Scene scene = new Scene(root);
+                Stage stage = new Stage();
+                stage.initModality(Modality.APPLICATION_MODAL);
+                stage.setTitle("Search - Queries list for - \"" + queriesFilepath.getText() + "\"");
+                stage.setScene(scene);
+                stage.show();
+            }
         }
-        Scene scene = new Scene(root);
-        Stage stage= new Stage();
-        stage.setTitle("Results");
-        stage.setScene(scene);
-        stage.show();
+        catch(Exception e){
+            
+        }
     }
-
-
-
 
 
 }
