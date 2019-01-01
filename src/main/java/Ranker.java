@@ -12,7 +12,7 @@ public class Ranker {
 
     private double _avgldl;
     private int _numOfIndexedDocs;
-    private HashMap<Integer,Double> docsAndRanks=new HashMap<>();
+    private HashMap<Integer,Double> docsAndRanks;
 
     private PriorityQueue<Pair<Integer, Double>> _RankedDocs = new PriorityQueue(new Comparator<Pair<Integer, Double>>() {
         @Override
@@ -73,7 +73,7 @@ public class Ranker {
         File f=new File("pls.txt");
         try {
             BufferedWriter writer=new BufferedWriter(new FileWriter(f,true));
-            RandomAccessFile reader=new RandomAccessFile("D:\\documents\\users\\ammo\\posting-true\\Documents.txt","r");
+            RandomAccessFile reader=new RandomAccessFile("D:\\documents\\users\\ammo\\posting true\\Documents.txt","r");
             Iterator<Integer> iterator=docsAndRanks.keySet().iterator();
             while (iterator.hasNext()){
                 int doc=iterator.next();
@@ -181,6 +181,7 @@ public class Ranker {
                                                      int numOfIndexedDocs,
                                                      HashMap<String, Integer> term_docsNumber,
                                                      double avgldl,String path) {
+        docsAndRanks=new HashMap<>();
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;
         return RankAllDocuments(docsToRank,doc_size,term_docsNumber);

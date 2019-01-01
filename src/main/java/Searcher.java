@@ -52,8 +52,6 @@ public class Searcher {
     public Searcher(double avgldl, int numOfIndexedDocs, String path, HashSet<String> chosenCities,boolean toStem,String pathToSave) {
         _numOfIndexedDocs = numOfIndexedDocs;
         _avgldl = avgldl;//_indexer.getAvgldl();no!
-        _doc_termPlusTfs = new HashMap<>();
-        _doc_size = new HashMap<>();
         _chosenCities = chosenCities;
         _path=path;
         this.toStem=toStem;
@@ -178,7 +176,7 @@ public class Searcher {
             letter = Character.toLowerCase(letter);
         else if (Character.isDigit(letter) || letter == '-')
             letter = '0';
-        String fullPath = _path + '/'+letter + toStem + "Done.txt";
+        String fullPath = _path + '/'+Character.toLowerCase(letter) + toStem + "Done.txt";
         if (!dictionary.containsKey(term.toLowerCase())&&!dictionary.containsKey(term.toUpperCase())) {//the term is not in the dictionary
             return doc_tf;
         }
@@ -252,9 +250,9 @@ public class Searcher {
      * return true if successful, false otherwise
      */
     private boolean loadDictionaryToMemory(boolean toStem) {
-        if (dictionary == null) {
+        if (dictionary == null||dictionary.size()==0) {
             try {
-                dictionary = new TreeMap<>();
+                dictionary = new HashMap<>();
                 BufferedReader bufferedReader = new BufferedReader(new FileReader(_path + "/" + toStem + "Dictionary.txt"));
                 String line = bufferedReader.readLine();
                 while(line!=null&&!line.equals("")) {
@@ -394,6 +392,8 @@ public class Searcher {
      * @return list of relevant docs.
      */
     public Collection<Document> Search(String id, String query, boolean toTreatSemantic) {
+        _doc_termPlusTfs = new HashMap<>();
+        _doc_size = new HashMap<>();
         Collection<Document> docs= new Vector<>();
         isSemantic=toTreatSemantic;
         loadDictionaryToMemory(toStem); //using for "Entities"
@@ -438,7 +438,8 @@ public class Searcher {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        WriteToQueryFile(docs_rank,id);
+        if(!_toSave.equals(""))
+            WriteToQueryFile(docs_rank,id);
         return documentsToReturn;
     }
 
