@@ -916,15 +916,15 @@ public class Indexer {
     private void writeToDocumentsAndEntitiesList(String nameOfDoc, String cityOfDoc, int maxtf, int size, int numOfWords,String language,String entitiesLine) {
         _wordCount.addAndGet(numOfWords);
         //docName(16 bytes)|city(16)|language(10)|maxtf(4)|num of terms(4)|words(4)-54 bytes
-        byte[] name=stringToByteArray(nameOfDoc,16);
-        byte[] city=stringToByteArray(cityOfDoc,16);
-        byte [] lang_bytes=stringToByteArray(language,10);
+       // byte[] name=stringToByteArray(nameOfDoc,16);
+        //byte[] city=stringToByteArray(cityOfDoc,16);
+       // byte [] lang_bytes=stringToByteArray(language,10);
         if(language.length()>0){
             languages.add(language);
         }
-        byte [] maxtf_bytes=toBytes(maxtf);
-        byte [] size_bytes=toBytes(size);
-        byte [] words_bytes=toBytes(numOfWords);
+       // byte [] maxtf_bytes=toBytes(maxtf);
+        //byte [] size_bytes=toBytes(size);
+        //byte [] words_bytes=toBytes(numOfWords);
         //new!!
         docsToWrite.add(nameOfDoc+"@"+cityOfDoc+"@"+language+"@"+maxtf+"@"
         +size+"@"+numOfWords+"\n");

@@ -83,7 +83,7 @@ public class Model {
         indexer=new Indexer(toStem,toSave);
         String s=ReadFile.readStopWords(path);
         StopWords.setStopwords(s);
-        ExecutorService pool= Executors.newFixedThreadPool(2);
+        ExecutorService pool= Executors.newFixedThreadPool(1);
         File folder = new File(path);
         File[] listOfFiles = folder.listFiles();
 

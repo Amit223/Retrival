@@ -1,6 +1,8 @@
 import javafx.util.Pair;
 import sun.awt.Mutex;
 
+import java.io.*;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -53,6 +55,44 @@ public class Ranker {
 
     /**
      *
+     * @param name- in bytes
+     * @return name in string
+     */
+    private String convertByteToString(byte[] name) {
+        String s=new String(name, Charset.forName("UTF-8"));
+        String out="";
+        boolean flag=true;
+        for (int i = 0; i < s.length()&&flag; i++) {
+            if(s.charAt(i)!='#')
+                out=out+s.charAt(i);
+            else flag=false;
+        }
+        return out;
+    }
+    private void getAllName(){
+        File f=new File("pls.txt");
+        try {
+            BufferedWriter writer=new BufferedWriter(new FileWriter(f,true));
+            RandomAccessFile reader=new RandomAccessFile("D:\\documents\\users\\ammo\\posting-true\\Documents.txt","r");
+            Iterator<Integer> iterator=docsAndRanks.keySet().iterator();
+            while (iterator.hasNext()){
+                int doc=iterator.next();
+                byte[] name=new byte[16];
+                reader.seek(54*doc);
+                reader.read(name);
+                String nameString=convertByteToString(name);
+                writer.write(nameString);
+                writer.newLine();
+            }
+            writer.close();
+            reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     *
      * @param priortyQ by rank
      * @return collection of the docs
      */
@@ -90,6 +130,7 @@ public class Ranker {
             doc = docsIt.next();
             rankDoc(doc,docsToRank.get(doc),doc_size.get(doc),term_docsNumber);
         }
+        getAllName();
         return get50BestDocs();
 
     }
@@ -174,78 +215,3 @@ public class Ranker {
 
 
 }
-/**
- * used for the {@link #start()}
- * this class extend thread and implements a thread that:
- * read file using {@link ReadFile}
- * get the relevant information from the tags
- * parse the text to #termList
- * and index the files using it.
- */
-class ThreadedRank extends Thread {
-
-    private Integer _doc;
-    private Vector<Pair<String, Integer>> _termInDocAndTF;
-    private Integer _docSize;
-    private Map<String, Integer> _docsNumberforTerm;
-    private HashMap<Integer,Double> _docsAndRanks;
-    private double _avgldl;
-    private int _numOfIndexedDocs;
-    private double _k = 1.25;
-    private double _b = 0.75;
-    private Mutex _mutex;
-
-    /** in the Ranker class
-     * private double _avgldl;
-     * private  int _numOfIndexedDocs;
-     * private static double _k=0;
-     * private static double _d=0; **/
-
-    /**
-     * constructor
-     *
-     * @param doc
-     * @param termInDocAndTF
-     * @param docSize
-     * @param docsNumberforTerm
-     */
-    public ThreadedRank(Integer doc, Vector<Pair<String, Integer>> termInDocAndTF, Integer docSize, Map<String, Integer> docsNumberforTerm,
-                        HashMap<Integer,Double> docsAndRanks,int numOfIndexedDocs, double avgldl,Mutex mutex) {
-        _doc = doc;
-        _termInDocAndTF = termInDocAndTF;
-        _docSize = docSize;
-        _docsNumberforTerm = docsNumberforTerm;
-        _docsAndRanks=docsAndRanks;
-        _numOfIndexedDocs=numOfIndexedDocs;
-        _avgldl=avgldl;
-        _mutex=mutex;
-    }
-
-    /**
-     * this function:
-     * in BM25
-     * using this variables:
-     * {@link #_doc} {@link #_termInDocAndTF} {@link #_docSize}
-     * {@link #_docsNumberforTerm} {@link #_avgldl} {@link #_numOfIndexedDocs} {@link #_k} {@link #_b}
-     * and put the document's Rank and document's number into {@link #_docsAndRanks}
-     */
-    public void run() {
-        double rank = 0;
-        for (int i = 0; i < _termInDocAndTF.size(); i++) {
-            String term = _termInDocAndTF.get(i).getKey();
-            int numOfDocsForTerm = _docsNumberforTerm.get(term);
-            double idf = Math.log(_numOfIndexedDocs / numOfDocsForTerm);
-            double moneOfTf=_termInDocAndTF.get(i).getValue();
-            double tf = moneOfTf / _docSize;
-            double mone = idf * tf;
-            double mechane = tf + _k * (1 - _b + _b * (_docSize / _avgldl));
-            rank = rank +( mone / mechane);
-        }
-        _mutex.lock();
-        _docsAndRanks.put(_doc,rank);
-        _mutex.unlock();
-        // if(!(minQueue.get()>rank&&queueSize.get()==50))
-        //   addItem(rank, _doc);
-    }
-}
-
