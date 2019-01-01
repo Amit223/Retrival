@@ -14,15 +14,9 @@ public class Main {
 
 
     public static void main(String[] args) {
-        try {
-            BufferedReader reader=new BufferedReader(new FileReader("D:\\documents\\users\\ammo\\toSavePosting\\dtrueDone.txt"));
-            String line=reader.readLine();
-            String [] params=line.split("~");
-            System.out.println(params[0]);
-            System.out.println(params[1]);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        int k=3;
+        byte[] d=toBytes(k);
+        System.out.println(byteToInt(d));
     }
 
     public static void test(){
@@ -41,15 +35,22 @@ public class Main {
     }
     public static byte[] toBytes(int input)
     {
-        byte[] conv = new byte[4];
-        conv[3] = (byte) ((byte) input & 0xff);
-        input >>= 8;
-        conv[2] = (byte) ((byte) input & 0xff);
-        input >>= 8;
-        conv[1] = (byte) ((byte) input & 0xff);
-        input >>= 8;
-        conv[0] = (byte) input;
-        return conv;
+        byte[] b =BigInteger.valueOf(input).toByteArray();
+        if(b.length<4){
+            byte[] returned=new byte[4];
+            for(int i=0;i<4;i++){
+                if(i<b.length)
+                    returned[3-i]=b[b.length-1-i];
+                else
+                    returned[3-i]=0;
+            }
+            return returned;
+        }
+        else{
+            return b;
+
+        }
+
 
     }
 
@@ -116,13 +117,17 @@ public class Main {
         }
     }
     private static int byteToInt(byte[] bytes) {
-        int MASK = 0xFF;
-        int result = 0;
-        result = bytes[0] & MASK;
-        result = result + ((bytes[1] & MASK) << 8);
-        result = result + ((bytes[2] & MASK) << 16);
-        result = result + ((bytes[3] & MASK) << 24);
-        return result;
+        String s2="";
+        for (int i=0; i<4; i++){
+            String x = String.format("%8s", Integer.toBinaryString(bytes[i] & 0xFF)).replaceAll("\\s","");
+            for (int j=8-x.length(); j>0; j--){
+                s2 =s2 + "0";
+            }
+            s2 = s2  +  x;
+        }
+        s2 = s2.replaceAll("\\s","");
+        int foo = Integer.parseInt(s2, 2);
+        return foo;
     }
     private static void ll(){
         try {

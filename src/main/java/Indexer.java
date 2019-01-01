@@ -4,6 +4,7 @@ import javafx.util.Pair;
 import sun.awt.Mutex;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
@@ -1069,15 +1070,25 @@ public class Indexer {
 
     /**
      *
-     * @param i-integer
+     * @param in-integer
      * @return integer in byte array of size 4
      */
-    public static byte[] toBytes(int i)
+    public static byte[] toBytes(int in)
     {
-        String temp = Integer.toString(i);
-        int asHex = Integer.valueOf(temp, 16);
-        byte[] pom = ByteBuffer.allocate(4).putInt(asHex+i).array();
-        return pom;
+        byte[] b = BigInteger.valueOf(in).toByteArray();
+        if(b.length<4){
+            byte[] returned=new byte[4];
+            for(int i=0;i<4;i++){
+                if(i<b.length)
+                    returned[3-i]=b[b.length-1-i];
+                else
+                    returned[3-i]=0;
+            }
+            return returned;
+        }
+        else {
+            return b;
+        }
 
     }
 
@@ -1494,8 +1505,7 @@ class ThreadedUpdate extends Thread{
             String prevWord="#";
             File newFile=new File(newName);
             newFile.createNewFile();
-            //RandomAccessFile writer=new RandomAccessFile(newFile,"rw");
-            BufferedWriter writer=new BufferedWriter(new FileWriter(newFile));
+            RandomAccessFile writer=new RandomAccessFile(newFile,"rw");
             BufferedReader reader=new BufferedReader(new FileReader(fileName));
             String line=reader.readLine();
             while(line!=null){
@@ -1520,18 +1530,13 @@ class ThreadedUpdate extends Thread{
 
                     }
                 }
-                if(prevWord.charAt(0)=='d'){
-                    System.out.println("rr");
-                }
                 //write to the new file in bytes
                 String[] postDetails = strings[1].split("\\^");
                 byte[] lineDoc = Indexer.toBytes(Integer.valueOf(postDetails[0]));
 
                 byte[] tf = Indexer.toBytes(Integer.valueOf(postDetails[1]));
-                //writer.writeInt(Integer.valueOf(postDetails[0]));
-                //writer.write(Integer.valueOf(postDetails[1]));
-                writer.write(Integer.valueOf(postDetails[0])+"~"+Integer.valueOf(postDetails[1]));
-                writer.newLine();
+                writer.write(Integer.valueOf(postDetails[0]));
+                writer.write(Integer.valueOf(postDetails[1]));
                 line=reader.readLine();
                 lineNum+=1;
             }
