@@ -1,3 +1,4 @@
+import ParseObjects.Between;
 import com.sun.org.apache.xml.internal.utils.StringComparable;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -50,6 +51,8 @@ public class Controller_2 {
     private TextArea query;
     @FXML
     private TextField pathSave;
+    @FXML
+    private ChoiceBox<String> language;
 
 
     /**
@@ -96,19 +99,49 @@ public class Controller_2 {
     }
 
 
-    private Vector<String> getLanguages(String path) {
-        Vector<String> langs = new Vector<>();
+    public String removeFromTheTermUndefindSigns(String termS) { //like: "dfsdfdsf
         try {
+            int startIndex = -1;// the index that the _token begin.
+            int endIndex = termS.length(); //the index that the _token ends
+            if (termS != null && !termS.equals("")) {
+                for (int i = 0; i < termS.length() && startIndex == -1; i++) {
+                    if ( Character.isLetter(termS.charAt(i))) {
+                        startIndex = i;
+                        break;
+                    }
+                }
+                for (int i = termS.length() - 1; 0 <= i && endIndex == termS.length(); i--) {
+                    if ( Character.isLetter(termS.charAt(i))) {
+                        endIndex = i;
+                        break;
+                    }
+                }
+                if (termS.length() > 1 && startIndex >= endIndex) return "";
+                if ((startIndex != 0) || (endIndex != termS.length())) {
+                    termS = termS.substring(startIndex, endIndex + 1);
+                }
+                return termS;
+            }
+            return "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    private Vector<String> getLanguages(String path) throws Exception {
+        Vector<String> langs = new Vector<>();
+
             BufferedReader reader = new BufferedReader(new FileReader(new File(path + "/Languages.txt")));
             String lang = reader.readLine();
             while (lang != null && !lang.equals("")) {
-                langs.add(lang);
+                lang = removeFromTheTermUndefindSigns(lang);
+                if (!lang.equals("")) {
+                    if (!langs.contains(lang)) {
+                        langs.add(lang);
+                    }
+                }
+                lang=reader.readLine();
             }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         return langs;
     }
 
@@ -201,22 +234,50 @@ public class Controller_2 {
         File file = chooser.showDialog(new Stage());
         if (file != null) {
             path.setText(file.getAbsolutePath());
-            ObservableList<String> list = FXCollections.observableArrayList();
+            ObservableList<String> ObserCityList = FXCollections.observableArrayList();
+            ObservableList<String> ObserLangList = FXCollections.observableArrayList();
             Vector<String> cities = getCitys(path.getText());
             File cityDic = new File(path.getText() + "/" + "CityDictionary.txt");
-
-            if (cityDic.exists()) {
+            boolean thereIsLangFile = true;
+            Vector<String> languages = new Vector<>();
+            try{
+                languages=getLanguages(file.getAbsolutePath());
+            }
+            catch (Exception e){
+                thereIsLangFile=false;
+            }
+            if (thereIsLangFile && cityDic.exists()) {
                 filterbycity.setDisable(false);
+                language.setDisable(false);
                 for (String city : cities) {
-                    list.add(city);
+                    ObserCityList.add(city);
                 }
-                listView.setItems(list);
+                for (String lang: languages ){
+                    ObserLangList.add(lang);
+                }
+                listView.setItems(ObserCityList);
                 listView.getItems().sort(Comparator.naturalOrder());
+                language.setItems(ObserLangList);
+                language.getItems().sort(String::compareTo);
             } else {
-                path.setText("");
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setContentText("There is no \"CityDictionary.txt\".");
-                alert.show();
+                if(!thereIsLangFile && !cityDic.exists()) {
+                    path.setText("");
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setContentText("There are no \"CityDictionary.txt\" and \"Languages.txt\".");
+                    alert.show();
+                }
+               else if(!cityDic.exists()) {
+                    path.setText("");
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setContentText("There is no \"CityDictionary.txt\".");
+                    alert.show();
+                }
+                else{// if(!thereIsLangFile){
+                    path.setText("");
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setContentText("There is no \"Languages.txt\".");
+                    alert.show();
+                }
             }
         } else {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
