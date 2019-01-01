@@ -187,7 +187,6 @@ public class Searcher {
             return doc_tf;
         }
         try {
-            /**
             RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
             int lineNum;
             int numOfDocs;
@@ -223,35 +222,8 @@ public class Searcher {
                 }
             }
             raf.close();
-             **/
-            int lineNum;
-            int numOfDocs;
-            if(dictionary.containsKey(term)) {
-                lineNum = dictionary.get(term).elementAt(2)-1;//the pointer;
-                numOfDocs = dictionary.get(term).elementAt(0);//num of docs
-            }
-            else {
-                if (term.equals(term.toUpperCase())) {
-                    lineNum = dictionary.get(term.toLowerCase()).elementAt(2) - 1;//the pointer;
-                    numOfDocs = dictionary.get(term.toLowerCase()).elementAt(0);//num of docs
-                } else {
-                    lineNum = dictionary.get(term.toUpperCase()).elementAt(2) - 1;//the pointer;
-                    numOfDocs = dictionary.get(term.toUpperCase()).elementAt(0);//num of docs
-                }
-            }
-                //-1 cause we checked
-            BufferedReader reader=new BufferedReader(new FileReader(fullPath));
-            for (int i = 0; i < lineNum; i++) {
-                String justLine=reader.readLine();
-            }
-            for (int i = 0; i < numOfDocs; i++) {
-                String line=reader.readLine();
-                String[] details=line.split("~");
-                int docLine = Integer.parseInt(details[0]);
-                int tf = Integer.parseInt(details[1]);
-                if(!doc_tf.keySet().contains(docLine))
-                    doc_tf.put(docLine,tf);
-            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -264,12 +236,17 @@ public class Searcher {
      * @return take byte[4] and turn into int- will use next part of project
      */
     private int byteToInt(byte[] bytes) {
-        int val = 0;
-        for (int i = 0; i < 4; i++) {
-            val = val << 8;
-            val = val | (bytes[i] & 0xFF);
+        String s2="";
+        for (int i=0; i<4; i++){
+            String x = String.format("%8s", Integer.toBinaryString(bytes[i] & 0xFF)).replaceAll("\\s","");
+            for (int j=8-x.length(); j>0; j--){
+                s2 =s2 + "0";
+            }
+            s2 = s2  +  x;
         }
-        return val;
+        s2 = s2.replaceAll("\\s","");
+        int foo = Integer.parseInt(s2, 2);
+        return foo;
     }
 
 
