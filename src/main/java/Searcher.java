@@ -57,7 +57,6 @@ public class Searcher {
         _chosenCities = chosenCities;
         _path=path;
         this.toStem=toStem;
-        loadDictionaryToMemory(toStem); //using for "Entities"
         _toSave=pathToSave;
     }
 
@@ -83,6 +82,7 @@ public class Searcher {
             term = termsIt.next();
             addDocsTo_doc_termPlusTfs(term);
         }
+        dictionary.clear();//todo
     }
 
     /**
@@ -150,16 +150,15 @@ public class Searcher {
      */
     private void addDocsTo_doc_termPlusTfs(String term) {
         Map<Integer, Integer> doc_tf = readTermDocs(term);
-        _term_docsCounter.put(term, doc_tf.size());
         Iterator<Integer>docs=doc_tf.keySet().iterator();
         while (docs.hasNext()) {
             Integer docNum = docs.next();
             Integer termTfInDoc = doc_tf.get(docNum);
             if (_doc_termPlusTfs.containsKey(docNum)) {
-                _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc)); //todo - future error - if not update, do put after getting copy.
+                _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc));
             } else {
                 _doc_termPlusTfs.put(docNum, new Vector<Pair<String, Integer>>());
-                _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc)); //todo - future error - if not update, do put after getting copy.
+                _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc));
             }
         }
     }
@@ -187,6 +186,7 @@ public class Searcher {
             RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
             int lineNum = dictionary.get(term).elementAt(2);//the pointer;
             int numOfDocs = dictionary.get(term).elementAt(0);//num of docs
+            _term_docsCounter.put(term,numOfDocs);
             for (int i = 0; i < numOfDocs; i++) {
                 byte[] fullLine=new byte[8];
                 raf.seek((lineNum + i) * 8);
@@ -381,6 +381,7 @@ public class Searcher {
     public Collection<Document> Search(String id, String query, boolean toTreatSemantic) {
         Collection<Document> docs= new Vector<>();
         isSemantic=toTreatSemantic;
+        loadDictionaryToMemory(toStem); //using for "Entities"
         build_doc_termPlusTfs(query, toStem);
         FilterDocsByCitys();
         Collection<Integer>  docNums = _ranker.Rank(_doc_termPlusTfs, _doc_size, _numOfIndexedDocs, _term_docsCounter, _avgldl,_path); // return only 50 most relvante
@@ -433,11 +434,11 @@ public class Searcher {
      *  writes to the results file the result for the query
      */
     private void WriteToQueryFile(Map<String, Double> docs_rank,String id) {
-        File file=new File("results.txt");
+        File file=new File(_toSave+"/results.txt");
         try {
-            if(!file.exists())
-                file.createNewFile();
-            BufferedWriter writer=new BufferedWriter(new FileWriter(file));
+            //if(!file.exists())
+              //  file.createNewFile();
+            BufferedWriter writer=new BufferedWriter(new FileWriter(file,true));
             Iterator<String> docs=docs_rank.keySet().iterator();
             while(docs.hasNext()){
                 String document=docs.next();
