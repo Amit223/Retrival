@@ -182,10 +182,8 @@ public class Ranker {
         if(maxBM25<rank){
             maxBM25=rank;
         }
-      //  if(doc==93570)
-    //    System.out.println(doc);
-    //    System.out.println(doc);
-        docsAndRanks.put(doc,new Pair<>(rank,cosSim) );
+
+        docsAndRanks.put(doc,new Pair<>(rank,cosSim*0.01) );
     }
 
     /**
