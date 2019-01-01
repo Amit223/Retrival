@@ -1535,8 +1535,8 @@ class ThreadedUpdate extends Thread{
                 byte[] lineDoc = Indexer.toBytes(Integer.valueOf(postDetails[0]));
 
                 byte[] tf = Indexer.toBytes(Integer.valueOf(postDetails[1]));
-                writer.write(Integer.valueOf(postDetails[0]));
-                writer.write(Integer.valueOf(postDetails[1]));
+                writer.write(lineDoc);
+                writer.write(tf);
                 line=reader.readLine();
                 lineNum+=1;
             }
