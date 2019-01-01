@@ -1074,8 +1074,11 @@ public class Indexer {
      */
     public static byte[] toBytes(int i)
     {
-        byte[] pom = ByteBuffer.allocate(4).putInt(i).array();
+        String temp = Integer.toString(i);
+        int asHex = Integer.valueOf(temp, 16);
+        byte[] pom = ByteBuffer.allocate(4).putInt(asHex+i).array();
         return pom;
+
     }
 
 
@@ -1491,7 +1494,8 @@ class ThreadedUpdate extends Thread{
             String prevWord="#";
             File newFile=new File(newName);
             newFile.createNewFile();
-            RandomAccessFile writer=new RandomAccessFile(newFile,"rw");
+            //RandomAccessFile writer=new RandomAccessFile(newFile,"rw");
+            BufferedWriter writer=new BufferedWriter(new FileWriter(newFile));
             BufferedReader reader=new BufferedReader(new FileReader(fileName));
             String line=reader.readLine();
             while(line!=null){
@@ -1507,7 +1511,8 @@ class ThreadedUpdate extends Thread{
                         //update dictionary
                         dictionaryMutex.lock();
                         Vector<Integer> details = dictionary.get(term);
-                        details.remove(2);//the ptr
+                        if(details.size()==3)
+                            details.remove(2);//the ptr
                         details.add(lineNum);
                         dictionary.remove(term);
                         dictionary.put(term, details);
@@ -1515,13 +1520,18 @@ class ThreadedUpdate extends Thread{
 
                     }
                 }
+                if(prevWord.charAt(0)=='d'){
+                    System.out.println("rr");
+                }
                 //write to the new file in bytes
                 String[] postDetails = strings[1].split("\\^");
                 byte[] lineDoc = Indexer.toBytes(Integer.valueOf(postDetails[0]));
 
                 byte[] tf = Indexer.toBytes(Integer.valueOf(postDetails[1]));
-                writer.write(lineDoc);
-                writer.write(tf);
+                //writer.writeInt(Integer.valueOf(postDetails[0]));
+                //writer.write(Integer.valueOf(postDetails[1]));
+                writer.write(Integer.valueOf(postDetails[0])+"~"+Integer.valueOf(postDetails[1]));
+                writer.newLine();
                 line=reader.readLine();
                 lineNum+=1;
             }

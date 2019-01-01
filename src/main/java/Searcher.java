@@ -35,7 +35,7 @@ public class Searcher {
     private HashMap<Integer, Vector<Pair<String,Integer>>> _doc_Entities = new HashMap<>();
     private static HashMap<String, Integer> _term_docsCounter = new HashMap<>();
     private String _path = "";
-    private boolean isSemantic; //todo what defualt ?
+    private boolean isSemantic;
     private String _toSave="";
 
 
@@ -159,6 +159,12 @@ public class Searcher {
                 _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc));
             }
         }
+        if(term.equalsIgnoreCase("British")){
+            System.out.println("Ff");
+            if(doc_tf.containsKey(325697)){
+                System.out.println("ss");
+            }
+        }
     }
 
     /**
@@ -181,47 +187,71 @@ public class Searcher {
             return doc_tf;
         }
         try {
+            /**
             RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
             int lineNum;
             int numOfDocs;
             if(dictionary.containsKey(term)) {
-                lineNum = dictionary.get(term).elementAt(2);//the pointer;
+                lineNum = dictionary.get(term).elementAt(2)-1;//the pointer;
                 numOfDocs = dictionary.get(term).elementAt(0);//num of docs
             }
             else{
                 if(term.equals(term.toUpperCase())){
-                    lineNum = dictionary.get(term.toLowerCase()).elementAt(2);//the pointer;
+                    lineNum = dictionary.get(term.toLowerCase()).elementAt(2)-1;//the pointer;
                     numOfDocs = dictionary.get(term.toLowerCase()).elementAt(0);//num of docs
                 }
                 else{
-                    lineNum = dictionary.get(term.toUpperCase()).elementAt(2);//the pointer;
+                    lineNum = dictionary.get(term.toUpperCase()).elementAt(2)-1;//the pointer;
                     numOfDocs = dictionary.get(term.toUpperCase()).elementAt(0);//num of docs
                 }
-
+            //-1 cause we checked
             }
             _term_docsCounter.put(term,numOfDocs);
-            for (int i = 0; i < numOfDocs; i++) {
-                byte[] fullLine=new byte[8];
-                raf.seek((lineNum + i) * 8);
-                raf.read(fullLine);
+            for (int i = 0; i <= numOfDocs; i++) {//TODO
+                raf.seek((lineNum + i) * 8);//TODO
                 byte[] docLine_bytes = new byte[4];
-                docLine_bytes[0]=fullLine[0];
-                docLine_bytes[1]=fullLine[1];
-                docLine_bytes[2]=fullLine[2];
-                docLine_bytes[3]=fullLine[3];
+                raf.read(docLine_bytes);
                 byte[] tf_bytes = new byte[4];
-                tf_bytes[0]=fullLine[4];
-                tf_bytes[1]=fullLine[5];
-                tf_bytes[2]=fullLine[6];
-                tf_bytes[3]=fullLine[7];
+                raf.seek((lineNum + i) * 8+4);
+                raf.read(tf_bytes);
                 int docLine = byteToInt(docLine_bytes);
                 int tf = byteToInt(tf_bytes);
                 if(!doc_tf.keySet().contains(docLine))
                     doc_tf.put(docLine,tf);
+                if(docLine==325697){
+                    System.out.println("dd");
+                }
             }
             raf.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+             **/
+            int lineNum;
+            int numOfDocs;
+            if(dictionary.containsKey(term)) {
+                lineNum = dictionary.get(term).elementAt(2)-1;//the pointer;
+                numOfDocs = dictionary.get(term).elementAt(0);//num of docs
+            }
+            else {
+                if (term.equals(term.toUpperCase())) {
+                    lineNum = dictionary.get(term.toLowerCase()).elementAt(2) - 1;//the pointer;
+                    numOfDocs = dictionary.get(term.toLowerCase()).elementAt(0);//num of docs
+                } else {
+                    lineNum = dictionary.get(term.toUpperCase()).elementAt(2) - 1;//the pointer;
+                    numOfDocs = dictionary.get(term.toUpperCase()).elementAt(0);//num of docs
+                }
+            }
+                //-1 cause we checked
+            BufferedReader reader=new BufferedReader(new FileReader(fullPath));
+            for (int i = 0; i < lineNum; i++) {
+                String justLine=reader.readLine();
+            }
+            for (int i = 0; i < numOfDocs; i++) {
+                String line=reader.readLine();
+                String[] details=line.split("~");
+                int docLine = Integer.parseInt(details[0]);
+                int tf = Integer.parseInt(details[1]);
+                if(!doc_tf.keySet().contains(docLine))
+                    doc_tf.put(docLine,tf);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

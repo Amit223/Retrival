@@ -12,7 +12,8 @@ public class Ranker {
 
     private double _avgldl;
     private int _numOfIndexedDocs;
-    private HashMap<Integer,Double> docsAndRanks;
+    private HashMap<Integer,Pair<Double,Double> >docsAndRanks;
+    private double maxBM25=0;
 
     private PriorityQueue<Pair<Integer, Double>> _RankedDocs = new PriorityQueue(new Comparator<Pair<Integer, Double>>() {
         @Override
@@ -35,19 +36,21 @@ public class Ranker {
         int count = 0;
         while (docs.hasNext() && count < 50) {
             Integer doc = docs.next();
-            Pair<Integer, Double> doc_rank = new Pair(doc, docsAndRanks.get(doc));
+            double rank = docsAndRanks.get(doc).getKey();
+            double cossim=docsAndRanks.get(doc).getValue();
+            Pair<Integer, Double> doc_rank = new Pair(doc, (rank/maxBM25)+cossim);
             _RankedDocs.add(doc_rank);
             count += 1;
         }
         while (docs.hasNext()) {//bigger than 50
             int doc = docs.next();
-            double rank = docsAndRanks.get(doc);
+            double rank = docsAndRanks.get(doc).getKey();
+            double cossim=docsAndRanks.get(doc).getValue();
             Double lowest = _RankedDocs.peek().getValue();
             if (rank > (lowest)) {
                 _RankedDocs.poll();
-                _RankedDocs.add(new Pair<Integer, Double>(doc, rank));
+                _RankedDocs.add(new Pair<Integer, Double>(doc, (rank/maxBM25)+cossim));
             }
-
         }
 
         return PQToCollection(_RankedDocs);
@@ -109,7 +112,20 @@ public class Ranker {
      * @return table of docs and their rank
      */
     public Map<Integer,Double> getDocsRanking(){
-        return docsAndRanks;
+        Map <Integer,Double> docsRank=findRanks();
+        return docsRank;
+    }
+
+    private Map<Integer,Double> findRanks() {
+        Map<Integer,Double> returnedValue=new HashMap<>();
+        Iterator<Integer> iterator=docsAndRanks.keySet().iterator();
+        while (iterator.hasNext()){
+            int doc=iterator.next();
+            double totRank=docsAndRanks.get(doc).getKey()/maxBM25;
+            totRank=totRank+docsAndRanks.get(doc).getValue();
+            returnedValue.put(doc,totRank);
+        }
+        return returnedValue;
     }
 
 
@@ -130,7 +146,7 @@ public class Ranker {
             doc = docsIt.next();
             rankDoc(doc,docsToRank.get(doc),doc_size.get(doc),term_docsNumber);
         }
-        getAllName();
+        //getAllName();
         return get50BestDocs();
 
     }
@@ -138,17 +154,17 @@ public class Ranker {
     /**
      *
      * @param doc-the line of doc
-     * @param docsToRank-the list of docs and thier info
-     * @param doc_size - the size of doc
      * @param term_docsNumber-the info of term- how many docs
      * ranks the doc and puts in the docs and ranks table
      */
     private void rankDoc(int doc,Vector<Pair<String, Integer>> _termInDocAndTF, //docsToRank.get(doc)
                          Integer _docSize,
                            HashMap<String, Integer> term_docsNumber){
-        double _k = 1.25;
-        double _b = 0.75;
+        double _k = 1.00;//1.25
+        double _b = 0.75;//0.75
         double rank = 0;
+        double totaltf=0;
+        double totaltf_power=0;
 
         for (int i = 0; i < _termInDocAndTF.size(); i++) {
             String term = _termInDocAndTF.get(i).getKey();
@@ -158,12 +174,18 @@ public class Ranker {
             double tf = moneOfTf / _docSize;
             double mone = idf * tf;
             double mechane = tf + _k * (1 - _b + _b * (_docSize / _avgldl));
+            totaltf=totaltf+tf;
+            totaltf_power=totaltf_power+tf*tf;
             rank = rank +( mone / mechane);
+        }
+        double cosSim=totaltf/(Math.sqrt(totaltf_power));
+        if(maxBM25<rank){
+            maxBM25=rank;
         }
       //  if(doc==93570)
     //    System.out.println(doc);
     //    System.out.println(doc);
-        docsAndRanks.put(doc,rank);
+        docsAndRanks.put(doc,new Pair<>(rank,cosSim) );
     }
 
     /**
