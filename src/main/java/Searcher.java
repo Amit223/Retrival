@@ -179,13 +179,28 @@ public class Searcher {
         else if (Character.isDigit(letter) || letter == '-')
             letter = '0';
         String fullPath = _path + '/'+letter + toStem + "Done.txt";
-        if (!dictionary.containsKey(term)) {//the term is not in the dictionary
+        if (!dictionary.containsKey(term.toLowerCase())&&!dictionary.containsKey(term.toUpperCase())) {//the term is not in the dictionary
             return doc_tf;
         }
         try {
             RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
-            int lineNum = dictionary.get(term).elementAt(2);//the pointer;
-            int numOfDocs = dictionary.get(term).elementAt(0);//num of docs
+            int lineNum;
+            int numOfDocs;
+            if(dictionary.containsKey(term)) {
+                lineNum = dictionary.get(term).elementAt(2);//the pointer;
+                numOfDocs = dictionary.get(term).elementAt(0);//num of docs
+            }
+            else{
+                if(term.equals(term.toUpperCase())){
+                    lineNum = dictionary.get(term.toLowerCase()).elementAt(2);//the pointer;
+                    numOfDocs = dictionary.get(term.toLowerCase()).elementAt(0);//num of docs
+                }
+                else{
+                    lineNum = dictionary.get(term.toUpperCase()).elementAt(2);//the pointer;
+                    numOfDocs = dictionary.get(term.toUpperCase()).elementAt(0);//num of docs
+                }
+
+            }
             _term_docsCounter.put(term,numOfDocs);
             for (int i = 0; i < numOfDocs; i++) {
                 byte[] fullLine=new byte[8];
@@ -442,7 +457,10 @@ public class Searcher {
             Iterator<String> docs=docs_rank.keySet().iterator();
             while(docs.hasNext()){
                 String document=docs.next();
-                String line=id+"   "+0+"   "+document+"   "+docs_rank.get(document)+"42.38   mt";
+                double rank=docs_rank.get(document);
+                String rankInString=String.valueOf(rank);
+                rankInString=rankInString.substring(0,6);//not so much
+                String line=id+"   "+0+"   "+document+"   "+rankInString+"   1   mt";
                 writer.write(line);
                 writer.newLine();
             }
