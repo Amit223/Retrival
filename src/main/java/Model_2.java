@@ -14,6 +14,17 @@ public class Model_2 {
     private int numOfIndexedDocs;
 
 
+    /**
+     *
+     * @param path of posting files
+     * @param cities to choose
+     * @param queriesPath the path of query file
+     * @param toStem
+     * @param toTreatSemantic
+     * @param savePath- path to save the results file.
+     * @return answers for query
+     * @throws IOException
+     */
     public Vector<Pair<String,Collection<Document>>> Start(String path, Vector<String> cities, Path queriesPath, boolean toStem, boolean toTreatSemantic, String savePath) throws IOException {
         Vector<Pair<String,Collection<Document>>> id_docsCollection= new Vector<>();
         HashSet<String> citieshash = new HashSet<>(cities);
@@ -32,6 +43,16 @@ public class Model_2 {
     }
     /**
      * This function is the main function of the program.
+     */
+    /**
+     *
+     * @param path of posting files
+     * @param cities to choose
+     * @param query
+     * @param toStem
+     * @param toTreatSemantic
+     * @param savePath - path to save the results file.
+     * @return answers for query
      */
     public Collection<Document> Start(String path, Vector<String> cities, String query, boolean toStem, boolean toTreatSemantic, String savePath){
         HashSet<String> citieshash = new HashSet<>(cities);

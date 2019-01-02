@@ -183,7 +183,8 @@ public class Searcher {
             return doc_tf;
         }
         try {
-            RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
+            //RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
+            BufferedReader reader=new BufferedReader(new FileReader(new File(fullPath)));
             int lineNum;
             int numOfDocs;
             if(dictionary.containsKey(term)) {
@@ -202,6 +203,7 @@ public class Searcher {
             //-1 cause we checked
             }
             _term_docsCounter.put(term,numOfDocs);
+            /**
             for (int i = 0; i <= numOfDocs; i++) {//TODO
                 raf.seek((lineNum + i) * 8);//TODO
                 byte[] docLine_bytes = new byte[4];
@@ -216,6 +218,23 @@ public class Searcher {
 
                 }
             raf.close();
+             **/
+            for(int i=0;i<lineNum-13;i++){
+                String justLine=reader.readLine();
+            }
+            for(int i=0;i<numOfDocs-1;i++){
+                String termLine=reader.readLine();
+                String[] details=termLine.split("~");
+                if(!details[0].equalsIgnoreCase(term)){
+                    System.out.println("somethings is wrong: "+term);
+                }
+                else {
+                    int docLine = (Integer.parseInt(details[1]));
+                    int tf = (Integer.parseInt(details[2]));
+                    if (!doc_tf.keySet().contains(docLine))
+                        doc_tf.put(docLine, tf);
+                }
+            }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
