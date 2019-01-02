@@ -31,7 +31,7 @@ public class ReadFile {
             String title = query.getElementsByTag("title").get(0).text();
             String desc = query.getElementsByTag("desc").get(0).childNode(0).toString().trim().split(":")[1];
             String narr = query.getElementsByTag("narr").get(0).text();
-            queriesTitels.add(new Pair<String,String>(id,title+" "+desc));
+            queriesTitels.add(new Pair<String,String>(id,title));
         }
         return queriesTitels;
     }
@@ -95,6 +95,7 @@ public class ReadFile {
             }
         }
         catch (Exception e){
+            e.printStackTrace();
             return stopwords;
         }
         return stopwords;

@@ -133,7 +133,9 @@ public class Parser {
             }
             return (theToken != null) ? theToken : "";
         } catch (Exception e) {
+            e.printStackTrace();
             return "";
+
         }
     }
 
