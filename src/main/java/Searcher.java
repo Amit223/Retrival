@@ -213,10 +213,8 @@ public class Searcher {
                 int tf = byteToInt(tf_bytes);
                 if(!doc_tf.keySet().contains(docLine))
                     doc_tf.put(docLine,tf);
-                if(i==numOfDocs-2){
-                    System.out.println("C");
+
                 }
-            }
             raf.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
