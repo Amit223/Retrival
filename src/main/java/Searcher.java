@@ -99,7 +99,7 @@ public class Searcher {
                 BufferedReader bufferedReader =new BufferedReader(iSR);
                 String result = bufferedReader.readLine();
                 JSONArray words = new JSONArray(result);
-                int minLength = 15;
+                int minLength = 5;
                 StringBuffer similiarSemanticWords= new StringBuffer();
                 for (int i = 0; i<words.length() && i < minLength  ; i++) {
                     JSONObject wordRecord = (JSONObject) words.get(i);
@@ -159,12 +159,8 @@ public class Searcher {
                 _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc));
             }
         }
-        if(term.equalsIgnoreCase("British")){
-            System.out.println("Ff");
-            if(doc_tf.containsKey(325697)){
-                System.out.println("ss");
-            }
-        }
+        System.out.println("done add to doc tfs");
+
     }
 
     /**
@@ -219,6 +215,7 @@ public class Searcher {
                 int tf = byteToInt(tf_bytes);
                 if(!doc_tf.keySet().contains(docLine))
                     doc_tf.put(docLine,tf);
+
                 }
             raf.close();
              **/
