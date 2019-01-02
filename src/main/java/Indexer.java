@@ -1522,12 +1522,14 @@ class ThreadedUpdate extends Thread{
                         //update dictionary
                         dictionaryMutex.lock();
                         Vector<Integer> details = dictionary.get(term);
-                        if(details.size()==3)
-                            details.remove(2);//the ptr
-                        details.add(lineNum);
-                        dictionary.remove(term);
-                        dictionary.put(term, details);
-                        dictionaryMutex.unlock();
+                        if(details.get(2)==-1) {
+                            if (details.size() == 3)
+                                details.remove(2);//the ptr
+                            details.add(lineNum);
+                            dictionary.remove(term);
+                            dictionary.put(term, details);
+                            dictionaryMutex.unlock();
+                        }
 
                     }
                 }
