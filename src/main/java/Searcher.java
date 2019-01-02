@@ -217,10 +217,7 @@ public class Searcher {
                 int tf = byteToInt(tf_bytes);
                 if(!doc_tf.keySet().contains(docLine))
                     doc_tf.put(docLine,tf);
-                if(docLine==325697){
-                    System.out.println("dd");
                 }
-            }
             raf.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();

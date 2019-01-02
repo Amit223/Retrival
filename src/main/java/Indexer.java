@@ -1505,7 +1505,8 @@ class ThreadedUpdate extends Thread{
             String prevWord="#";
             File newFile=new File(newName);
             newFile.createNewFile();
-            RandomAccessFile writer=new RandomAccessFile(newFile,"rw");
+           // RandomAccessFile writer=new RandomAccessFile(newFile,"rw");
+            BufferedWriter writer=new BufferedWriter(new FileWriter(newFile));
             BufferedReader reader=new BufferedReader(new FileReader(fileName));
             String line=reader.readLine();
             while(line!=null){
@@ -1535,8 +1536,10 @@ class ThreadedUpdate extends Thread{
                 byte[] lineDoc = Indexer.toBytes(Integer.valueOf(postDetails[0]));
 
                 byte[] tf = Indexer.toBytes(Integer.valueOf(postDetails[1]));
-                writer.write(lineDoc);
-                writer.write(tf);
+                writer.write(prevWord+"~"+Integer.valueOf(postDetails[0])+"~"+Integer.valueOf(postDetails[1]));
+                writer.newLine();
+                //writer.write(lineDoc);
+                //writer.write(tf);
                 line=reader.readLine();
                 lineNum+=1;
             }
