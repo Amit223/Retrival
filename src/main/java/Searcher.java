@@ -61,7 +61,7 @@ public class Searcher {
     /**Auxiliary functions for Search**/
 
     /**
-     * build {@link #_doc_termPlusTfs} using {@link #addDocsTo_doc_termPlusTfs(String)}
+     * build {@link #_doc_termPlusTfs} using {@link #addDocsTo_doc_termPlusTfs(List<String>)}
      *
      * @param query  - query to search
      * @param toStem if stem is needed
@@ -74,13 +74,42 @@ public class Searcher {
         queryParser.Parse(query, toStem, "");
         HashMap<String, Integer> termList = queryParser.getTerms();
         Set<String> terms = termList.keySet();
-        Iterator<String> termsIt = terms.iterator();
-        String term = "";
-        while (termsIt.hasNext()) {
-            term = termsIt.next();
-            addDocsTo_doc_termPlusTfs(term);
+        Vector<List<String>> termsSorted=sortTerms(terms);
+        for(int i=0;i<termsSorted.size();i++) {
+            addDocsTo_doc_termPlusTfs(termsSorted.get(i));
         }
         dictionary.clear();//todo
+    }
+
+    private Vector<List<String>> sortTerms(Set<String> terms) {
+        List myList = new ArrayList(terms);
+        Collections.sort(myList);
+        Vector<List<String>> sorted=new Vector<>();
+        Iterator<String> iterator=myList.iterator();
+        char c='^';
+        List<String> list=null;
+        while (iterator.hasNext()){
+            String term=iterator.next();
+            char first=term.charAt(0);
+            if(Character.isLetter(first)){
+                first=Character.toLowerCase(first);
+            }
+            else{
+                first='0';
+            }
+            if(first!=c){//new
+                if(list!=null){
+                    sorted.add(list);
+                }
+                list=new ArrayList<>();
+                list.add(term);
+            }
+            else{//old
+                list.add(term);
+            }
+        }
+        return sorted;
+
     }
 
     /**
@@ -141,24 +170,14 @@ public class Searcher {
 
     /**
      * Auxiliary function for {@link #build_doc_termPlusTfs(String, boolean)}
-     * add docs that the term appear in them to our {@link #_doc_termPlusTfs} using {@link #readTermDocs(String)}
+     * add docs that the term appear in them to our {@link #_doc_termPlusTfs} using {@link #readTermDocs(List<String>)}
      *
-     * @param term - the term that adding the docs that include it.
+     * @param terms - the term that adding the docs that include it.
      *             working in concurrency
      */
-    private void addDocsTo_doc_termPlusTfs(String term) {
-        Map<Integer, Integer> doc_tf = readTermDocs(term);
-        Iterator<Integer>docs=doc_tf.keySet().iterator();
-        while (docs.hasNext()) {
-            Integer docNum = docs.next();
-            Integer termTfInDoc = doc_tf.get(docNum);
-            if (_doc_termPlusTfs.containsKey(docNum)) {
-                _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc));
-            } else {
-                _doc_termPlusTfs.put(docNum, new Vector<Pair<String, Integer>>());
-                _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(term, termTfInDoc));
-            }
-        }
+    private void addDocsTo_doc_termPlusTfs(List<String> terms) {
+        Map<Integer, Integer> doc_tf = readTermDocs(terms);
+
         System.out.println("done add to doc tfs");
 
     }
@@ -168,11 +187,12 @@ public class Searcher {
      * using {@link #_chosenCities} and not insert doc that their city is one of the cities given from the user
      * if meet doc in the first time, add his entities and his size to their maps( {@link #_doc_size} {@link #_doc_Entities}).
      *
-     * @param term - the docs that include  the term
+     * @param terms - the docs that include  the term
      * @return doc_tf - list of "doc-tf"s for the above term
      */
-    private Map<Integer, Integer> readTermDocs(String term) {
+    private Map<Integer, Integer> readTermDocs(List<String> terms) {
         Map<Integer, Integer> doc_tf = new HashMap<>();
+        String term=terms.get(0);
         char letter = term.charAt(0);
         if (Character.isUpperCase(letter))
             letter = Character.toLowerCase(letter);
@@ -185,27 +205,11 @@ public class Searcher {
         try {
             //RandomAccessFile raf = new RandomAccessFile(new File(fullPath), "r");
             BufferedReader reader=new BufferedReader(new FileReader(new File(fullPath)));
-            int lineNum;
             int numOfDocs;
-            if(dictionary.containsKey(term)) {
-                lineNum = dictionary.get(term).elementAt(2)-1;//the pointer;
-                numOfDocs = dictionary.get(term).elementAt(0);//num of docs
-            }
-            else{
-                if(term.equals(term.toUpperCase())){
-                    lineNum = dictionary.get(term.toLowerCase()).elementAt(2)-1;//the pointer;
-                    numOfDocs = dictionary.get(term.toLowerCase()).elementAt(0);//num of docs
-                }
-                else{
-                    lineNum = dictionary.get(term.toUpperCase()).elementAt(2)-1;//the pointer;
-                    numOfDocs = dictionary.get(term.toUpperCase()).elementAt(0);//num of docs
-                }
-            //-1 cause we checked
-            }
-            _term_docsCounter.put(term,numOfDocs);
+
             /**
-            for (int i = 0; i <= numOfDocs; i++) {//TODO
-                raf.seek((lineNum + i) * 8);//TODO
+            for (int i = 0; i <= numOfDocs; i++) {
+                raf.seek((lineNum + i) * 8);
                 byte[] docLine_bytes = new byte[4];
                 raf.read(docLine_bytes);
                 byte[] tf_bytes = new byte[4];
@@ -219,22 +223,61 @@ public class Searcher {
                 }
             raf.close();
              **/
-            for(int i=0;i<lineNum-13;i++){
-                String justLine=reader.readLine();
-            }
-            for(int i=0;i<numOfDocs-1;i++){
-                String termLine=reader.readLine();
+            int j=0;
+            boolean flag=false;
+            String termLine;
+            String currentTerm=terms.get(j);
+            while(!flag){
+                termLine=reader.readLine();
                 String[] details=termLine.split("~");
-                if(!details[0].equalsIgnoreCase(term)){
-                    System.out.println("somethings is wrong: "+term);
+                if(details[0].equalsIgnoreCase(currentTerm)) {//need to get numOfDocs for term-term_docsCounter
+                    //new term, add details for new one!
+                    if (dictionary.containsKey(currentTerm)) {
+                        //lineNum = dictionary.get(term).elementAt(2) - 1;//the pointer;
+                        numOfDocs = dictionary.get(currentTerm).elementAt(0);//num of docs
+                    } else {
+                        if (currentTerm.equals(currentTerm.toUpperCase())) {
+                            //  lineNum = dictionary.get(term.toLowerCase()).elementAt(2) - 1;//the pointer;
+                            numOfDocs = dictionary.get(currentTerm.toLowerCase()).elementAt(0);//num of docs
+                        } else {
+                            //lineNum = dictionary.get(term.toUpperCase()).elementAt(2) - 1;//the pointer;
+                            numOfDocs = dictionary.get(currentTerm.toUpperCase()).elementAt(0);//num of docs
+                        }
+                        //-1 cause we checked
+                    }
+                    _term_docsCounter.put(currentTerm, numOfDocs);
+                    boolean stopFor=false;
+                    //read all lines for new term
+                    int i=0;
+                    while( !stopFor) {
+                        if (!details[0].equalsIgnoreCase(currentTerm)) {//not the same - we got to a new term
+                            //System.out.println("somethings is wrong: " + currentTerm);
+                            stopFor=true;
+                            writeDoc_tfTo_doc_termPlusTfs(doc_tf,currentTerm);//write tto the big map(done with this term!)
+                            doc_tf=new HashMap<>();
+                            if (j < terms.size()-1) {//there are more terms
+                                j++;
+                                currentTerm = terms.get(j);
+                            } else {//no more terms!
+                                flag = true;
+                            }
+                        } else {//the term is ok
+
+                            //write to doc_tf for the current term ,the current doc.
+                            int docLine = (Integer.parseInt(details[1]));
+                            int tf = (Integer.parseInt(details[2]));
+                            if (!doc_tf.keySet().contains(docLine))
+                                doc_tf.put(docLine, tf);
+
+                            termLine = reader.readLine();
+                            details = termLine.split("~");
+                            }
+                            i++;
+
+                        }
+                    }
                 }
-                else {
-                    int docLine = (Integer.parseInt(details[1]));
-                    int tf = (Integer.parseInt(details[2]));
-                    if (!doc_tf.keySet().contains(docLine))
-                        doc_tf.put(docLine, tf);
-                }
-            }
+
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -242,6 +285,20 @@ public class Searcher {
         }
 
         return doc_tf;
+    }
+
+    private void writeDoc_tfTo_doc_termPlusTfs(Map<Integer, Integer> doc_tf,String currentTerm) {
+        Iterator<Integer> docs = doc_tf.keySet().iterator();
+        while (docs.hasNext()) {
+            Integer docNum = docs.next();
+            Integer termTfInDoc = doc_tf.get(docNum);
+            if (_doc_termPlusTfs.containsKey(docNum)) {
+                _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(currentTerm, termTfInDoc));
+            } else {
+                _doc_termPlusTfs.put(docNum, new Vector<Pair<String, Integer>>());
+                _doc_termPlusTfs.get(docNum).add(new Pair<String, Integer>(currentTerm, termTfInDoc));
+            }
+        }
     }
 
     /**
@@ -480,7 +537,8 @@ public class Searcher {
                 String document=docs.next();
                 double rank=docs_rank.get(document);
                 String rankInString=String.valueOf(rank);
-                rankInString=rankInString.substring(0,6);//not so much
+                if(rankInString.length()>7)
+                    rankInString=rankInString.substring(0,6);//not so much
                 String line=id+"   "+0+"   "+document+"   "+rankInString+"   1   mt";
                 writer.write(line);
                 writer.newLine();

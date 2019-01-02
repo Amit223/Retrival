@@ -116,14 +116,18 @@ public class Controller_2 {
                         break;
                     }
                 }
+                if(startIndex==-1) return "";
                 if (termS.length() > 1 && startIndex >= endIndex) return "";
                 if ((startIndex != 0) || (endIndex != termS.length())) {
+                    if(startIndex==-1||endIndex+1==-1)
+                        System.out.println("d");
                     termS = termS.substring(startIndex, endIndex + 1);
                 }
                 return termS;
             }
             return "";
         } catch (Exception e) {
+            e.printStackTrace();
             return "";
         }
     }
@@ -170,6 +174,7 @@ public class Controller_2 {
             try {
                 bufferedReader = new BufferedReader(new FileReader(path + "/" + "CityDictionary.txt"));
             } catch (Exception e) {
+                e.printStackTrace();
                 return;
             }
             String line = bufferedReader.readLine();
@@ -244,6 +249,7 @@ public class Controller_2 {
                 languages=getLanguages(file.getAbsolutePath());
             }
             catch (Exception e){
+                e.printStackTrace();
                 thereIsLangFile=false;
             }
             if (thereIsLangFile && cityDic.exists()) {
@@ -386,6 +392,7 @@ public class Controller_2 {
                     controller.setModel((model.Start(path.getText(), cities, Paths.get(queriesFilepath.getText()),
                             toStem.isSelected(), toTreatSemantic.isSelected(), (pathSave.getText() != null ? pathSave.getText() : ""))));
                 } catch (IOException e) {
+                    e.printStackTrace();
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setContentText("You select to browse file of queries, and there is a problem with the file or with the file path.");
                     alert.show();
@@ -399,7 +406,8 @@ public class Controller_2 {
             }
         }
         catch(Exception e){
-            
+            e.printStackTrace();
+
         }
     }
 
